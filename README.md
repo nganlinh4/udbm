@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # UDBM - Realtime Database Monitor
 
 <table>
@@ -9,9 +10,21 @@
 <td width="50%">
 
 ![Database Schema](readme_assets/schema.png)
+=======
+
+<table>
+<tr>
+<td width="33.3333%">
+<img src="readme_assets/initial.png" alt="Initial Setup">
+</td>
+<td width="66.6666%">
+<img src="readme_assets/ui.png" alt="Database Monitoring">
+>>>>>>> bd0657f (fix readme)
 </td>
 </tr>
 </table>
+
+![Database Schema](readme_assets/schema.png)
 
 A real-time web-based database monitoring system that you can use for multiple databases, free and locally. Monitor your MySQL and PostgreSQL databases with a modern, responsive interface.
 
@@ -40,7 +53,7 @@ A real-time web-based database monitoring system that you can use for multiple d
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
+git clone udbm
 cd udbm
 ```
 
