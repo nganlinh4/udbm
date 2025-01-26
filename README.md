@@ -28,6 +28,7 @@ A real-time web-based database monitoring system that focus on monitoring tables
 
 ## Future Plans
 
+(please recommend me more features)
 - Admin mode in settings menu for direct database operations:
   - Add, delete, and alter tables directly from the interface
   - Execute custom SQL queries
