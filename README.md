@@ -1,25 +1,18 @@
-<<<<<<< HEAD
-# UDBM - Realtime Database Monitor
+
 
 <table>
 <tr>
 <td width="50%">
 
 ![Database Monitoring](readme_assets/ui.png)
+<td width="33.3333%">
+<img src="readme_assets/initial.png" alt="Initial Setup">
 </td>
 <td width="50%">
 
 ![Database Schema](readme_assets/schema.png)
-=======
-
-<table>
-<tr>
-<td width="33.3333%">
-<img src="readme_assets/initial.png" alt="Initial Setup">
-</td>
 <td width="66.6666%">
 <img src="readme_assets/ui.png" alt="Database Monitoring">
->>>>>>> bd0657f (fix readme)
 </td>
 </tr>
 </table>
