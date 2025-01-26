@@ -1,17 +1,17 @@
-# uDBM - Realtime Database Monitor
+# UDBM - Realtime Database Monitor
 
 <table>
 <tr>
-<td width="33.3333%">
-<img src="readme_assets/initial.png" alt="Initial Setup">
+<td width="50%">
+
+![Database Monitoring](readme_assets/ui.png)
 </td>
-<td width="66.6666%">
-<img src="readme_assets/ui.png" alt="Database Monitoring">
+<td width="50%">
+
+![Database Schema](readme_assets/schema.png)
 </td>
 </tr>
 </table>
-
-![Database Schema](readme_assets/schema.png)
 
 A real-time web-based database monitoring system that you can use for multiple databases, free and locally. Monitor your MySQL and PostgreSQL databases with a modern, responsive interface.
 
@@ -26,11 +26,21 @@ A real-time web-based database monitoring system that you can use for multiple d
 - Custom page title that sticks to each database
 - Secure connection management with cookie-based persistence
 
+## Future Plans
+
+- Admin mode in settings menu for direct database operations:
+  - Add, delete, and alter tables directly from the interface
+  - Execute custom SQL queries
+- Customization options:
+  - Custom page logo placement next to page title
+  - Custom favicon support
+- Support for more SQL types besides MySQL and PostgreSQL
+
 ## Installation
 
 1. Clone the repository:
 ```bash
-git clone udbm
+git clone [repository-url]
 cd udbm
 ```
 
@@ -67,11 +77,6 @@ python monitor.py
 2. Access the web interface:
    - Open your browser and navigate to `http://localhost:5046`
    - Add your database connection through the interface
-
-### Swipe table pills
-Quickly toggle multiple tables with swiping (table pills ordered smartly by their foreign keys, instead of alphabetically) 
-
-![Swipe Tables](readme_assets/swipe.png)
 
 ### Changing Page Title
 
