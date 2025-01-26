@@ -1,16 +1,10 @@
-
+# uDBM - Realtime Database Monitor
 
 <table>
 <tr>
-<td width="50%">
-
-![Database Monitoring](readme_assets/ui.png)
 <td width="33.3333%">
 <img src="readme_assets/initial.png" alt="Initial Setup">
 </td>
-<td width="50%">
-
-![Database Schema](readme_assets/schema.png)
 <td width="66.6666%">
 <img src="readme_assets/ui.png" alt="Database Monitoring">
 </td>
@@ -83,6 +77,11 @@ python monitor.py
 2. Access the web interface:
    - Open your browser and navigate to `http://localhost:5046`
    - Add your database connection through the interface
+
+### Swipe table pills
+Quickly toggle multiple tables with swiping (table pills ordered smartly by their foreign keys, instead of alphabetically) 
+
+![Swipe Tables](readme_assets/swipe.png)
 
 ### Changing Page Title
 
