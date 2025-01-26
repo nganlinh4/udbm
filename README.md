@@ -68,6 +68,11 @@ python monitor.py
    - Open your browser and navigate to `http://localhost:5046`
    - Add your database connection through the interface
 
+### Swipe table pills
+Quickly toggle multiple tables with swiping (table pills ordered smartly by their foreign keys, instead of alphabetically) 
+
+![Swipe Tables](readme_assets/swipe.png)
+
 ### Changing Page Title
 
 Modified page title will be remembered to each of your DB separatedly
