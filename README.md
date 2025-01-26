@@ -13,7 +13,7 @@
 
 ![Database Schema](readme_assets/schema.png)
 
-A real-time web-based database monitoring system that you can use for multiple databases, free and locally. Monitor your MySQL and PostgreSQL databases with a modern, responsive interface.
+A real-time web-based database monitoring system that focus on monitoring tables' data. You can use it for multiple databases, free and locally. Monitor your MySQL and PostgreSQL databases with a modern, responsive interface.
 
 ## Features
 
