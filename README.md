@@ -18,7 +18,7 @@ A real-time web-based database monitoring system that focus on monitoring tables
 ## Features
 
 - Real-time monitoring for MySQL and PostgreSQL databases, at any scale
-- Interactive schema visualization with relationships
+- Interactive schema visualization with relationships using Mermaid.js
 - Real-time data view with auto-refresh
 - Pause/Resume monitoring, configurable refresh rate
 - Light/dark mode, English/Korean language support
@@ -49,13 +49,6 @@ cd udbm
 ```bash
 pip install -r requirements.txt
 ```
-
-3. System dependencies (for Ubuntu/Debian):
-```bash
-sudo apt-get install graphviz graphviz-dev
-```
-
-For other systems, install GraphViz from [graphviz.org](https://graphviz.org/download/)
 
 ### (Optional) Testing with Sample Databases
 

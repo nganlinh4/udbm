@@ -6,7 +6,6 @@ import psycopg2.extras
 import time
 import logging
 import os
-import graphviz
 import json
 
 # Configure logging
@@ -672,35 +671,7 @@ def get_schema():
             cursor.close()
             connection.close()
 
-        # Create graphviz object with vertical layout
-        dot = graphviz.Digraph(comment='Database Schema')
-        dot.attr(rankdir='TB')
-        
-        # Calculate appropriate DPI based on schema size
-        table_count = len([t for t in tables.keys() if t not in IGNORED_TABLES])
-        total_columns = sum(len(columns) for columns in tables.values())
-        
-        # Base DPI on schema complexity
-        # For small schemas (few tables/columns), use higher DPI
-        if table_count <= 5:
-            dpi = '300'
-        elif table_count <= 10:
-            dpi = '250'
-        else:
-            dpi = '200'
-        
-        # Set DPI in graph attributes
-        dot.attr(dpi=dpi)
-        dot.attr('node', shape='record', fontsize='10')
-        dot.attr(splines='ortho')
-        dot.attr('edge', arrowhead='normal', labeldistance='1.0', labelangle='90', labelloc='c', fontsize='8', decorate='false')
-        
-        # Add graph-level attributes
-        dot.attr(nodesep='0.4')
-        dot.attr(ranksep='0.8')
-        dot.attr(concentrate='true')
-
-        # Define color palette to match the UI theme colors
+        # Define colors for tables
         theme_colors = [
             '#C5CAE9',  # theme-0 (Indigo)
             '#B2DFDB',  # theme-1 (Teal)
@@ -714,40 +685,7 @@ def get_schema():
             '#CFD8DC',  # theme-9 (Blue Grey)
         ]
 
-        # Add tables and columns with only table headers colored
-        for idx, (table_name, columns) in enumerate(tables.items()):
-            if table_name not in IGNORED_TABLES:
-                color = theme_colors[idx % len(theme_colors)]
-                
-                # Format columns with primary key indicator
-                column_strs = []
-                for col in columns:
-                    type_str = str(col['type']).split('COLLATE')[0].strip()
-                    pk_marker = ' (PK)' if col['is_primary'] else ''
-                    column_strs.append(f"{col['name']}{pk_marker} ({type_str})")
-                
-                # Create HTML-like label with colored header and white columns
-                label = f'''<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
-                    <TR><TD BGCOLOR="{color}">{table_name}</TD></TR>
-                    <TR><TD BGCOLOR="white" ALIGN="LEFT">{('<BR/>' + '  ').join(column_strs)}</TD></TR>
-                </TABLE>>'''
-
-                # Create node with HTML-like label
-                dot.node(table_name, label, shape='none')
-
-        # Add relationships
-        for rel in relationships:
-            if rel['from']['table'] in tables and rel['to']['table'] in tables:
-                label_html = f"""<<table border="0" cellborder="0" cellspacing="0" bgcolor="white">
-<tr><td bgcolor="white" style="padding: 2px 4px;">{rel['from']['column']} -&gt; {rel['to']['column']}</td></tr>
-</table>>"""
-                dot.edge(
-                    rel['from']['table'],
-                    rel['to']['table'],
-                    label=label_html
-                )
-
-        # Return the schema data directly
+        # Return the schema data for mermaid.js
         return jsonify({
             'tables': tables,
             'relationships': relationships,
