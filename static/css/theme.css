@@ -1,0 +1,385 @@
+[data-theme="dark"] {
+    /* Material Design 3 Dark Theme */
+    --md-sys-color-primary: #8dcdff;
+    --md-sys-color-on-primary: #003450;
+    --md-sys-color-surface: #191c1e;
+    --md-sys-color-surface-container: #1f2328;
+    --md-sys-color-on-surface: #e2e2e5;
+    --md-sys-color-outline: #8d9199;
+    --md-sys-color-surface-variant: #43474e;
+    --md-elevation-level1: 0px 1px 3px rgba(0, 0, 0, 0.5);
+    --md-elevation-level2: 0px 2px 6px rgba(0, 0, 0, 0.5);
+    --table-header-bg: #424242;
+    /* Dark theme table header background */
+    --toggle-button-bg: #616161;
+    /* Dark theme toggle button background */
+    --toggle-button-text: #ffffff;
+    /* Dark theme toggle button text */
+    /* Adjust colors for dark mode */
+    --theme-1-color: #FF8F00;
+    /* Darker Amber */
+    --theme-1-darker: #FF6F00;
+    --theme-2-color: #0277BD;
+    /* Darker Light Blue */
+    --theme-2-darker: #01579B;
+    --theme-3-color: #2E7D32;
+    /* Darker Green */
+    --theme-3-darker: #1B5E20;
+    /* Add more themes as needed */
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .table-button {
+    background-image: linear-gradient(to right, #2d2d2d, #353535, #2d2d2d);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .monitor-control {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+[data-theme="dark"] .dropdown-container {
+    background: var(--md-sys-color-surface-container);
+}
+
+[data-theme="dark"] .monitor-dropdown {
+    background-color: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface) !important;
+    border-color: var(--md-sys-color-outline);
+}
+
+[data-theme="dark"] .monitor-dropdown:hover {
+    background-color: var(--md-sys-color-surface-variant);
+}
+
+[data-theme="dark"] .table-title {
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .table-title span {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="dark"] .language-switcher {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+[data-theme="dark"] .switch-label {
+    color: var(--md-sys-color-on-surface);
+    opacity: 0.7;
+}
+
+[data-theme="dark"] .switch-label.language-active {
+    opacity: 1;
+    color: var(--md-sys-color-primary);
+}
+
+/* Glow effect for active elements in dark mode */
+[data-theme="dark"] .monitor-control:hover,
+[data-theme="dark"] .language-switcher:hover {
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 10px rgba(141, 205, 255, 0.1);
+}
+
+[data-theme="dark"] .monitor-dropdown:focus {
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 2px rgba(141, 205, 255, 0.2);
+}
+
+/* Dark theme danger state */
+[data-theme="dark"] .monitor-dropdown.danger {
+    color: #ff8a80 !important;
+    border-color: #ff8a80;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ff8a80' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .monitor-dropdown.danger:hover {
+    background-color: rgba(255, 138, 128, 0.08);
+}
+
+/* Add softer colors for dark mode */
+[data-theme="dark"] .connection-status {
+    background: linear-gradient(135deg,
+        rgba(26, 115, 232, 0.7),
+        rgba(138, 180, 248, 0.7)
+    );
+}
+
+[data-theme="dark"] .connection-status.connected {
+    background: linear-gradient(135deg,
+        rgba(15, 69, 30, 0.7),
+        rgba(59, 127, 102, 0.7)
+    );
+}
+
+[data-theme="dark"] .connection-status.disconnected {
+    border: #000000;
+    background: linear-gradient(135deg,
+        rgba(234, 67, 53, 0.7),
+        rgba(255, 177, 177, 0.7)
+    );
+}
+
+[data-theme="dark"] .schema-button {
+    background: linear-gradient(135deg,
+        rgba(16, 54, 103, 0.7),
+        rgba(48, 89, 155, 0.7)
+    );
+}
+
+/* Softer header colors for dark mode */
+[data-theme="dark"] .table-container.theme-0 thead tr {
+    background-color: rgba(63, 81, 181, 0.4);
+}
+
+[data-theme="dark"] .table-container.theme-1 thead tr {
+    background-color: rgba(0, 150, 136, 0.4);
+}
+
+[data-theme="dark"] .table-container.theme-2 thead tr {
+    background-color: rgba(233, 30, 99, 0.4);
+}
+
+[data-theme="dark"] .table-container.theme-3 thead tr {
+    background-color: rgba(255, 152, 0, 0.4);
+}
+
+[data-theme="dark"] .table-container.theme-4 thead tr {
+    background-color: rgba(76, 175, 80, 0.4);
+}
+
+[data-theme="dark"] .table-container.theme-5 thead tr {
+    background-color: rgba(156, 39, 176, 0.4);
+}
+
+[data-theme="dark"] .table-container.theme-6 thead tr {
+    background-color: rgba(3, 169, 244, 0.4);
+}
+
+[data-theme="dark"] .table-container.theme-7 thead tr {
+    background-color: rgba(255, 235, 59, 0.4);
+}
+
+[data-theme="dark"] .table-container.theme-8 thead tr {
+    background-color: rgba(121, 85, 72, 0.4);
+}
+
+[data-theme="dark"] .table-container.theme-9 thead tr {
+    background-color: rgba(96, 125, 139, 0.4);
+}
+
+/* Ensure text remains visible in dark mode */
+[data-theme="dark"] thead tr th {
+    color: var(--md-sys-color-on-surface);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Update toggle button colors for dark mode */
+[data-theme="dark"] .toggle-button.show {
+    background-image: linear-gradient(to right, rgba(26, 115, 232, 0.7), rgba(138, 180, 248, 0.7));
+    color: #fff;
+}
+
+[data-theme="dark"] .toggle-button.hide {
+    background-image: linear-gradient(to right, rgba(38, 38, 38, 0.7), rgba(55, 55, 55, 0.7));
+    color: #e0e0e0;
+}
+
+/* Even darker header colors for dark mode */
+[data-theme="dark"] .table-container.theme-0 thead tr {
+    background-color: rgba(63, 81, 181, 0.2);
+}
+
+[data-theme="dark"] .table-container.theme-1 thead tr {
+    background-color: rgba(0, 150, 136, 0.2);
+}
+
+[data-theme="dark"] .table-container.theme-2 thead tr {
+    background-color: rgba(233, 30, 99, 0.2);
+}
+
+[data-theme="dark"] .table-container.theme-3 thead tr {
+    background-color: rgba(255, 152, 0, 0.2);
+}
+
+[data-theme="dark"] .table-container.theme-4 thead tr {
+    background-color: rgba(76, 175, 80, 0.2);
+}
+
+[data-theme="dark"] .table-container.theme-5 thead tr {
+    background-color: rgba(156, 39, 176, 0.2);
+}
+
+[data-theme="dark"] .table-container.theme-6 thead tr {
+    background-color: rgba(3, 169, 244, 0.2);
+}
+
+[data-theme="dark"] .table-container.theme-7 thead tr {
+    background-color: rgba(255, 235, 59, 0.2);
+}
+
+[data-theme="dark"] .table-container.theme-8 thead tr {
+    background-color: rgba(121, 85, 72, 0.2);
+}
+
+[data-theme="dark"] .table-container.theme-9 thead tr {
+    background-color: rgba(96, 125, 139, 0.2);
+}
+
+/* Theme-specific toggle button colors for dark mode */
+[data-theme="dark"] .toggle-button.hide.theme-0 {
+    background-image: linear-gradient(339deg, #3949ab, #5c6bc0);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-1 {
+    background-image: linear-gradient(339deg, #00897b, #26a69a);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-2 {
+    background-image: linear-gradient(339deg, #c2185b, #d81b60);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-3 {
+    background-image: linear-gradient(339deg, #f57c00, #fb8c00);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-4 {
+    background-image: linear-gradient(339deg, #388e3c, #43a047);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-5 {
+    background-image: linear-gradient(339deg, #7b1fa2, #8e24aa);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-6 {
+    background-image: linear-gradient(339deg, #0288d1, #039be5);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-7 {
+    background-image: linear-gradient(339deg, #fbc02d, #fdd835);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-8 {
+    background-image: linear-gradient(339deg, #795548, #8d6e63);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-9 {
+    background-image: linear-gradient(339deg, #546e7a, #607d8b);
+    color: #e0e0e0;
+}
+
+.table-section.theme-1 .toggle-button.active {
+    background-color: var(--theme-1-darker);
+}
+
+.table-section.theme-1 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: var(--theme-1-color);
+}
+
+.table-section.theme-1 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: var(--theme-1-darker);
+}
+
+
+.table-section.theme-2 .toggle-button.active {
+    background-color: var(--theme-2-darker);
+}
+
+.table-section.theme-2 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: var(--theme-2-color);
+}
+
+.table-section.theme-2 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: var(--theme-2-darker);
+}
+
+
+.table-section.theme-3 .toggle-button.active {
+    background-color: var(--theme-3-darker);
+}
+
+.table-section.theme-3 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: var(--theme-3-color);
+}
+
+.table-section.theme-3 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: var(--theme-3-darker);
+}
+
+/* Add more themes as needed */
+
+/* Update toggle button styles for both light and dark mode */
+.toggle-button.show {
+    background-image: linear-gradient(to left, #1a73e8, #8ab4f8);
+    color: white;
+}
+
+[data-theme="dark"] .toggle-button.show {
+    background-image: linear-gradient(to right, rgba(8, 68, 147, 0.7), rgba(7, 36, 83, 0.7));
+    color: white;
+}
+
+/* Keep the hide button styles as they are */
+[data-theme="dark"] .toggle-button.hide.theme-0 {
+    background-image: linear-gradient(339deg, #3949ab, #5c6bc0);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-1 {
+    background-image: linear-gradient(339deg, #00897b, #26a69a);
+    color: #e0e0e0;
+}
+[data-theme="dark"] .toggle-button.hide.theme-2 {
+    background-image: linear-gradient(339deg, #c2185b, #d81b60);
+    color: #e0e0e0;
+}
+[data-theme="dark"] .toggle-button.hide.theme-3 {
+    background-image: linear-gradient(339deg, #f57c00, #fb8c00);
+    color: #e0e0e0;
+}
+[data-theme="dark"] .toggle-button.hide.theme-4 {
+    background-image: linear-gradient(339deg, #388e3c, #43a047);
+    color: #e0e0e0;
+}
+[data-theme="dark"] .toggle-button.hide.theme-5 {
+    background-image: linear-gradient(339deg, #7b1fa2, #8e24aa);
+    color: #e0e0e0;
+}
+[data-theme="dark"] .toggle-button.hide.theme-6 {
+    background-image: linear-gradient(339deg, #0288d1, #039be5);
+    color: #e0e0e0;
+}
+[data-theme="dark"] .toggle-button.hide.theme-7 {
+    background-image: linear-gradient(339deg, #fbc02d, #fdd835);
+    color: #e0e0e0;
+}
+[data-theme="dark"] .toggle-button.hide.theme-8 {
+    background-image: linear-gradient(339deg, #795548, #8d6e63);
+    color: #e0e0e0;
+}
+[data-theme="dark"] .toggle-button.hide.theme-9 {
+    background-image: linear-gradient(339deg, #546e7a, #607d8b);
+    color: #e0e0e0;
+}
+
+/* Prevent revealing elements on hover over the show button */
+.toggle-button.show:hover {
+    /* Remove or adjust styles that cause the reveal */
+    /* Example: Remove any transform or display changes */
+    /* transform: none; */
+    /* display: block; */
+    /* Add desired hover styles */
+    opacity: 0.9;
+}

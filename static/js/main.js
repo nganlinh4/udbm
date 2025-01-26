@@ -1,0 +1,1262 @@
+import { 
+    setCookie, 
+    getCookie,
+    isDarkMode,
+    initializeTheme,
+    translations,
+    getCurrentLanguage,
+    initializeLanguage,
+    updateLanguage,
+    updateStaticLanguageElements,
+    checkConnection,
+    connectionAttempts
+} from './utils.js';
+import { createNewTable, updateSingleTable, fetchTableData, fetchTableCount, adjustColumnWidths } from './table.js';
+
+// Constants
+const baseUrl = window.location.origin;
+
+// Export it for use in other modules
+export { baseUrl };
+
+// Global variables
+let previousData = {};
+let tableNames = [];
+let tableOffsets = {};
+let fetchError = false;
+
+// Add new global variables for monitor interval
+let monitorInterval = 5000; // Default monitor interval of 5 seconds
+let monitorIntervalId = null; // Store interval ID
+
+// Add new global variable
+let isMonitoringPaused = false;
+
+// Add new globals
+let wasMonitoringActive = false;
+
+// Declare tableChunks and isLoading
+let tableChunks = {};
+let isLoading = {};
+
+function showError(message) {
+    document.getElementById('error-message').innerText = message;
+    document.getElementById('error-message').style.display = 'block';
+}
+
+function hideError() {
+    document.getElementById('error-message').style.display = 'none';
+}
+
+function updateTablesIfChanged(newData) {
+    Object.keys(newData).forEach(tableName => {
+        if (!previousData[tableName] || JSON.stringify(newData[tableName].data) !== JSON.stringify(previousData[tableName].data)) {
+            updateSingleTable(tableName, newData[tableName], translations, getCurrentLanguage(), fetchTableData);
+        }
+    });
+    previousData = JSON.parse(JSON.stringify(newData));
+}
+
+function updateConnectionStatus() {
+    const status = document.getElementById('connection-status');
+    const isNoDatabase = status.classList.contains('no-database');
+    const isConnected = status.classList.contains('connected');
+    const isDisconnected = status.classList.contains('disconnected');
+    
+    // Keep existing classes to maintain state
+    status.className = 'connection-status';
+    if (isNoDatabase) status.classList.add('no-database');
+    if (isConnected) status.classList.add('connected');
+    if (isDisconnected) status.classList.add('disconnected');
+
+    let statusText;
+    if (isNoDatabase) {
+        statusText = translations[getCurrentLanguage()].noDatabase;
+    } else if (isConnected) {
+        statusText = translations[getCurrentLanguage()].connected;
+    } else {
+        statusText = `${translations[getCurrentLanguage()].disconnected} ${translations[getCurrentLanguage()].attemptPrefix}${connectionAttempts}${translations[getCurrentLanguage()].attemptSuffix}`;
+    }
+
+    status.innerHTML = `
+        <span class="lang-ko" style="display: ${getCurrentLanguage() === 'ko' ? 'inline' : 'none'}">${statusText}</span>
+        <span class="lang-en" style="display: ${getCurrentLanguage() === 'en' ? 'inline' : 'none'}">${statusText}</span>
+    `;
+}
+
+function loadTableStates() {
+    const tableElements = document.querySelectorAll('.table-container');
+    tableNames = Array.from(tableElements).map(el => el.id);
+
+    // Phase 1: Initialize all tables as hidden first
+    tableNames.forEach(tableName => {
+        const container = document.getElementById(tableName);
+        const button = container.previousElementSibling.querySelector('.toggle-button');
+        const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
+
+        // Initially hide all tables
+        container.classList.add('hidden-table');
+        button.classList.remove('hide');
+        button.classList.add('show');
+        updateToggleButtonText(button, true);
+        limitedInfoSpan.textContent = '';
+        limitedInfoSpan.classList.remove('visible');
+
+        // Apply theme class to the button
+        const themeClass = container.className.match(/theme-\d+/)[0];
+        button.classList.add(themeClass);
+
+        container.classList.add('initialized');
+        
+        // Always fetch table count
+        fetchTableCount(tableName, baseUrl, translations, getCurrentLanguage());
+    });
+
+    // Phase 2: After a brief delay, simulate clicking for previously visible tables
+    setTimeout(() => {
+        tableNames.forEach(tableName => {
+            const currentDb = getCurrentDatabaseKey();
+            if (currentDb) {
+                const state = getCookie(`table_${currentDb}_${tableName}`);
+                if (state === 'visible') {
+                    toggleTable(tableName);
+                }
+            }
+        });
+    }, 100); // Small delay to ensure initial state is properly set
+
+    document.body.classList.add('loaded');
+}
+
+function saveTableOrder() {
+    const currentDb = getCurrentDatabaseKey();
+    if (!currentDb) return;
+
+    const tableOrder = Array.from(document.querySelectorAll('.table-section'))
+        .map(section => section.dataset.tableName);
+    setCookie(`tableOrder_${currentDb}`, JSON.stringify(tableOrder), 365);
+}
+
+function loadTableOrder() {
+    const currentDb = getCurrentDatabaseKey();
+    if (!currentDb) return;
+
+    const orderCookie = getCookie(`tableOrder_${currentDb}`);
+    if (!orderCookie) return;
+
+    try {
+        const order = JSON.parse(orderCookie);
+        const container = document.getElementById('tables-container');
+        const sections = Array.from(document.querySelectorAll('.table-section'));
+
+        sections.sort((a, b) => {
+            const aIndex = order.indexOf(a.dataset.tableName);
+            const bIndex = order.indexOf(b.dataset.tableName);
+            return aIndex - bIndex;
+        });
+
+        sections.forEach(section => container.appendChild(section));
+    } catch (error) {
+        console.error('Error loading table order:', error);
+    }
+}
+
+function updateDropdownOptions() {
+    const dropdown = document.getElementById('monitorDropdown');
+    dropdown.querySelectorAll('option').forEach(option => {
+        // Remove any existing units first
+        const baseValue = option.textContent.replace(/[초s]/g, '').trim();
+        option.textContent = `${baseValue}${translations[getCurrentLanguage()].timeUnit}`;
+    });
+}
+
+function updateDynamicElements() {
+    // Update all dynamic elements at once
+    document.querySelectorAll('.toggle-button').forEach(button => {
+        const isHidden = button.closest('.table-section').querySelector('.table-container').classList.contains('hidden-table');
+        updateToggleButtonText(button, isHidden);
+    });
+
+    // Update row counts
+    document.querySelectorAll('[id$="_count"]').forEach(countSpan => {
+        const count = countSpan.textContent.match(/\d+/);
+        if (count) {
+            countSpan.textContent = `(${count[0]} ${translations[getCurrentLanguage()].rows})`;
+        }
+    });
+
+    // Update tooltips and info spans
+    document.querySelectorAll('[id$="_limited_info"]').forEach(span => {
+        if (!span.textContent) return;
+
+        const isScrollMore = span.textContent.includes(translations.ko.scrollMore) ||
+            span.textContent.includes(translations.en.scrollMore);
+        const text = isScrollMore ? translations[getCurrentLanguage()].scrollMore : translations[getCurrentLanguage()].allDataLoaded;
+        span.innerHTML = `<span class="lang-${getCurrentLanguage()}" style="display: inline">${text}</span>`;
+    });
+
+    // Update empty table messages
+    document.querySelectorAll('.table-container p').forEach(p => {
+        if (p.textContent.includes(translations.ko.noData) ||
+            p.textContent.includes(translations.en.noData)) {
+            p.innerHTML = `<span class="lang-${getCurrentLanguage()}" style="display: inline">${translations[getCurrentLanguage()].noData}</span>`;
+        }
+    });
+}
+
+// Add new helper function for button text updates
+function updateToggleButtonText(button, isHidden) {
+    button.innerHTML = `
+        <span class="lang-ko" style="display: ${getCurrentLanguage() === 'ko' ? 'inline' : 'none'}">${translations.ko[isHidden ? 'show' : 'hide']}</span>
+        <span class="lang-en" style="display: ${getCurrentLanguage() === 'en' ? 'inline' : 'none'}">${translations.en[isHidden ? 'show' : 'hide']}</span>
+    `;
+}
+
+// Modify the startMonitoring function
+function startMonitoring() {
+    if (monitorIntervalId) {
+        clearInterval(monitorIntervalId);
+    }
+
+    if (window.isMonitoringPaused) return;
+
+    // Immediately check connection when monitoring starts/resumes
+    checkConnection(baseUrl, updateConnectionStatus);
+
+    // Add storage for previous counts
+    const previousCounts = {};
+
+    monitorIntervalId = setInterval(async () => {
+        // Check connection status first
+        const connectionResult = await checkConnection(baseUrl, updateConnectionStatus);
+        if (!connectionResult) {
+            return; // Skip data fetching if connection is down
+        }
+
+        // Update all table counts only if connected
+        tableNames.forEach(tableName => {
+            fetchTableCount(tableName, baseUrl, translations, getCurrentLanguage())
+                .then(newCount => {
+                    const oldCount = previousCounts[tableName];
+                    
+                    if (oldCount !== undefined && newCount !== oldCount) {
+                        const delta = newCount - oldCount;
+                        
+                        // Update table row count
+                        const countSpan = document.getElementById(`${tableName}_count`);
+                        if (!countSpan.classList.contains('table-row-count')) {
+                            countSpan.className = 'table-row-count';
+                        }
+                        
+                        // Update pill count
+                        const buttonCount = document.getElementById(`${tableName}_button_count`);
+                        const pillWrapper = buttonCount.closest('.pill-count-wrapper') || createPillWrapper(buttonCount);
+                        if (!buttonCount.classList.contains('pill-count')) {
+                            buttonCount.className = 'pill-count';
+                        }
+                        
+                        // Add delta indicators
+                        [countSpan, buttonCount].forEach(element => {
+                            const deltaPopup = document.createElement('span');
+                            deltaPopup.className = `count-delta ${delta > 0 ? 'positive' : 'negative'}`;
+                            deltaPopup.textContent = `${delta > 0 ? '+' : ''}${delta}`;
+                            
+                            const container = element.closest('.table-row-count, .pill-count-wrapper');
+                            const existingDelta = container.querySelector('.count-delta');
+                            if (existingDelta) {
+                                existingDelta.remove();
+                            }
+                            
+                            container.appendChild(deltaPopup);
+                            
+                            // Trigger animation
+                            element.classList.remove('count-update');
+                            void element.offsetWidth;
+                            element.classList.add('count-update');
+                        });
+
+                        // Cleanup
+                        setTimeout(() => {
+                            document.querySelectorAll(`#${tableName}_count, #${tableName}_button_count`)
+                                .forEach(el => el.classList.remove('count-update'));
+                        }, 1500);
+                    }
+                    
+                    previousCounts[tableName] = newCount;
+                });
+        });
+
+        // Then update content only for visible tables
+        const visibleTables = document.querySelectorAll('.table-container:not(.hidden-table)');
+        visibleTables.forEach(tableContainer => {
+            const tableName = tableContainer.id;
+            fetchTableData(
+                tableName, 
+                false, 
+                baseUrl, 
+                translations, 
+                getCurrentLanguage(), 
+                updateSingleTable
+            );
+        });
+    }, monitorInterval);
+
+    updateClockAnimation();
+}
+
+function createPillWrapper(buttonCount) {
+    const wrapper = document.createElement('span');
+    wrapper.className = 'pill-count-wrapper';
+    buttonCount.parentNode.insertBefore(wrapper, buttonCount);
+    wrapper.appendChild(buttonCount);
+    return wrapper;
+}
+
+// Add new function to handle pause/resume
+function toggleMonitoring() {
+    const pauseButton = document.getElementById('pauseButton');
+    const pauseIcon = pauseButton.querySelector('.pause-icon');
+    const playIcon = pauseButton.querySelector('.play-icon');
+    const clockHand = document.querySelector('.clock-hand');
+    
+    window.isMonitoringPaused = !window.isMonitoringPaused;
+    
+    if (window.isMonitoringPaused) {
+        pauseIcon.style.display = 'none';
+        playIcon.style.display = 'inline';
+        pauseButton.classList.add('paused');
+        if (monitorIntervalId) {
+            clearInterval(monitorIntervalId);
+            monitorIntervalId = null;
+        }
+        if (clockHand) {
+            clockHand.style.animationPlayState = 'paused';
+        }
+    } else {
+        pauseIcon.style.display = 'inline';
+        playIcon.style.display = 'none';
+        pauseButton.classList.remove('paused');
+        if (clockHand) {
+            clockHand.style.animationPlayState = 'running';
+        }
+
+        // Get all tables with historical data
+        const hasOldData = Object.keys(tableChunks).some(tn => tableChunks[tn].end > 50);
+        if (hasOldData) {
+            // Scroll all tables to top when resuming with historical data
+            const visibleTables = document.querySelectorAll('.table-container:not(.hidden-table)');
+            visibleTables.forEach(container => {
+                const wrapper = container.querySelector('.table-scroll-wrapper');
+                if (wrapper) {
+                    wrapper.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        }
+        
+        startMonitoring();
+    }
+}
+
+// Make toggleMonitoring globally available
+window.toggleMonitoring = toggleMonitoring;
+
+// Add new function to snap slider value to predefined steps
+function snapToStep(value) {
+    const steps = [500, 600, 700, 800, 900, 1000,
+        1250, 1500, 1750, 2000, 3000, 4000, 5000,
+        7500, 10000, 20000, 60000];
+
+    return steps.reduce((prev, curr) => {
+        return Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev;
+    });
+}
+
+function updateClockAnimation() {
+    const clockHand = document.querySelector('.clock-hand');
+    const clockIcon = document.querySelector('.clock-icon');
+    if (clockHand) {
+        clockHand.style.animationDuration = `${monitorInterval / 1000}s`;
+
+        // Update pause button class to ensure CSS selector works
+        const pauseButton = document.querySelector('.pause-button');
+        if (window.isMonitoringPaused) {
+            pauseButton.classList.add('paused');
+        } else {
+            pauseButton.classList.remove('paused');
+        }
+
+        // Remove previous event listeners to prevent duplicates
+        clockHand.removeEventListener('animationiteration', handleClockEffect);
+
+        // Add event listener for when the hand completes a full rotation
+        clockHand.addEventListener('animationiteration', handleClockEffect);
+    }
+}
+
+function handleClockEffect() {
+    const clockIcon = document.querySelector('.clock-icon');
+    if (clockIcon) {
+        // Add the effect class to trigger the heartbeat or color-blink animation
+        clockIcon.classList.add('effect');
+
+        // Remove the effect after the animation completes
+        setTimeout(() => {
+            clockIcon.classList.remove('effect');
+        }, 500); // Duration matches the heartbeat animation duration
+    }
+}
+
+function toggleTable(tableName) {
+    const container = document.getElementById(tableName);
+    const button = container.previousElementSibling.querySelector('.toggle-button');
+    const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
+    const currentLang = getCurrentLanguage();  // Get current language
+
+    // Add transition class before toggling
+    container.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
+    const isHidden = container.classList.toggle('hidden-table');
+    updateToggleButtonText(button, isHidden); // Use the updated toggle-specific function
+    button.classList.toggle('show', isHidden);
+    button.classList.toggle('hide', !isHidden);
+
+    // Apply theme class to the button
+    const themeClass = container.className.match(/theme-\d+/)[0];
+    button.classList.forEach(cls => {
+        if (cls.startsWith('theme-')) {
+            button.classList.remove(cls);
+        }
+    });
+    button.classList.add(themeClass);
+
+    const currentDb = getCurrentDatabaseKey();
+    if (currentDb) {
+        setCookie(`table_${currentDb}_${tableName}`, isHidden ? 'hidden' : 'visible', 365);
+    }
+
+    if (isHidden) {
+        // If we're hiding the table and monitoring was paused, resume it
+        if (window.isMonitoringPaused) {
+            window.toggleMonitoring();
+        }
+        
+        // Reset chunk tracking when hiding table
+        delete tableChunks[tableName];
+        // Add hiding class for slide-out animation
+        limitedInfoSpan.classList.add('hiding');
+        limitedInfoSpan.classList.remove('visible');
+
+        // Wait for animation to complete before removing text
+        setTimeout(() => {
+            limitedInfoSpan.textContent = '';
+            limitedInfoSpan.classList.remove('hiding');
+        }, 300); // Match the transition duration
+
+        // Use requestAnimationFrame for smooth cleanup
+        const handleTransitionEnd = () => {
+            if (isHidden) {
+                container.innerHTML = '';
+                delete previousData[tableName];
+                delete tableOffsets[tableName];
+            }
+            container.removeEventListener('transitionend', handleTransitionEnd);
+        };
+
+        container.addEventListener('transitionend', handleTransitionEnd);
+    } else {
+        // Initialize chunk tracking when showing table
+        tableChunks[tableName] = {
+            start: 0,
+            end: 50
+        };
+
+        // Pass baseUrl when calling fetchTableData
+        fetchTableData(tableName, false, baseUrl, translations, getCurrentLanguage(), 
+            (tName, tInfo, trans, lang, fetchFn) => {
+                const limitedInfoSpan = document.getElementById(`${tName}_limited_info`);
+                if (limitedInfoSpan) {
+                    if (tInfo.limited) {
+                        limitedInfoSpan.innerHTML = `
+                            <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.scrollMore}</span>
+                            <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.scrollMore}</span>
+                        `;
+                    } else {
+                        limitedInfoSpan.innerHTML = `
+                            <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.allDataLoaded}</span>
+                            <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.allDataLoaded}</span>
+                        `;
+                    }
+                    limitedInfoSpan.classList.add('visible');
+                }
+                updateSingleTable(tName, tInfo, trans, lang, fetchFn, baseUrl);
+            }
+        ).then(() => {
+            const tableDiv = document.getElementById(tableName);
+            const tableElement = tableDiv.querySelector('table');
+            if (tableElement) {
+                adjustColumnWidths(tableElement);
+            }
+            requestAnimationFrame(() => {
+                container.classList.add('expanded');
+            });
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const initialSetup = document.getElementById('initial-setup');
+    const mainInterface = document.getElementById('main-interface');
+    
+    // Add loaded class immediately to make content visible
+    document.body.classList.add('loaded');
+    
+    // First fetch current database state
+    fetch(`${baseUrl}/api/database`)
+        .then(response => response.json())
+        .then(config => {
+            if (!config.database) {
+                // Show initial setup screen
+                initialSetup.style.display = 'flex';
+                mainInterface.style.display = 'none';
+                
+                // Get the existing form
+                const form = document.querySelector('.setup-form-container form');
+                const typeSelect = form.querySelector('select[name="type"]');
+                let config = { type: typeSelect.value }; // Initialize config with selected type
+
+                // Handle type selection changes
+                typeSelect.addEventListener('change', () => {
+                    config.type = typeSelect.value;
+                });
+
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    // Merge formData into config
+                    for (let [key, value] of formData.entries()) {
+                        config[key] = value;
+                    }
+
+                    try {
+                        const response = await fetch(`${baseUrl}/api/database`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(config)
+                        });
+                        
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            const error = await response.json();
+                            throw new Error(error.message);
+                        }
+                    } catch (error) {
+                        // Show error message
+                        let errorDiv = form.querySelector('.db-error');
+                        if (!errorDiv) {
+                            errorDiv = document.createElement('div');
+                            errorDiv.className = 'db-error';
+                            form.insertBefore(errorDiv, form.firstChild);
+                        }
+                        errorDiv.textContent = error.message;
+                    }
+                });
+            } else {
+                // Show main interface and initialize
+                initialSetup.style.display = 'none';
+                mainInterface.style.display = 'block';
+                loadTableStates();
+                checkConnection(baseUrl, updateConnectionStatus);
+            }
+        });
+    
+    new Sortable(document.getElementById('tables-container'), {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        onEnd: function () {
+            saveTableOrder();
+        }
+    });
+
+    loadTableOrder();
+
+    initializeLanguage(updateLanguage, updateStaticLanguageElements, updateDynamicElements, updateDropdownOptions, updateConnectionStatus);
+
+    // Add dropdown initialization
+    const dropdown = document.getElementById('monitorDropdown');
+    const warningPopup = document.getElementById('warningPopup');
+    let warningTimeout;
+
+    function updateDropdownDangerState(milliseconds) {
+        if (milliseconds < 2000) {
+            dropdown.classList.add('danger');
+        } else {
+            dropdown.classList.remove('danger');
+        }
+    }
+
+    function showWarning() {
+        const warningPopup = document.getElementById('warningPopup');
+        requestAnimationFrame(() => {
+            warningPopup.classList.add('show');
+            clearTimeout(window.warningTimeout);
+            window.warningTimeout = setTimeout(() => {
+                warningPopup.classList.remove('show');
+            }, 2000);
+        });
+    }
+
+    dropdown.addEventListener('change', (e) => {
+        const milliseconds = parseInt(e.target.value);
+        const seconds = (milliseconds / 1000).toFixed(milliseconds >= 1000 ? 1 : 1);
+
+        updateDropdownDangerState(milliseconds);
+
+        if (milliseconds < 2000) {
+            showWarning();
+        } else {
+            warningPopup.classList.remove('show');
+            clearTimeout(warningTimeout);
+        }
+
+        monitorInterval = milliseconds;
+        setCookie('monitor_interval', monitorInterval, 365);
+        startMonitoring();
+        updateClockAnimation();
+    });
+
+    // Remove or modify the old savedInterval loading code
+    const savedInterval = getCookie('monitor_interval');
+    if (savedInterval) {
+        monitorInterval = parseInt(savedInterval);
+    } else {
+        // Set default if no saved interval exists
+        monitorInterval = 5000;
+        setCookie('monitor_interval', monitorInterval, 365);
+    }
+
+    // Always set both the dropdown value and the actual interval to 5000ms
+    dropdown.value = '5000';
+    monitorInterval = 5000;
+
+    // Initialize danger class based on current value
+    updateDropdownDangerState(monitorInterval);
+
+    // Restart monitoring with new interval
+    startMonitoring();
+    updateClockAnimation();
+
+    // Add pause button handler
+    const pauseButton = document.getElementById('pauseButton');
+    pauseButton.addEventListener('click', toggleMonitoring);
+
+    initializeTheme();
+
+    // Expose toggleTable to global scope
+    window.toggleTable = toggleTable;
+    window.baseUrl = baseUrl;
+
+    // Add after other initializations in DOMContentLoaded
+    function initializeDatabaseSwitcher() {
+        const dbSwitchButton = document.getElementById('dbSwitchButton');
+        const dbMenu = document.getElementById('dbMenu');
+        const addDbButton = document.getElementById('addDbButton');
+        const dbList = document.querySelector('.db-list');
+        let isFormOpen = false;
+        
+        // Load saved databases from cookie with proper encoding/decoding
+        const savedConfigs = (() => {
+            try {
+                const configStr = getCookie('db_configs');
+                return configStr ? JSON.parse(decodeURIComponent(configStr)) : {};
+            } catch (e) {
+                console.warn('Failed to parse saved database configs:', e);
+                return {};
+            }
+        })();
+        
+        const currentDb = document.querySelector('.current-db');
+        
+        // Update currentDb display for no configuration
+        if (!Object.keys(savedConfigs).length) {
+            currentDb.textContent = 'No Database Connected';
+            currentDb.style.color = '#999';
+            // Show the add database form immediately and disable close on click outside
+            dbMenu.classList.add('show', 'force-show');
+            showAddDatabaseForm();
+        }
+
+        // Handle force-show class for the database menu
+        document.addEventListener('click', (e) => {
+            if (dbMenu.classList.contains('force-show')) {
+                e.stopPropagation();  // Prevent closing when force-show is active
+                return;
+            }
+        }, true);  // Use capture phase to handle click before other listeners
+        
+        function showAddDatabaseForm() {
+            isFormOpen = true;
+            updateAddButtonState(true);
+            dbList.innerHTML = `
+            <form class="db-form material-form">
+                <div class="form-group db-type-group">
+                    <div class="db-type-switch-container">
+                        <span class="switch-label mysql active">MySQL</span>
+                        <label class="switch">
+                            <input type="checkbox" name="type" value="postgresql">
+                            <span class="switch-slider material"></span>
+                        </label>
+                        <span class="switch-label postgresql">PostgreSQL</span>
+                    </div>
+                    <div class="db-type-help">
+                        <small>Choose your database type</small>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="host" id="host" required placeholder=" ">
+                    <label for="host">Host</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="user" id="user" required placeholder=" ">
+                    <label for="user">User</label>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="password" id="password" required placeholder=" ">
+                    <label for="password">Password</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="database" id="database" required placeholder=" ">
+                    <label for="database">Database</label>
+                </div>
+                    <button type="submit" class="add-db-button">
+                        <span class="lang-ko">추가</span>
+                        <span class="lang-en">Add</span>
+                    </button>
+                </form>
+            `;
+            
+            const form = dbList.querySelector('form');
+            // Handle type switch click events
+            const typeSwitch = form.querySelector('input[name="type"]');
+            const switchSlider = form.querySelector('.switch-slider');
+            const switchContainer = form.querySelector('.db-type-switch-container');
+
+            // Only add event listeners if elements exist
+            if (switchContainer && typeSwitch) {
+                // Add click handler for the entire switch container
+                switchContainer.addEventListener('click', (e) => {
+                    // Toggle switch regardless of where it was clicked within the container
+                    typeSwitch.checked = !typeSwitch.checked;
+                    // Trigger change event to update styles
+                    typeSwitch.dispatchEvent(new Event('change'));
+                });
+            }
+
+            // Prevent double-triggering when clicking the actual checkbox
+            typeSwitch.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            // Handle form submission
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                const config = Object.fromEntries(formData);
+                
+                // Set the type based on switch state
+                const type = typeSwitch.checked ? 'postgresql' : 'mysql';
+                
+                // Add the type to the config and save
+                const fullConfig = {
+                    ...config,
+                    type // Explicitly set the type field
+                };
+                const configKey = `${fullConfig.host}/${fullConfig.database}`;
+                savedConfigs[configKey] = fullConfig;
+                setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
+                
+                // Show the updated list before switching
+                updateDbList();
+                isFormOpen = false;
+                updateAddButtonState(false);
+                
+                // Switch to the new database
+                switchDatabase(config);
+            });
+        }
+
+        function updateDbList() {
+            dbList.innerHTML = '';
+            const entries = Object.entries(savedConfigs);
+            
+            if (entries.length === 0) {
+                showAddDatabaseForm();
+                // Clear server-side state when no databases remain
+                fetch(`${baseUrl}/api/database`, { method: 'DELETE' })
+                    .then(() => {
+                        currentDb.textContent = 'No Database Connected';
+                        currentDb.style.color = '#999';
+                        location.reload(); // Refresh to clear all data
+                    });
+                return;
+            }
+            
+            entries.forEach(([key, config]) => {
+                const item = document.createElement('div');
+                item.className = 'db-item';
+                
+                const contentSpan = document.createElement('span');
+                contentSpan.className = 'db-item-content';
+                const dbType = config.type || (config.database.includes('postgres') ? 'postgresql' : 'mysql');
+                contentSpan.innerHTML = `${config.database} (${config.host}) <span class="db-type-badge db-type-${dbType.toLowerCase()}">${dbType === 'postgresql' ? 'PostgreSQL' : 'MySQL'}</span>`;
+                contentSpan.addEventListener('click', () => switchDatabase(config));
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-db';
+                deleteBtn.innerHTML = '×';
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    delete savedConfigs[key];
+                    
+                    // If this was the last database
+                    if (Object.keys(savedConfigs).length === 0) {
+                        setCookie('db_configs', '', -1); // Clear cookie
+                        await fetch(`${baseUrl}/api/database`, { method: 'DELETE' });
+                        location.reload(); // Refresh page to reset state
+                    } else {
+                        setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
+                        updateDbList();
+                    }
+                });
+                
+                item.appendChild(contentSpan);
+                item.appendChild(deleteBtn);
+                dbList.appendChild(item);
+            });
+        }
+        
+        function switchDatabase(config) {
+            const dbList = document.querySelector('.db-list');
+            dbList.innerHTML = '<div class="db-loading">Connecting...</div>';
+            
+            // Add the database type to the config if it's not already present
+            const dbConfig = {
+                ...config,
+                type: config.type || (config.database.includes('postgres') ? 'postgresql' : 'mysql')
+            };
+            
+            fetch(`${baseUrl}/api/database`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dbConfig)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const newConfigs = { ...savedConfigs };
+                    const configKey = `${config.host}/${config.database}`;
+                    newConfigs[configKey] = config;
+                    
+                    setCookie('db_configs', encodeURIComponent(JSON.stringify(newConfigs)), 365);
+                    location.reload();
+                } else {
+                    throw new Error(data.message || 'Failed to connect to database');
+                }
+            })
+            .catch(error => {
+                dbList.innerHTML = `<div class="db-error">${error.message}</div>`;
+                setTimeout(updateDbList, 2000);
+            });
+        }
+        
+        // Toggle menu
+        dbSwitchButton.addEventListener('click', () => {
+            dbMenu.classList.toggle('show');
+            if (dbMenu.classList.contains('show')) {
+                updateDbList();
+                isFormOpen = false;
+            }
+        });
+        
+        // Add new button state management
+        function updateAddButtonState(isFormOpen) {
+            const addBtn = document.getElementById('addDbButton');
+            const addText = addBtn.querySelector('.add-text');
+            const backText = addBtn.querySelector('.back-text');
+
+            if (isFormOpen) {
+                addBtn.classList.add('back');
+                addText.style.display = 'none';
+                backText.style.display = 'block';
+            } else {
+                addBtn.classList.remove('back');
+                addText.style.display = 'block';
+                backText.style.display = 'none';
+            }
+        }
+
+        // Add new database
+        addDbButton.addEventListener('click', () => {
+            if (isFormOpen) {
+                updateDbList();
+                isFormOpen = false;
+                updateAddButtonState(false);
+                return;
+            }
+            
+            isFormOpen = true;
+            updateAddButtonState(true);
+            dbList.innerHTML = `
+                <form class="db-form">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select name="type" required>
+                            <option value="mysql">MySQL</option>
+                            <option value="postgresql">PostgreSQL</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Host</label>
+                        <input type="text" name="host" required>
+                    </div>
+                    <div class="form-group">
+                        <label>User</label>
+                        <input type="text" name="user" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Database</label>
+                        <input type="text" name="database" required>
+                    </div>
+                    <button type="submit" class="add-db-button">
+                        <span class="lang-ko">추가</span>
+                        <span class="lang-en">Add</span>
+                    </button>
+                </form>
+            `;
+            
+            const form = dbList.querySelector('form');
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                const config = Object.fromEntries(formData);
+                
+                const fullConfig = {
+                    ...config,
+                    type: config.type || 'mysql' // Default to MySQL if somehow missing
+                };
+                const configKey = `${fullConfig.host}/${fullConfig.database}`;
+                savedConfigs[configKey] = fullConfig;
+                setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
+                
+                // Show the updated list before switching
+                updateDbList();
+                isFormOpen = false;
+                updateAddButtonState(false);
+                
+                // Switch to the new database
+                switchDatabase(config);
+            });
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!dbMenu.contains(e.target) && !dbSwitchButton.contains(e.target)) {
+                dbMenu.classList.remove('show');
+                if (isFormOpen) {
+                    updateDbList();
+                    isFormOpen = false;
+                    updateAddButtonState(false);
+                }
+            }
+        });
+        
+        // Load current database info
+        fetch(`${baseUrl}/api/database`)
+            .then(response => response.json())
+            .then(config => {
+                if (config.database) {
+                    const dbSwitchButton = document.getElementById('dbSwitchButton');
+                    const currentDb = document.querySelector('.current-db');
+                }
+            });
+    }
+
+    initializeDatabaseSwitcher(); // Add this line
+    initializePageTitle();
+
+    // Modified swipe-to-toggle functionality
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    let isMouseDown = false;
+    let startButton = null;
+    let lastToggledButton = null;
+    let initialState = null;
+    let processedButtons = new Set();
+    let mouseDownTime = 0;
+    let startX = 0;
+    let startY = 0;
+    let hasMoved = false;
+
+    buttonsLine.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        hasMoved = false;
+        mouseDownTime = Date.now();
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        const targetButton = e.target.closest('.table-button');
+        if (targetButton) {
+            startButton = targetButton;
+            initialState = !targetButton.classList.contains('active');
+            if (hasMovedEnough(e)) {
+                processAndToggleButton(targetButton);
+            }
+        }
+        
+        processedButtons.clear();
+        e.preventDefault();
+    });
+
+    function hasMovedEnough(e) {
+        const moveX = Math.abs(e.clientX - startX);
+        const moveY = Math.abs(e.clientY - startY);
+        return moveX > 5 || moveY > 5; // 5px threshold for movement
+    }
+
+    function processAndToggleButton(button) {
+        if (!button || !button.classList.contains('table-button')) return;
+        if (!hasMoved) return; // Don't process if it's just a click
+
+        const tableName = button.dataset.table;
+        const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+        const currentDb = getCurrentDatabaseKey();
+        
+        if (!processedButtons.has(button)) {
+            if (initialState) {
+                button.classList.add('active');
+                tableSection.style.display = 'block';
+                requestAnimationFrame(() => {
+                    tableSection.classList.add('visible');
+                });
+                if (currentDb) {
+                    setCookie(`table_${currentDb}_${tableName}`, 'visible', 365);
+                }
+            } else {
+                button.classList.remove('active');
+                tableSection.classList.remove('visible');
+                tableSection.classList.add('hiding');
+                setTimeout(() => {
+                    tableSection.classList.remove('hiding');
+                    tableSection.style.display = 'none';
+                }, 300);
+                if (currentDb) {
+                    setCookie(`table_${currentDb}_${tableName}`, 'hidden', 365);
+                }
+            }
+            
+            processedButtons.add(button);
+        }
+    }
+
+    buttonsLine.addEventListener('mousemove', (e) => {
+        if (!isMouseDown) return;
+        
+        // Check if movement threshold is met
+        if (!hasMoved && hasMovedEnough(e)) {
+            hasMoved = true;
+            buttonsLine.classList.add('swiping');
+        }
+
+        if (!hasMoved) return; // Don't process if movement threshold isn't met
+        
+        const elementsUnderMouse = document.elementsFromPoint(e.clientX, e.clientY);
+        const currentButton = elementsUnderMouse.find(el => el.classList.contains('table-button'));
+        
+        if (currentButton && initialState === null) {
+            initialState = !currentButton.classList.contains('active');
+        }
+        
+        if (currentButton) {
+            processAndToggleButton(currentButton);
+        }
+    });
+
+    document.addEventListener('mouseup', (e) => {
+        if (!isMouseDown) return;
+
+        isMouseDown = false;
+        startButton = null;
+        lastToggledButton = null;
+        initialState = null;
+        processedButtons.clear();
+        buttonsLine.classList.remove('swiping');
+        hasMoved = false;
+    });
+
+    // Add swipe guide animation
+    const guideElement = document.createElement('div');
+    guideElement.className = 'swipe-guide';
+    document.body.appendChild(guideElement);
+
+    function showSwipeGuide(button) {
+        // Remove any existing guides
+        document.querySelectorAll('.swipe-guide').forEach(guide => guide.remove());
+
+        // Create a new guide
+        const guide = document.createElement('div');
+        guide.className = 'swipe-guide';
+        
+        // Get button position
+        const buttonRect = button.getBoundingClientRect();
+        guide.style.top = `${buttonRect.top + (buttonRect.height * 0.3)}px`;
+        guide.style.left = `${buttonRect.left + (buttonRect.width * 0.5)}px`;
+        
+        // Append to body instead of button
+        document.body.appendChild(guide);
+        
+        // Add animation class after a brief delay
+        requestAnimationFrame(() => {
+            guide.classList.add('animate');
+        });
+        
+        // Remove guide after animation completes
+        setTimeout(() => {
+            guide.remove();
+        }, 2000);
+    }
+    
+    // Show guide when hovering over any table button - only once per page load
+    let hasShownGuide = false;
+    const firstTableButton = document.querySelector('.table-button');
+    document.querySelectorAll('.table-button').forEach(button => {
+        button.addEventListener('mouseenter', () => {
+            const dbMenu = document.getElementById('dbMenu');
+            if (!hasShownGuide && firstTableButton && !dbMenu.classList.contains('show')) {
+                const buttonRect = firstTableButton.getBoundingClientRect();
+                const guide = document.createElement('div');
+                guide.className = 'swipe-guide';
+                guide.style.top = `${buttonRect.top + (buttonRect.height * 1.3)}px`;
+                guide.style.left = `${buttonRect.left + (buttonRect.width * 0.5)}px`;
+                document.body.appendChild(guide);
+                
+                requestAnimationFrame(() => {
+                    guide.classList.add('animate');
+                });
+                
+                setTimeout(() => {
+                    guide.remove();
+                }, 2000);
+                
+                hasShownGuide = true;
+            }
+        });
+    });
+
+});
+
+export { toggleTable, updateDropdownOptions, updateStaticLanguageElements, updateDynamicElements, updateConnectionStatus };
+
+function initializePageTitle() {
+    const pageTitle = document.getElementById('pageTitle');
+    const currentDb = getCurrentDatabaseKey();
+
+    // Load saved title for current database
+    if (currentDb) {
+        const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+        const savedTitle = savedTitles[currentDb];
+        
+        if (savedTitle) {
+            pageTitle.textContent = savedTitle;
+        } else {
+            pageTitle.textContent = 'Edit page title'; // Default title
+        }
+    }
+
+    pageTitle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            pageTitle.blur();
+        }
+    });
+
+    pageTitle.addEventListener('input', () => {
+        pageTitle.classList.add('editing');
+    });
+
+    pageTitle.addEventListener('blur', () => {
+        pageTitle.classList.remove('editing');
+        savePageTitle();
+    });
+}
+
+function savePageTitle() {
+    const pageTitle = document.getElementById('pageTitle');
+    const currentDb = getCurrentDatabaseKey();
+    const titleText = pageTitle.textContent.trim();
+
+    if (currentDb && titleText) {
+        const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+        savedTitles[currentDb] = titleText;
+        localStorage.setItem('pageTitles', JSON.stringify(savedTitles));
+    }
+}
+
+function getCurrentDatabaseKey() {
+    // Get current database configuration from cookie
+    const dbConfigsCookie = getCookie('db_configs');
+    const lastUsedDb = getCookie('last_used_db');
+    
+    if (dbConfigsCookie && lastUsedDb) {
+        try {
+            const dbConfigs = JSON.parse(decodeURIComponent(dbConfigsCookie));
+            return lastUsedDb;
+        } catch (e) {
+            console.error('Error parsing database configuration:', e);
+        }
+    }
+    return null;
+}
+
+
+function updateLogo() {
+    const settings = JSON.parse(localStorage.getItem('settings') || '{}');
+    const logo = settings.useLogo ? localStorage.getItem('logoImage') : null;
+    const pageTitle = document.getElementById('pageTitle');
+    
+    if (logo && settings.useLogo) {
+        const img = document.createElement('img');
+        img.src = logo;
+        img.style.height = '40px';
+        img.style.marginRight = '10px';
+        if (!pageTitle.querySelector('img')) {
+            pageTitle.insertBefore(img, pageTitle.firstChild);
+        }
+    } else {
+        const existingLogo = pageTitle.querySelector('img');
+        if (existingLogo) {
+            existingLogo.remove();
+        }
+    }
+}
+
+function updateFavicon() {
+    const settings = JSON.parse(localStorage.getItem('settings') || '{}');
+    const favicon = settings.useFavicon ? localStorage.getItem('faviconImage') : null;
+    const link = document.querySelector("link[rel~='icon']");
+    
+    if (favicon && settings.useFavicon) {
+        link.href = favicon;
+    } else {
+        link.href = `${baseUrl}/static/monitor_icon.png`;
+    }
+}
+
+// Initialize settings on page load
+// Remove this since initializeSettings is now included in other initialization

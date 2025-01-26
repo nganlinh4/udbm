@@ -1,0 +1,365 @@
+/* Global scrollbar styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cdcdcd;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #bdbdbd;
+}
+
+/* For Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #cdcdcd transparent;
+}
+
+:root {
+    /* Material Design 3 Light Theme */
+    --md-sys-color-primary: #1e6fd9;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-surface: #fafcff;
+    --md-sys-color-surface-container: #f3f5f8;
+    --md-sys-color-on-surface: #191c1e;
+    --md-sys-color-outline: #73777f;
+    --md-sys-color-surface-variant: #dfe2eb;
+    --md-elevation-level1: 0px 1px 2px rgba(0, 0, 0, 0.3);
+    --md-elevation-level2: 0px 2px 4px rgba(0, 0, 0, 0.3);
+    --table-header-bg: #ffffff; /* Light theme table header background */
+    --toggle-button-bg: #e0e0e0; /* Light theme toggle button background */
+    --toggle-button-text: #000000; /* Light theme toggle button text */
+    /* Define colors for theme-1 */
+    --theme-1-color: #FFC107; /* Amber */
+    --theme-1-darker: #FFA000;
+    /* Define colors for theme-2 */
+    --theme-2-color: #03A9F4; /* Light Blue */
+    --theme-2-darker: #0288D1;
+    /* Define colors for theme-3 */
+    --theme-3-color: #4CAF50; /* Green */
+    --theme-3-darker: #388E3C;
+    /* Add more themes as needed */
+}
+
+:root {
+    --md-sys-color-background: #ffffff;
+}
+
+[data-theme="dark"] {
+    --md-sys-color-background: #121212;
+}
+
+body {
+    font-family: Pretendard, Roboto, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    opacity: 1;
+    transition: opacity 0.3s ease, var(--theme-transition);
+    background-color: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    zoom: 80%;
+    -moz-transform: scale(0.8);
+    -moz-transform-origin: 0 0;
+    transform-origin: 0 0;
+}
+
+body.loaded {
+    opacity: 1;
+}
+
+h1 {
+    text-align: center;
+    font-size: 2.4em;
+    line-height: 1.3;
+    font-family: Pretendard, Poppins, sans-serif;
+    font-weight: 900;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #1a73e8, #8ab4f8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: -0.5px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    display: inline-block;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    margin-left: 0vw;
+}
+
+h1::after {
+    display: none;
+}
+
+h1[contenteditable="true"] {
+    cursor: text;
+    outline: none;
+    min-width: 200px;
+    position: relative;
+    z-index: 1001;  /* Ensure it's above the warning popup */
+    padding: 15px 2px; /* Add small padding to prevent cursor from touching edges */
+    caret-color: var(--md-sys-color-primary);
+}
+
+h1[contenteditable="true"]:empty:before {
+    content: attr(data-placeholder);
+    color: rgba(0, 0, 0, 0.5);
+    font-style: italic;
+}
+
+h1[contenteditable="true"]:focus {
+    border-bottom: 2px solid var(--md-sys-color-primary);
+}
+
+@keyframes blink-cursor {
+    from, to { caret-color: transparent; }
+    50% { caret-color: var(--md-sys-color-primary); }
+}
+
+h1[contenteditable="true"]:empty:before {
+    content: attr(data-placeholder);
+    color: rgba(0, 0, 0, 0.4);
+    font-style: italic;
+}
+
+[data-theme="dark"] h1[contenteditable="true"]:empty:before {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.title-bar {
+    padding: 20px;
+    margin-bottom: 20px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
+
+.connection-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 24px;
+    font-size: 0.85rem;
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.connection-status.connected {
+    background: linear-gradient(90deg, 
+        rgba(76, 175, 80, 0.2),
+        rgba(129, 199, 132, 0.3),
+        rgba(76, 175, 80, 0.2)
+    );
+}
+
+.connection-status.disconnected {
+    background: linear-gradient(90deg, 
+        rgba(244, 67, 54, 0.2),
+        rgba(239, 154, 154, 0.3),
+        rgba(244, 67, 54, 0.2)
+    );
+}
+
+.connection-status::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.6),
+        transparent
+    );
+    animation: shine 3s ease-in-out infinite;
+}
+
+[data-theme="dark"] .connection-status::before {
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(0, 0, 0, 0.6),
+        transparent
+    );
+}
+
+[data-theme="dark"] .connection-status {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .connection-status.connected {
+    border: #000000;
+    background: linear-gradient(90deg, 
+        rgba(76, 175, 80, 0.1),
+        rgba(129, 199, 132, 0.15),
+        rgba(76, 175, 80, 0.1)
+    );
+}
+
+[data-theme="dark"] .connection-status.disconnected {
+    background: linear-gradient(90deg, 
+        rgba(244, 67, 54, 0.1),
+        rgba(239, 154, 154, 0.15),
+        rgba(244, 67, 54, 0.1)
+    );
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.connection-status.connected .status-indicator {
+    background: linear-gradient(45deg, #4CAF50, #81C784);
+    box-shadow: 0 0 15px #4CAF50;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.connection-status.disconnected .status-indicator {
+    background: linear-gradient(45deg, #f44336, #ef9a9a);
+    box-shadow: 0 0 15px #f44336;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.status-text {
+    color: #fff;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    position: relative;
+    z-index: 1;
+}
+
+[data-theme="dark"] .connection-status {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.connection-status.connected::after,
+.connection-status.disconnected::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 0.1) 0%,
+        transparent 70%
+    );
+    animation: shine 3s ease-in-out infinite;
+}
+
+[data-theme="dark"] .connection-status.connected::after,
+[data-theme="dark"] .connection-status.disconnected::after {
+    background: radial-gradient(
+        circle,
+        rgba(0, 0, 0, 0.1) 0%,
+        transparent 70%
+    );
+}
+
+.warning-popup {
+    z-index: 1000; /* Ensure warning popup is below the title */
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes shine {
+    0% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(0%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #888;
+    transition: background-color 0.3s ease;
+}
+
+.connection-status.connected .status-indicator {
+    background: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+}
+
+.connection-status.disconnected .status-indicator {
+    background: #f44336;
+    box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
+}
+
+.status-text {
+    color: inherit;
+    font-weight: 500;
+}
+
+[data-theme="dark"] .status-text {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.lang-ko {
+    font-family: Poppins, sans-serif;
+}
+
+.lang-en {
+    font-family: Poppins, sans-serif;
+}
+
+.lang-en {
+    display: inline;  /* Changed from 'none' to 'inline' */
+}
+
+.lang-ko {
+    display: none;    /* Changed from 'inline' to 'none' */
+}

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html data-theme="{{ preferred_theme }}" style="width: 98vw; margin-left: 1vw;">
+
+<head>
+    <title>IIS Monitoring System | IIS Monitoring System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard-dynamic-subset.css"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <link rel="icon" href="{{ url_for('static', filename='monitor_icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/table.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script>
+        // Get saved language preference
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // Set initial language display
+        const savedLang = getCookie('preferred_language') || 'ko';
+        document.documentElement.setAttribute('data-lang', savedLang);
+        
+        // Add style to hide non-selected language elements immediately
+        const style = document.createElement('style');
+        style.textContent = `
+            .lang-ko { display: ${savedLang === 'ko' ? 'inline' : 'none'} !important; }
+            .lang-en { display: ${savedLang === 'en' ? 'inline' : 'none'} !important; }
+            .switch-label[data-lang="${savedLang}"] { opacity: 1; }
+            .switch-label:not([data-lang="${savedLang}"]) { opacity: 0.5; }
+        `;
+        document.head.appendChild(style);
+
+        // Set initial language toggle state
+        window.addEventListener('DOMContentLoaded', () => {
+            const toggle = document.getElementById('languageToggle');
+            if (toggle) {
+                toggle.checked = savedLang === 'en';
+            }
+        });
+    </script>
+    <script>
+        // Wait for mermaid to be loaded
+        window.mermaidPromise = new Promise((resolve) => {
+            if (typeof mermaid !== 'undefined') {
+                resolve(mermaid);
+            } else {
+                document.querySelector('script[src*="mermaid"]').onload = () => resolve(mermaid);
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <!-- Initial setup screen for no database -->
+    <div id="initial-setup" style="display: {{ 'flex' if not has_database else 'none' }};" class="initial-setup">
+        <div class="setup-content">
+            <h1>
+                <span class="lang-ko">데이터베이스 설정</span>
+                <span class="lang-en">Database Setup</span>
+            </h1>
+            <p class="setup-description">
+                <span class="lang-ko">모니터링을 시작하려면 데이터베이스를 추가하세요</span>
+                <span class="lang-en">Add a database to start monitoring</span>
+            </p>
+            <div class="setup-form-container">
+                <form class="db-form material-form">
+                    <div class="form-group">
+                        <select name="type" class="db-type-select" required>
+                            <option value="mysql">MySQL</option>
+                            <option value="postgresql">PostgreSQL</option>
+                        </select>
+                        <label style="top: -15px;">Database Type</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="host" required placeholder=" ">
+                        <label for="host">Host</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="user" required placeholder=" ">
+                        <label for="user">User</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" name="password" required placeholder=" ">
+                        <label for="password">Password</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="database" required placeholder=" ">
+                        <label for="database">Database</label>
+                    </div>
+                    <button type="submit" class="add-db-button">
+                        <span class="lang-ko">연결하기</span>
+                        <span class="lang-en">Connect</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Regular UI -->
+    <div id="main-interface" style="display: {{ 'block' if has_database else 'none' }};">
+        <div class="title-bar">
+            <div class="monitor-control">
+            <div class="dropdown-container">
+                <div class="clock-icon">
+                    <div class="clock-face">
+                        <div class="clock-hand"></div>
+                    </div>
+                </div>
+                <div class="refresh-rate-label">
+                    <span class="lang-ko">
+                        <span>갱신</span>
+                        <span>주기</span>
+                    </span>
+                    <span class="lang-en">
+                        <span>Refresh</span>
+                        <span>rate</span>
+                    </span>
+                </div>
+                <select id="monitorDropdown" class="monitor-dropdown">
+                    <option value="500">0.5</option>
+                    <option value="600">0.6</option>
+                    <option value="700">0.7</option>
+                    <option value="800">0.8</option>
+                    <option value="900">0.9</option>
+                    <option value="1000" selected>1</option>
+                    <option value="1250">1.25</option>
+                    <option value="1500">1.5</option>
+                    <option value="1750">1.75</option>
+                    <option value="2000">2</option>
+                    <option value="3000">3</option>
+                    <option value="4000">4</option>
+                    <option value="5000">5</option>
+                    <option value="7500">7.5</option>
+                    <option value="10000">10</option>
+                    <option value="20000">20</option>
+                    <option value="60000">60</option>
+                </select>
+                <button id="pauseButton" class="pause-button">
+                    <span class="pause-icon" style="display: inline;">⏸</span>
+                    <span class="play-icon" style="display: none;">▶</span>
+                    <div class="tooltip default-tooltip">
+                        <span class="lang-ko">내용을 쉽게 복사하기 위해 모니터링을 일시 중지합니다</span>
+                        <span class="lang-en">Pausing monitoring lets you copy contents more easily</span>
+                    </div>
+                    <div class="tooltip temp-tooltip" style="display: none;">
+                        <span class="lang-ko">이전 데이터 확인을 위해 일시적으로 중지되었습니다</span>
+                        <span class="lang-en">Temporarily paused for viewing historical data</span>
+                    </div>
+                </button>
+            </div>
+            <div class="db-switcher">
+                <button id="dbSwitchButton" class="db-switch-button">
+                    <span class="current-db"></span>
+                    <!-- Arrow indicator is now handled by CSS ::after pseudo-element -->
+                </button>
+                <div id="dbMenu" class="db-menu">
+                    <div class="db-list"></div>
+                    <button id="addDbButton" class="add-db-button">
+                        <span class="add-text">
+                            <span class="lang-ko">새 데이터베이스 추가</span>
+                            <span class="lang-en">Add New Database</span>
+                        </span>
+                        <span class="back-text" style="display: none;">
+                            <span class="lang-ko">뒤로 가기</span>
+                            <span class="lang-en">Go Back</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="connection-status" class="connection-status connected">
+            <div class="status-indicator"></div>
+            <span class="status-text">
+                <span class="lang-ko">연결됨</span>
+                <span class="lang-en">Connected</span>
+            </span>
+        </div>
+        <h1 id="pageTitle" contenteditable="true" data-placeholder="Edit page title" spellcheck="false">Edit page title</h1>
+        <button id="schemaButton" class="schema-button">
+            <span class="lang-ko">스키마</span>
+            <span class="lang-en">SCHEMA</span>
+            <div class="tooltip">
+                <span class="lang-ko">데이터베이스의 최신 스키마를 확인합니다</span>
+                <span class="lang-en">See the latest SCHEMA from the database</span>
+            </div>
+        </button>
+        <button id="settingsButton" class="settings-button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+        </button>
+        <div id="language-switcher" class="language-switcher">
+           <span class="switch-label ko" data-lang="ko">한국어</span>
+           <label class="switch">
+               <input type="checkbox" id="languageToggle">
+               <span class="switch-slider"></span>
+           </label>
+           <span class="switch-label en" data-lang="en">ENG</span>
+            <div class="theme-switcher">
+                <label class="theme-switch" title="Toggle dark mode">
+                    <input type="checkbox" id="themeToggle" style=" margin: 7px;">
+                    <span class="theme-switch-slider">
+                        <span class="theme-icon sun-icon"></span>
+                        <span class="theme-icon moon-icon"></span>
+                    </span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Menu -->
+    <div id="settingsMenu" class="settings-menu">
+        <div class="settings-item">
+            <div class="settings-item-title">
+                <span class="lang-ko">관리자 모드</span>
+                <span class="lang-en">Admin Mode</span>
+            </div>
+            <div class="settings-toggle">
+                <label class="switch">
+                    <input type="checkbox" id="adminModeToggle">
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="settings-item">
+            <div class="settings-item-title">
+                <span class="lang-ko">로고 설정</span>
+                <span class="lang-en">Logo Settings</span>
+            </div>
+            <div class="settings-toggle">
+                <label class="switch">
+                    <input type="checkbox" id="logoToggle">
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <input type="file" id="logoUpload" accept="image/*" style="display: none;">
+            <button class="upload-button" id="logoUploadButton">
+                <span class="lang-ko">로고 업로드</span>
+                <span class="lang-en">Upload Logo</span>
+            </button>
+        </div>
+        <div class="settings-item">
+            <div class="settings-item-title">
+                <span class="lang-ko">파비콘 설정</span>
+                <span class="lang-en">Favicon Settings</span>
+            </div>
+            <div class="settings-toggle">
+                <label class="switch">
+                    <input type="checkbox" id="faviconToggle">
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <input type="file" id="faviconUpload" accept="image/*" style="display: none;">
+            <button class="upload-button" id="faviconUploadButton">
+                <span class="lang-ko">파비콘 업로드</span>
+                <span class="lang-en">Upload Favicon</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Admin Mode Warning -->
+    <div id="adminWarning" class="admin-warning">
+        <div class="warning-content">
+            <h3>
+                <span class="lang-ko">⚠️ 주의: 관리자 모드</span>
+                <span class="lang-en">⚠️ Warning: Admin Mode</span>
+            </h3>
+            <p>
+                <span class="lang-ko">관리자 모드를 활성화하면 모니터링이 일시 중지되며 데이터베이스를 직접 수정할 수 있습니다. 이 작업은 위험할 수 있습니다.</span>
+                <span class="lang-en">Enabling admin mode will pause monitoring and allow direct database modifications. This can be dangerous.</span>
+            </p>
+            <div class="warning-buttons">
+                <button class="warning-confirm" id="confirmAdmin">
+                    <span class="lang-ko">계속하기</span>
+                    <span class="lang-en">Continue</span>
+                </button>
+                <button class="warning-cancel" id="cancelAdmin">
+                    <span class="lang-ko">취소</span>
+                    <span class="lang-en">Cancel</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="warningPopup" class="warning-popup">
+        <span class="warning-icon">⚠</span>
+        <div>
+            <span class="lang-ko">갱신 주기가 2초 미만일 경우 시스템 성능에 영향을 줄 수 있습니다.</span>
+            <span class="lang-en">Setting refresh rate under 2s may affect system performance.</span>
+        </div>
+    </div>
+    <div id="error-message" class="error" style="display: none;"></div>
+    <div class="table-buttons-line">
+        {% for table in tables %}
+        <button class="table-button" data-table="{{ table.name }}" data-theme="{{ loop.index0 % 10 }}">
+            {{ table.name }}
+            <span class="count" id="{{ table.name }}_button_count"></span>
+        </button>
+        {% endfor %}
+    </div>
+    <div id="tables-container">
+        {% for table in tables %}
+        <div class="table-section theme-{{ loop.index0 % 10 }}" data-table-name="{{ table.name }}" data-pk="{{ table.pk }}">
+            <h2>
+                <span class="drag-handle"></span>
+                <span class="table-title">
+                    {{ table.name }}
+                    <span id="{{ table.name }}_count" style="font-size: smaller; color: gray;"></span>
+                </span>
+                <div class="tooltip-and-button">
+                    <span id="{{ table.name }}_limited_info" class="limited-info"></span>
+                    <button class="toggle-button hide" onclick="toggleTable('{{ table.name }}')">
+                        <span class="lang-ko">숨기기</span>
+                        <span class="lang-en">Hide</span>
+                    </button>
+                </div>
+            </h2>
+            <div id="{{ table.name }}" class="table-container theme-{{ loop.index0 % 10 }}">
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Schema modal structure -->
+    <div id="schemaModal" class="schema-modal">
+        <div class="schema-content">
+            <div id="schemaLoading" class="schema-loading">Loading schema...</div>
+            <div id="schemaError" class="schema-error" style="display: none;"></div>
+            <div class="schema-container">
+                <div class="mermaid" id="schemaContent">
+                    Loading schema diagram...
+                </div>
+                <div class="zoom-controls">
+                    <button class="zoom-button zoom-out" title="Zoom out">−</button>
+                    <button class="zoom-button zoom-in" title="Zoom in">+</button>
+                </div>
+            </div>
+            <button class="schema-close" title="Close schema view">×</button>
+        </div>
+    </div>
+
+<script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script type="module">
+    import { initializeSchema } from '/static/js/schema.js';
+    const baseUrl = window.location.origin;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize schema visualization
+        const schemaButton = document.getElementById('schemaButton');
+        const schemaModal = document.getElementById('schemaModal');
+        const loading = document.getElementById('schemaLoading');
+        const error = document.getElementById('schemaError');
+        const container = document.querySelector('.schema-container');
+
+        initializeSchema(schemaButton, schemaModal, loading, error, container);
+    });
+
+    function getCurrentDatabaseKey() {
+            const getCookie = (name) => {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+                return null;
+            };
+            
+            const dbConfigsCookie = getCookie('db_configs');
+            const lastUsedDb = getCookie('last_used_db');
+            
+            if (dbConfigsCookie && lastUsedDb) {
+                try {
+                    const dbConfigs = JSON.parse(decodeURIComponent(dbConfigsCookie));
+                    return lastUsedDb;
+                } catch (e) {
+                    console.error('Error parsing database configuration:', e);
+                }
+            }
+            return null;
+        }
+        
+        function initializePageTitle() {
+            const pageTitle = document.getElementById('pageTitle');
+            const currentDb = getCurrentDatabaseKey();
+
+            if (currentDb) {
+                const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+                const savedTitle = savedTitles[currentDb];
+                
+                if (savedTitle) {
+                    pageTitle.textContent = savedTitle;
+                } else {
+                    pageTitle.textContent = 'Edit page title';
+                }
+            }
+
+            pageTitle.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    pageTitle.blur();
+                }
+            });
+
+            pageTitle.addEventListener('input', () => {
+                pageTitle.classList.add('editing');
+            });
+
+            pageTitle.addEventListener('blur', () => {
+                pageTitle.classList.remove('editing');
+                savePageTitle();
+            });
+        }
+
+        function savePageTitle() {
+            const pageTitle = document.getElementById('pageTitle');
+            const currentDb = getCurrentDatabaseKey();
+            const titleText = pageTitle.textContent.trim();
+
+            if (currentDb && titleText) {
+                const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+                savedTitles[currentDb] = titleText;
+                localStorage.setItem('pageTitles', JSON.stringify(savedTitles));
+            }
+        }
+        
+        // Schema button click handler is now handled by the initializeSchema function
+
+        document.querySelector('.schema-close').addEventListener('click', function () {
+            const modal = document.getElementById('schemaModal');
+            modal.classList.remove('visible');
+            setTimeout(() => modal.style.display = 'none', 300);
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const tableButtons = document.querySelectorAll('.table-button');
+            tableButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tableName = button.dataset.table;
+                    const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+
+                    if (!button.classList.contains('active')) {
+                        button.classList.add('active');
+                        tableSection.style.display = 'block';
+                        requestAnimationFrame(() => {
+                            tableSection.classList.add('visible');
+                        });
+                    } else {
+                        button.classList.remove('active');
+                        tableSection.classList.remove('visible');
+                        tableSection.classList.add('hiding');
+                        setTimeout(() => {
+                            tableSection.classList.remove('hiding');
+                            tableSection.style.display = 'none';
+                        }, 300);
+                    }
+
+                    saveToggleStates();
+                });
+            });
+
+            loadToggleStates();
+            initializePageTitle();
+
+            const updateButtonCount = (tableName, count) => {
+                const buttonCount = document.getElementById(`${tableName}_button_count`);
+                if (buttonCount) {
+                    buttonCount.textContent = `(${count})`;
+                }
+            };
+
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    // Fix: Use endsWith instead of endswith
+                    if (mutation.target.id.endsWith('_count')) {
+                        const tableName = mutation.target.id.replace('_count', '');
+                        const count = mutation.target.textContent.match(/\d+/)[0];
+                        updateButtonCount(tableName, count);
+                    }
+                });
+            });
+
+            document.querySelectorAll('[id$="_count"]').forEach(countSpan => {
+                observer.observe(countSpan, { childList: true, characterData: true, subtree: true });
+            });
+        });
+
+        function saveToggleStates() {
+            const states = {};
+            document.querySelectorAll('.table-button').forEach(button => {
+                states[button.dataset.table] = button.classList.contains('active');
+            });
+            localStorage.setItem('tableToggleStates', JSON.stringify(states));
+        }
+
+        function loadToggleStates() {
+            const savedStates = localStorage.getItem('tableToggleStates');
+            if (savedStates) {
+                const states = JSON.parse(savedStates);
+                document.querySelectorAll('.table-button').forEach(button => {
+                    const tableName = button.dataset.table;
+                    if (states[tableName]) {
+                        button.classList.add('active');
+                        const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+                        tableSection.classList.add('visible');
+                        tableSection.style.display = 'block';
+                    }
+                });
+            }
+        }
+
+        // Check if page is completely empty
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!document.getElementById('initial-setup') && !document.getElementById('main-interface')) {
+                // Reload the page if essential elements are missing
+                location.reload();
+            }
+        });
+    </script>
+</body>
+
+</html>
