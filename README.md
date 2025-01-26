@@ -19,7 +19,11 @@ A real-time web-based database monitoring system that you can use for multiple d
 
 - Real-time monitoring for MySQL and PostgreSQL databases, at any scale
 - Interactive schema visualization with relationships
-- Real-
+- Real-time data view with auto-refresh
+- Pause/Resume monitoring, configurable refresh rate
+- Light/dark mode, English/Korean language support
+- Quick swipe to toggle tables
+- Custom page title that sticks to each database
 - Secure connection management with cookie-based persistence
 
 ## Installation
