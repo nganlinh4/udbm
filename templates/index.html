@@ -191,12 +191,6 @@
                 <span class="lang-en">See the latest SCHEMA from the database</span>
             </div>
         </button>
-        <button id="settingsButton" class="settings-button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-        </button>
         <div id="language-switcher" class="language-switcher">
            <span class="switch-label ko" data-lang="ko">한국어</span>
            <label class="switch">
@@ -216,79 +210,6 @@
         </div>
     </div>
 
-    <!-- Settings Menu -->
-    <div id="settingsMenu" class="settings-menu">
-        <div class="settings-item">
-            <div class="settings-item-title">
-                <span class="lang-ko">관리자 모드</span>
-                <span class="lang-en">Admin Mode</span>
-            </div>
-            <div class="settings-toggle">
-                <label class="switch">
-                    <input type="checkbox" id="adminModeToggle">
-                    <span class="switch-slider"></span>
-                </label>
-            </div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-item-title">
-                <span class="lang-ko">로고 설정</span>
-                <span class="lang-en">Logo Settings</span>
-            </div>
-            <div class="settings-toggle">
-                <label class="switch">
-                    <input type="checkbox" id="logoToggle">
-                    <span class="switch-slider"></span>
-                </label>
-            </div>
-            <input type="file" id="logoUpload" accept="image/*" style="display: none;">
-            <button class="upload-button" id="logoUploadButton">
-                <span class="lang-ko">로고 업로드</span>
-                <span class="lang-en">Upload Logo</span>
-            </button>
-        </div>
-        <div class="settings-item">
-            <div class="settings-item-title">
-                <span class="lang-ko">파비콘 설정</span>
-                <span class="lang-en">Favicon Settings</span>
-            </div>
-            <div class="settings-toggle">
-                <label class="switch">
-                    <input type="checkbox" id="faviconToggle">
-                    <span class="switch-slider"></span>
-                </label>
-            </div>
-            <input type="file" id="faviconUpload" accept="image/*" style="display: none;">
-            <button class="upload-button" id="faviconUploadButton">
-                <span class="lang-ko">파비콘 업로드</span>
-                <span class="lang-en">Upload Favicon</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Admin Mode Warning -->
-    <div id="adminWarning" class="admin-warning">
-        <div class="warning-content">
-            <h3>
-                <span class="lang-ko">⚠️ 주의: 관리자 모드</span>
-                <span class="lang-en">⚠️ Warning: Admin Mode</span>
-            </h3>
-            <p>
-                <span class="lang-ko">관리자 모드를 활성화하면 모니터링이 일시 중지되며 데이터베이스를 직접 수정할 수 있습니다. 이 작업은 위험할 수 있습니다.</span>
-                <span class="lang-en">Enabling admin mode will pause monitoring and allow direct database modifications. This can be dangerous.</span>
-            </p>
-            <div class="warning-buttons">
-                <button class="warning-confirm" id="confirmAdmin">
-                    <span class="lang-ko">계속하기</span>
-                    <span class="lang-en">Continue</span>
-                </button>
-                <button class="warning-cancel" id="cancelAdmin">
-                    <span class="lang-ko">취소</span>
-                    <span class="lang-en">Cancel</span>
-                </button>
-            </div>
-        </div>
-    </div>
 
     <div id="warningPopup" class="warning-popup">
         <span class="warning-icon">⚠</span>

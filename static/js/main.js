@@ -1,7 +1,6 @@
 import { 
     setCookie, 
     getCookie,
-    isDarkMode,
     initializeTheme,
     translations,
     getCurrentLanguage,
@@ -11,7 +10,7 @@ import {
     checkConnection,
     connectionAttempts
 } from './utils.js';
-import { createNewTable, updateSingleTable, fetchTableData, fetchTableCount, adjustColumnWidths } from './table.js';
+import { updateSingleTable, fetchTableData, fetchTableCount, adjustColumnWidths } from './table.js';
 
 // Constants
 const baseUrl = window.location.origin;
@@ -23,21 +22,13 @@ export { baseUrl };
 let previousData = {};
 let tableNames = [];
 let tableOffsets = {};
-let fetchError = false;
 
 // Add new global variables for monitor interval
 let monitorInterval = 5000; // Default monitor interval of 5 seconds
 let monitorIntervalId = null; // Store interval ID
 
-// Add new global variable
-let isMonitoringPaused = false;
-
-// Add new globals
-let wasMonitoringActive = false;
-
 // Declare tableChunks and isLoading
 let tableChunks = {};
-let isLoading = {};
 
 function showError(message) {
     document.getElementById('error-message').innerText = message;
@@ -1152,32 +1143,6 @@ document.addEventListener('DOMContentLoaded', () => {
     guideElement.className = 'swipe-guide';
     document.body.appendChild(guideElement);
 
-    function showSwipeGuide(button) {
-        // Remove any existing guides
-        document.querySelectorAll('.swipe-guide').forEach(guide => guide.remove());
-
-        // Create a new guide
-        const guide = document.createElement('div');
-        guide.className = 'swipe-guide';
-        
-        // Get button position
-        const buttonRect = button.getBoundingClientRect();
-        guide.style.top = `${buttonRect.top + (buttonRect.height * 0.3)}px`;
-        guide.style.left = `${buttonRect.left + (buttonRect.width * 0.5)}px`;
-        
-        // Append to body instead of button
-        document.body.appendChild(guide);
-        
-        // Add animation class after a brief delay
-        requestAnimationFrame(() => {
-            guide.classList.add('animate');
-        });
-        
-        // Remove guide after animation completes
-        setTimeout(() => {
-            guide.remove();
-        }, 2000);
-    }
     
     // Show guide when hovering over any table button - only once per page load
     let hasShownGuide = false;
@@ -1276,40 +1241,3 @@ function getCurrentDatabaseKey() {
     }
     return null;
 }
-
-
-function updateLogo() {
-    const settings = JSON.parse(localStorage.getItem('settings') || '{}');
-    const logo = settings.useLogo ? localStorage.getItem('logoImage') : null;
-    const pageTitle = document.getElementById('pageTitle');
-    
-    if (logo && settings.useLogo) {
-        const img = document.createElement('img');
-        img.src = logo;
-        img.style.height = '40px';
-        img.style.marginRight = '10px';
-        if (!pageTitle.querySelector('img')) {
-            pageTitle.insertBefore(img, pageTitle.firstChild);
-        }
-    } else {
-        const existingLogo = pageTitle.querySelector('img');
-        if (existingLogo) {
-            existingLogo.remove();
-        }
-    }
-}
-
-function updateFavicon() {
-    const settings = JSON.parse(localStorage.getItem('settings') || '{}');
-    const favicon = settings.useFavicon ? localStorage.getItem('faviconImage') : null;
-    const link = document.querySelector("link[rel~='icon']");
-    
-    if (favicon && settings.useFavicon) {
-        link.href = favicon;
-    } else {
-        link.href = `${baseUrl}/static/monitor_icon.png`;
-    }
-}
-
-// Initialize settings on page load
-// Remove this since initializeSettings is now included in other initialization
