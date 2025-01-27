@@ -177,7 +177,7 @@ def handle_database():
     return jsonify(safe_config)
 
 # Define tables to ignore
-IGNORED_TABLES = {'user', 'verification', 'tb_deepid', 'source_db', 'alembic_version', 'COUNTRY', 'BBS2', 'BBS'}
+IGNORED_TABLES = {'SequelizeMeta'}
 
 # Modify get_table_names() to include primary key info
 def get_table_names():
