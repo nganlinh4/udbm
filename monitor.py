@@ -520,8 +520,238 @@ def data_table(table_name):
         if 'connection' in locals():
             connection.close()
 
-# Remove delete endpoint
-# @app.route('/delete/<table_name>', methods=['DELETE'])
+@app.route('/add/<table_name>', methods=['POST'])
+def add_row(table_name):
+    try:
+        data = request.json
+        connection = get_db_connection()
+
+        if current_db_config.get('db_type') == 'postgresql':
+            try:
+                # Use RealDictCursor for PostgreSQL
+                cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                
+                # Disable foreign key checks
+                cursor.execute("SET session_replication_role = 'replica';")
+                
+                # Get column information including constraints
+                cursor.execute("""
+                    SELECT column_name,
+                           data_type,
+                           is_nullable,
+                           column_default,
+                           CASE
+                               WHEN is_nullable = 'NO' AND column_default IS NULL THEN true
+                               ELSE false
+                           END as requires_value
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                    AND table_name = %s
+                    ORDER BY ordinal_position""", (table_name,))
+                columns_info = cursor.fetchall()
+
+                # Prepare columns and values with appropriate defaults
+                columns = []
+                values = []
+                for col in columns_info:
+                    col_name = col['column_name']
+                    columns.append(col_name)
+                    
+                    # Handle different data types and constraints
+                    if col['data_type'] == 'integer' and col['column_default'] and 'nextval' in str(col['column_default']):
+                        # Skip auto-incrementing columns
+                        continue
+                    elif col['requires_value']:
+                        if col['data_type'] == 'integer':
+                            values.append(0)  # Default integer
+                        elif col['data_type'] in ('timestamp', 'timestamp without time zone'):
+                            values.append('1970-01-01 00:00:00')  # Default timestamp
+                        elif col['data_type'] in ('date'):
+                            values.append('1970-01-01')  # Default date
+                        elif col['data_type'] in ('boolean'):
+                            values.append(False)  # Default boolean
+                        else:
+                            values.append('')  # Default string
+                    else:
+                        values.append(None)  # NULL for nullable columns
+                    columns.append(col_name)
+
+                # Insert empty row
+                columns_str = ', '.join(f'"{col}"' for col in columns)
+                values_str = ', '.join(['%s'] * len(columns))
+                
+                query = f'INSERT INTO "{table_name}" ({columns_str}) VALUES ({values_str}) RETURNING *'
+                logger.debug(f"PostgreSQL insert query for {table_name}: {query}")
+                logger.debug(f"Values: {values}")
+                logger.debug(f"Columns: {columns}")
+                
+                cursor.execute(query, values)
+                new_row = cursor.fetchone()
+                
+                # Re-enable foreign key checks
+                cursor.execute("SET session_replication_role = 'origin';")
+                connection.commit()
+                
+                return jsonify(dict(new_row))
+            except psycopg2.Error as e:
+                logger.error(f"PostgreSQL error adding row to {table_name}: {str(e)}")
+                connection.rollback()
+                return jsonify({'error': str(e)}), 500
+        else:
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute("SET FOREIGN_KEY_CHECKS=0")
+            
+            # Get column info and exclude auto-increment columns
+            cursor.execute(f"SHOW COLUMNS FROM {table_name}")
+            columns_info = cursor.fetchall()
+            
+            # Identify columns that need default values
+            insert_columns = []
+            for col in columns_info:
+                # Skip auto-increment columns
+                if 'auto_increment' in col['Extra'].lower():
+                    continue
+                
+                # Include other columns
+                insert_columns.append(col['Field'])
+            
+            # Create minimal INSERT statement
+            if insert_columns:
+                # For tables with required columns, use DEFAULT keyword
+                columns_str = ', '.join([f'`{col}`' for col in insert_columns])
+                values_str = 'DEFAULT, ' * (len(insert_columns)-1) + 'DEFAULT'
+                query = f"INSERT INTO {table_name} ({columns_str}) VALUES ({values_str})"
+            else:
+                # For tables with only auto-increment columns
+                query = f"INSERT INTO {table_name} () VALUES ()"
+            
+            cursor.execute(query)
+            cursor.execute(f"SELECT * FROM {table_name} WHERE id = LAST_INSERT_ID()")
+            new_row = cursor.fetchone()
+            
+            connection.commit()
+            return jsonify(new_row)
+
+    except Exception as e:
+        logger.error(f"Error adding empty row to {table_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
+@app.route('/delete/<table_name>/<row_id>', methods=['DELETE'])
+def delete_row(table_name, row_id):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        if current_db_config.get('db_type') == 'postgresql':
+            try:
+                # Disable foreign key checks
+                cursor.execute("SET session_replication_role = 'replica';")
+                # Delete the row
+                cursor.execute(f'DELETE FROM "{table_name}" WHERE id = %s', (row_id,))
+                # Re-enable foreign key checks
+                cursor.execute("SET session_replication_role = 'origin';")
+            except psycopg2.Error as e:
+                return jsonify({'error': str(e)}), 500
+        else:
+            # MySQL
+            try:
+                # Disable foreign key checks
+                cursor.execute("SET FOREIGN_KEY_CHECKS=0")
+                # Delete the row
+                cursor.execute(f"DELETE FROM {table_name} WHERE id = %s", (row_id,))
+                # Re-enable foreign key checks
+                cursor.execute("SET FOREIGN_KEY_CHECKS=1")
+            except mysql.connector.Error as e:
+                return jsonify({'error': str(e)}), 500
+
+        connection.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"Error deleting row from {table_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
+@app.route('/update/<table_name>/<row_id>/<column>', methods=['PUT'])
+def update_cell(table_name, row_id, column):
+    try:
+        data = request.json
+        if 'value' not in data:
+            return jsonify({'error': 'No value provided'}), 400
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        if current_db_config.get('db_type') == 'postgresql':
+            try:
+                # Disable foreign key checks
+                cursor.execute("SET session_replication_role = 'replica';")
+                cursor.execute(f'UPDATE "{table_name}" SET "{column}" = %s WHERE id = %s',
+                             (data['value'], row_id))
+                # Re-enable foreign key checks
+                cursor.execute("SET session_replication_role = 'origin';")
+            except psycopg2.Error as e:
+                return jsonify({'error': str(e)}), 500
+        else:
+            try:
+                # Disable foreign key checks
+                cursor.execute("SET FOREIGN_KEY_CHECKS=0")
+                cursor.execute(f"UPDATE {table_name} SET {column} = %s WHERE id = %s",
+                             (data['value'], row_id))
+                # Re-enable foreign key checks
+                cursor.execute("SET FOREIGN_KEY_CHECKS=1")
+            except mysql.connector.Error as e:
+                return jsonify({'error': str(e)}), 500
+
+        connection.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"Error updating cell in {table_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'connection' in locals():
+            connection.close()
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        if current_db_config.get('db_type') == 'postgresql':
+            try:
+                # Disable foreign key checks
+                cursor.execute("SET session_replication_role = 'replica';")
+                # Delete the row
+                cursor.execute(f'DELETE FROM "{table_name}" WHERE id = %s', (row_id,))
+                # Re-enable foreign key checks
+                cursor.execute("SET session_replication_role = 'origin';")
+            except psycopg2.Error as e:
+                return jsonify({'error': str(e)}), 500
+        else:
+            # MySQL
+            try:
+                # Disable foreign key checks
+                cursor.execute("SET FOREIGN_KEY_CHECKS=0")
+                # Delete the row
+                cursor.execute(f"DELETE FROM {table_name} WHERE id = %s", (row_id,))
+                # Re-enable foreign key checks
+                cursor.execute("SET FOREIGN_KEY_CHECKS=1")
+            except mysql.connector.Error as e:
+                return jsonify({'error': str(e)}), 500
+
+        connection.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"Error deleting row from {table_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'connection' in locals():
+            connection.close()
 
 # Update schema endpoint without referrer check
 @app.route('/schema')

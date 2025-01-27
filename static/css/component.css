@@ -571,10 +571,17 @@ input:checked ~ .switch-label.language-active {
 }
 
 .warning-popup .warning-icon {
-    color: #ff5252;
     margin-right: 12px;
     font-size: 1.2em;
     display: inline-block;
+}
+
+#warningPopup .warning-icon {
+    color: #ff5252;
+}
+
+#deletePopup .warning-icon {
+    color: #4caf50;
 }
 
 .pause-button {
@@ -2075,6 +2082,83 @@ html[data-lang="en"] .swipe-guide::after {
 [data-theme="dark"] option {
     background: var(--md-sys-color-surface-container);
     color: var(--md-sys-color-on-surface);
+}
+
+/* Admin mode container styles */
+.admin-mode-container {
+    position: absolute;
+    right: calc(100% + 20px);
+    top: 0;
+    padding: 0 0px;
+    border-radius: 36px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    height: 42px;
+}
+
+.admin-mode-label {
+    margin-top: 2px;
+    width: 46px;
+    font-size: 0.75em;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--md-sys-color-on-surface);
+    text-align: center;
+}
+
+/* Admin switch styles */
+.admin-switch {
+    margin: 0 4px;
+}
+
+.admin-switch .switch-slider {
+    background: linear-gradient(135deg, #4b4b4b, #bababa);
+}
+
+.admin-switch input:checked + .switch-slider {
+    background: linear-gradient(135deg, #00c853, #64dd17);
+}
+
+.switch-container {
+    position: relative;
+    display: inline-block;
+}
+
+.switch-container:hover .tooltip {
+    opacity: 1;
+    transform: translate(-50%, 4px);
+}
+
+.switch-container .tooltip {
+    position: absolute;
+    top: 130%;
+    left: 50%;
+    transform: translate(-50%, 8px);
+    min-width: 260px;
+    line-height: 1.4;
+    padding: 8px 16px;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 1000;
+    font-size: 0.9em;
+}
+
+.switch-container .tooltip span {
+    display: block;
+    text-align: center;
+}
+
+.admin-mode-container .tooltip::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background: rgba(97, 97, 97, 0.9);
 }
 
 /* Fix clock animation with pause */

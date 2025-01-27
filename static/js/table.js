@@ -3,16 +3,40 @@ import { setCookie, getCookie, getTextWidth, translations, getCurrentLanguage } 
 // Constants
 const ROWS_PER_LOAD = 50;
 
-// Add new global variables for chunk tracking
+// Global state variables
 let tableChunks = {};  // Store the current chunk range for each table
 let isLoading = {};
 let autoScrolling = false;
+let isAdminMode = false;
+
+// Initialize admin mode handler
+document.addEventListener('DOMContentLoaded', () => {
+    const adminToggle = document.getElementById('adminToggle');
+    if (adminToggle) {
+        adminToggle.addEventListener('change', (e) => {
+            isAdminMode = e.target.checked;
+            document.querySelectorAll('td.focused').forEach(cell => {
+                cell.classList.remove('focused');
+            });
+        });
+    }
+});
 
 function updateTableRows(tbody, tableData, columns) {
     const currentRows = Array.from(tbody.querySelectorAll('tr')).length;
     const newRowCount = tableData.length;
     const hasRowCountChanged = currentRows !== newRowCount;
     
+    // Store focused cell info before update
+    const focusedCell = tbody.querySelector('td.focused');
+    let focusedRowKey = null;
+    let focusedCellIndex = -1;
+    if (focusedCell) {
+        focusedRowKey = focusedCell.closest('tr').querySelector('td').textContent;
+        const cells = Array.from(focusedCell.closest('tr').querySelectorAll('td'));
+        focusedCellIndex = cells.indexOf(focusedCell);
+    }
+
     // Store current view for comparison
     const existingRows = new Map();
     tbody.querySelectorAll('tr').forEach(tr => {
@@ -85,6 +109,21 @@ function updateTableRows(tbody, tableData, columns) {
             el.style.animationDelay = '';
         });
     }, 1500);
+
+    // Restore focused cell if it existed
+    if (focusedRowKey !== null && focusedCellIndex !== -1) {
+        const rows = tbody.querySelectorAll('tr');
+        for (const row of rows) {
+            const firstCell = row.querySelector('td');
+            if (firstCell && firstCell.textContent === focusedRowKey) {
+                const cells = row.querySelectorAll('td');
+                if (cells[focusedCellIndex]) {
+                    cells[focusedCellIndex].classList.add('focused');
+                }
+                break;
+            }
+        }
+    }
 }
 
 export function createNewTable(tableDiv, tableData, columns, baseUrl) {
@@ -119,6 +158,7 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
 
     // Add event listeners
     addResizerListeners(table, columns);
+    handleRowDeletion(tableDiv, tableDiv.id, baseUrl);
     wrapper.addEventListener('scroll', function () {
         handleTableScroll(this, tableDiv.id);
     });
@@ -431,6 +471,317 @@ export function fetchTableCount(tableName, baseUrl, translations, currentLang) {
         countSpan.textContent = `(Error)`;
         return null;
     });
+}
+
+// Function to handle row deletion and cell editing
+export function handleRowDeletion(tableDiv, tableName, baseUrl) {
+    const table = tableDiv.querySelector('table');
+    if (!table) return;
+
+    let isEditing = false;
+    let currentEditCell = null;
+    let originalValue = null;
+
+    // Function to restore cell to non-editing state
+    const restoreCell = (cell) => {
+        if (!cell) return;
+        cell.textContent = originalValue;
+        cell.classList.remove('editing');
+        isEditing = false;
+        currentEditCell = null;
+
+        // Resume monitoring if it wasn't paused before
+        if (editingState && !editingState.wasPaused && window.isMonitoringPaused) {
+            window.toggleMonitoring();
+        }
+
+        originalValue = null;
+        editingState = null;
+    };
+
+    // Add monitoring state handler
+    let editingState = null;
+
+    // Handler for starting cell edit
+    const startEditing = (cell) => {
+        if (isEditing) {
+            restoreCell(currentEditCell);
+        }
+
+        // Pause monitoring while editing
+        const wasPaused = window.isMonitoringPaused;
+        if (!wasPaused) {
+            window.toggleMonitoring();
+        }
+
+        originalValue = cell.textContent;
+        currentEditCell = cell;
+        isEditing = true;
+        cell.classList.add('editing');
+        const input = document.createElement('input');
+        input.value = originalValue;
+
+        // Store editing state for monitoring updates
+        const row = cell.closest('tr');
+        editingState = {
+            rowId: row.cells[0].textContent,
+            columnIndex: Array.from(row.cells).indexOf(cell),
+            value: input.value,
+            selectionStart: 0,
+            selectionEnd: 0,
+            wasPaused: wasPaused // Store monitoring state
+        };
+
+        const handleEditComplete = async (newValue, shouldSave) => {
+            if (shouldSave && newValue !== originalValue) {
+                const row = cell.closest('tr');
+                const rowId = row.cells[0].textContent;
+                const columnIndex = Array.from(row.cells).indexOf(cell);
+                const columnName = table.querySelector('th:nth-child(' + (columnIndex + 1) + ')').textContent;
+                
+                try {
+                    const response = await fetch(`${baseUrl}/update/${tableName}/${rowId}/${columnName}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ value: newValue })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Update failed');
+                    }
+
+                    cell.textContent = newValue;
+                    originalValue = newValue;
+
+                    // Show success popup
+                    const deletePopup = document.getElementById('deletePopup');
+                    deletePopup.querySelector('.warning-icon').textContent = '✓';
+                    deletePopup.querySelector('.lang-en').textContent = 'Value updated successfully';
+                    deletePopup.querySelector('.lang-ko').textContent = '값이 업데이트되었습니다';
+                    deletePopup.classList.add('show');
+                    setTimeout(() => {
+                        deletePopup.classList.remove('show');
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error updating cell:', error);
+                    restoreCell(cell);
+                    // Show error popup
+                    const deletePopup = document.getElementById('deletePopup');
+                    const icon = deletePopup.querySelector('.warning-icon');
+                    icon.textContent = '⚠';
+                    deletePopup.querySelector('.lang-en').textContent = 'Failed to update value';
+                    deletePopup.querySelector('.lang-ko').textContent = '값 업데이트에 실패했습니다';
+                    deletePopup.classList.add('show');
+                    setTimeout(() => {
+                        icon.textContent = '✓';
+                        deletePopup.classList.remove('show');
+                    }, 2000);
+                    return;
+                }
+            } else {
+                restoreCell(cell);
+            }
+            
+            cell.classList.remove('editing');
+            isEditing = false;
+            currentEditCell = null;
+        };
+
+        input.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleEditComplete(input.value, true);
+            } else if (e.key === 'Escape') {
+                handleEditComplete(originalValue, false);
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            handleEditComplete(originalValue, false);
+        });
+        
+        cell.textContent = '';
+        cell.appendChild(input);
+        input.focus();
+    };
+
+    // Add click and double click handlers
+    table.addEventListener('click', (e) => {
+        const cell = e.target.closest('td');
+        if (!cell) return;
+
+        if (e.target.tagName === 'INPUT' || !isAdminMode) {
+            return; // Don't handle clicks when not in admin mode or clicking on input
+        }
+
+        if (cell.classList.contains('focused') && !isEditing) {
+            startEditing(cell);
+        } else if (!isEditing) {
+            // Remove focus from any previously focused cell
+            table.querySelectorAll('td').forEach(td => td.classList.remove('focused'));
+            // Add focus to clicked cell
+            cell.classList.add('focused');
+        }
+    });
+
+    // Add double click handler
+    table.addEventListener('dblclick', (e) => {
+        const cell = e.target.closest('td');
+        if (cell && !isEditing && isAdminMode) {
+            startEditing(cell);
+        }
+    });
+
+    // Add keydown handler for 'D' and 'A' keys
+    document.addEventListener('keydown', async (e) => {
+        if ((e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a') && !isEditing && isAdminMode) {
+            const focusedCell = table.querySelector('td.focused');
+            if (!focusedCell) return;
+
+            const row = focusedCell.closest('tr');
+            if (!row) return;
+
+            // Get row ID from first cell
+            if (e.key.toLowerCase() === 'd') {
+                const rowId = row.cells[0].textContent;
+
+                try {
+                    const response = await fetch(`${baseUrl}/delete/${tableName}/${rowId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Delete failed');
+                    }
+
+                    // Add deleting animation class
+                    row.classList.add('deleting');
+                    
+                    // Remove row after animation
+                    setTimeout(() => {
+                        row.remove();
+                    }, 300);
+
+                    // Show success popup
+                    const deletePopup = document.getElementById('deletePopup');
+                    deletePopup.querySelector('.warning-icon').textContent = '✓';
+                    deletePopup.querySelector('.lang-en').textContent = 'Row has been deleted';
+                    deletePopup.querySelector('.lang-ko').textContent = '행이 삭제되었습니다';
+                    deletePopup.classList.add('show');
+                    setTimeout(() => {
+                        deletePopup.classList.remove('show');
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error deleting row:', error);
+                    // Show error in warningPopup style
+                    const deletePopup = document.getElementById('deletePopup');
+                    const icon = deletePopup.querySelector('.warning-icon');
+                    icon.textContent = '⚠';
+                    deletePopup.querySelector('.lang-en').textContent = 'Failed to delete row';
+                    deletePopup.querySelector('.lang-ko').textContent = '행 삭제에 실패했습니다';
+                    deletePopup.classList.add('show');
+                    setTimeout(() => {
+                        // Reset popup back to success state
+                        icon.textContent = '✓';
+                        deletePopup.classList.remove('show');
+                    }, 2000);
+                }
+            } else if (e.key.toLowerCase() === 'a') {
+                try {
+                    // Get table columns
+                    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+                    
+                    // Create empty row data object
+                    const emptyRow = {};
+                    headers.forEach(col => {
+                        emptyRow[col] = '';
+                    });
+
+                    const response = await fetch(`${baseUrl}/add/${tableName}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(emptyRow)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Add failed');
+                    }
+
+                    const newRowData = await response.json();
+                    
+                    // Create new row element
+                    const newRow = document.createElement('tr');
+                    newRow.classList.add('new-row');
+                    
+                    // Add cells to new row
+                    headers.forEach(col => {
+                        const td = document.createElement('td');
+                        td.textContent = newRowData[col] || '';
+                        newRow.appendChild(td);
+                    });
+
+                    // Insert new row at the focused row's position
+                    row.insertAdjacentElement('beforebegin', newRow);
+
+                    // Show success popup
+                    const deletePopup = document.getElementById('deletePopup');
+                    deletePopup.querySelector('.warning-icon').textContent = '✓';
+                    deletePopup.querySelector('.lang-en').textContent = 'New row added';
+                    deletePopup.querySelector('.lang-ko').textContent = '새 행이 추가되었습니다';
+                    deletePopup.classList.add('show');
+                    setTimeout(() => {
+                        deletePopup.classList.remove('show');
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error adding row:', error);
+                    // Show error in warningPopup style
+                    const deletePopup = document.getElementById('deletePopup');
+                    const icon = deletePopup.querySelector('.warning-icon');
+                    icon.textContent = '⚠';
+                    deletePopup.querySelector('.lang-en').textContent = 'Failed to add row';
+                    deletePopup.querySelector('.lang-ko').textContent = '행 추가에 실패했습니다';
+                    deletePopup.classList.add('show');
+                    setTimeout(() => {
+                        // Reset popup back to success state
+                        icon.textContent = '✓';
+                        deletePopup.classList.remove('show');
+                    }, 2000);
+                }
+            }
+        }
+    });
+
+    // Handle monitoring updates preserving edit state
+    const originalUpdateTableRows = window.updateTableRows;
+    window.updateTableRows = (tbody, tableData, columns) => {
+        if (isEditing && currentEditCell) {
+            const editingRowId = currentEditCell.closest('tr').cells[0].textContent;
+            const editingColIndex = Array.from(currentEditCell.closest('tr').cells).indexOf(currentEditCell);
+            
+            originalUpdateTableRows(tbody, tableData, columns);
+            
+            // Restore editing state
+            const newRow = Array.from(tbody.querySelectorAll('tr')).find(tr => tr.cells[0].textContent === editingRowId);
+            if (newRow) {
+                const cell = newRow.cells[editingColIndex];
+                if (cell) {
+                    const input = document.createElement('input');
+                    input.value = originalValue;
+                    cell.textContent = '';
+                    cell.classList.add('editing');
+                    cell.appendChild(input);
+                    input.focus();
+                    currentEditCell = cell;
+                }
+            }
+        } else {
+            originalUpdateTableRows(tbody, tableData, columns);
+        }
+    };
 }
 
 export function adjustColumnWidths(table) {

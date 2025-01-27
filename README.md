@@ -25,16 +25,12 @@ A real-time web-based database monitoring system that focus on monitoring tables
 - Quick swipe to toggle tables
 - Custom configs that sticks to each database
 - Secure connection management with cookie-based persistence
+- Admin mode allowing add, delete, and alter table data directly from the interface
 
 ## Future Plans
 
 (please recommend me more features)
-- Admin mode in settings menu for direct database operations:
-  - Add, delete, and alter tables directly from the interface
-  - Execute custom SQL queries
-- Customization options:
-  - Custom page logo placement next to page title
-  - Custom favicon support
+- Execute custom SQL queries
 - Support for more SQL types besides MySQL and PostgreSQL
 
 ## Installation
@@ -88,6 +84,12 @@ Modified page title will be remembered to each of your DB separatedly
 Just scroll down, the monitoring will automatically pauses, it will auto resume when you scroll back up or collapse the table
 
 ![Historical Data View](readme_assets/tooltip.png)
+
+### Add, Delete, Alter Data
+
+When ADMIN MODE is turned on, the page will allow for selecting data cell. Add an empty row to the table: Select cell + Press A. Delete a row: Select cell + Press D. Edit cell value: Select cell + click once more or Double click a cell, type your edits and press Enter.
+
+![Admin mode](readme_assets/admin.png)
 
 ## License
 
