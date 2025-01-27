@@ -83,13 +83,13 @@ h2 {
 /* Connection status styles */
 .connection-status {
     cursor: default;
-    padding: 4px 8px;
+    padding: 4px 13px;
     border-radius: 36px;
     color: white;
     font-size: 0.8em;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 0px;
     user-select: none;
 }
 

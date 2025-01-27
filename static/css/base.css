@@ -110,7 +110,8 @@ h1[contenteditable="true"] {
     caret-color: var(--md-sys-color-primary);
 }
 
-h1[contenteditable="true"]:empty:before {
+/* Only show placeholder when element is both empty and initialized */
+h1[contenteditable="true"].initialized:empty:before {
     content: attr(data-placeholder);
     color: rgba(0, 0, 0, 0.5);
     font-style: italic;
@@ -125,13 +126,7 @@ h1[contenteditable="true"]:focus {
     50% { caret-color: var(--md-sys-color-primary); }
 }
 
-h1[contenteditable="true"]:empty:before {
-    content: attr(data-placeholder);
-    color: rgba(0, 0, 0, 0.4);
-    font-style: italic;
-}
-
-[data-theme="dark"] h1[contenteditable="true"]:empty:before {
+[data-theme="dark"] h1[contenteditable="true"].initialized:empty:before {
     color: rgba(255, 255, 255, 0.4);
 }
 
@@ -148,6 +143,7 @@ h1[contenteditable="true"]:empty:before {
 .connection-status {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     padding: 6px 12px;
     border-radius: 24px;
@@ -158,6 +154,14 @@ h1[contenteditable="true"]:empty:before {
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    min-width: var(--connection-status-width, auto);
+    text-align: center;
+}
+
+.connection-status span {
+    width: 100%;
+    text-align: center;
 }
 
 .connection-status.connected {
@@ -223,64 +227,6 @@ h1[contenteditable="true"]:empty:before {
     );
 }
 
-.status-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-.connection-status.connected .status-indicator {
-    background: linear-gradient(45deg, #4CAF50, #81C784);
-    box-shadow: 0 0 15px #4CAF50;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.connection-status.disconnected .status-indicator {
-    background: linear-gradient(45deg, #f44336, #ef9a9a);
-    box-shadow: 0 0 15px #f44336;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.status-text {
-    color: #fff;
-    font-weight: 500;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    position: relative;
-    z-index: 1;
-}
-
-[data-theme="dark"] .connection-status {
-    background: rgba(0, 0, 0, 0.3);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-.connection-status.connected::after,
-.connection-status.disconnected::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(
-        circle,
-        rgba(255, 255, 255, 0.1) 0%,
-        transparent 70%
-    );
-    animation: shine 3s ease-in-out infinite;
-}
-
-[data-theme="dark"] .connection-status.connected::after,
-[data-theme="dark"] .connection-status.disconnected::after {
-    background: radial-gradient(
-        circle,
-        rgba(0, 0, 0, 0.1) 0%,
-        transparent 70%
-    );
-}
-
 .warning-popup {
     z-index: 1000; /* Ensure warning popup is below the title */
 }
@@ -294,21 +240,6 @@ h1[contenteditable="true"]:empty:before {
     }
 }
 
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.2);
-        opacity: 0.8;
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
 @keyframes shine {
     0% {
         transform: translateX(-100%);
@@ -319,33 +250,6 @@ h1[contenteditable="true"]:empty:before {
     100% {
         transform: translateX(100%);
     }
-}
-
-.status-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #888;
-    transition: background-color 0.3s ease;
-}
-
-.connection-status.connected .status-indicator {
-    background: #4CAF50;
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
-}
-
-.connection-status.disconnected .status-indicator {
-    background: #f44336;
-    box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
-}
-
-.status-text {
-    color: inherit;
-    font-weight: 500;
-}
-
-[data-theme="dark"] .status-text {
-    color: rgba(255, 255, 255, 0.9);
 }
 
 .lang-ko {

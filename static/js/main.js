@@ -57,7 +57,35 @@ function updateTablesIfChanged(newData) {
     previousData = JSON.parse(JSON.stringify(newData));
 }
 
-function updateConnectionStatus() {
+// Function to measure the max width needed for both languages
+function measureConnectionStatusWidth(status, statusText) {
+    // Create a temporary div to measure text width
+    const measureDiv = document.createElement('div');
+    measureDiv.style.cssText = `
+        position: absolute;
+        visibility: hidden;
+        height: auto;
+        width: auto;
+        white-space: nowrap;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        display: inline-flex;
+        align-items: center;
+        font-family: Poppins, sans-serif;
+    `;
+    document.body.appendChild(measureDiv);
+
+    // Add text content
+    const textSpan = document.createElement('span');
+    textSpan.textContent = statusText;
+    measureDiv.appendChild(textSpan);
+
+    const width = measureDiv.offsetWidth;
+    document.body.removeChild(measureDiv);
+    return width;
+}
+
+function updateConnectionStatus(forceLang) {
     const status = document.getElementById('connection-status');
     const isNoDatabase = status.classList.contains('no-database');
     const isConnected = status.classList.contains('connected');
@@ -69,18 +97,35 @@ function updateConnectionStatus() {
     if (isConnected) status.classList.add('connected');
     if (isDisconnected) status.classList.add('disconnected');
 
-    let statusText;
-    if (isNoDatabase) {
-        statusText = translations[getCurrentLanguage()].noDatabase;
-    } else if (isConnected) {
-        statusText = translations[getCurrentLanguage()].connected;
-    } else {
-        statusText = `${translations[getCurrentLanguage()].disconnected} ${translations[getCurrentLanguage()].attemptPrefix}${connectionAttempts}${translations[getCurrentLanguage()].attemptSuffix}`;
+    // Get text for both languages
+    const koText = isNoDatabase ? translations.ko.noDatabase :
+                  isConnected ? translations.ko.connected :
+                  `${translations.ko.disconnected} ${translations.ko.attemptPrefix}${connectionAttempts}${translations.ko.attemptSuffix}`;
+
+    const enText = isNoDatabase ? translations.en.noDatabase :
+                  isConnected ? translations.en.connected :
+                  `${translations.en.disconnected} ${translations.en.attemptPrefix}${connectionAttempts}${translations.en.attemptSuffix}`;
+
+    // Measure widths
+    const koWidth = measureConnectionStatusWidth(status, koText);
+    const enWidth = measureConnectionStatusWidth(status, enText);
+    const maxWidth = Math.max(koWidth, enWidth);
+
+    // Store max width in cookie if it's different
+    const savedWidth = parseInt(getCookie('connection_status_width')) || 0;
+    if (maxWidth !== savedWidth) {
+        setCookie('connection_status_width', maxWidth, 365);
     }
 
+    // Apply the width to the connection status element
+    status.style.setProperty('--connection-status-width', `${maxWidth}px`);
+
+    // Update the content
+    const currentLang = forceLang || getCurrentLanguage();
+    const statusText = currentLang === 'ko' ? koText : enText;
     status.innerHTML = `
-        <span class="lang-ko" style="display: ${getCurrentLanguage() === 'ko' ? 'inline' : 'none'}">${statusText}</span>
-        <span class="lang-en" style="display: ${getCurrentLanguage() === 'en' ? 'inline' : 'none'}">${statusText}</span>
+        <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${koText}</span>
+        <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${enText}</span>
     `;
 }
 
@@ -220,22 +265,24 @@ function startMonitoring() {
 
     if (window.isMonitoringPaused) return;
 
+    const currentLang = getCurrentLanguage();
     // Immediately check connection when monitoring starts/resumes
-    checkConnection(baseUrl, updateConnectionStatus);
+    checkConnection(baseUrl, () => updateConnectionStatus(currentLang));
 
     // Add storage for previous counts
     const previousCounts = {};
-
-    monitorIntervalId = setInterval(async () => {
-        // Check connection status first
-        const connectionResult = await checkConnection(baseUrl, updateConnectionStatus);
-        if (!connectionResult) {
-            return; // Skip data fetching if connection is down
-        }
+monitorIntervalId = setInterval(async () => {
+    // Store the current language for consistent usage
+    const currentLang = getCurrentLanguage();
+    // Check connection status first
+    const isConnected = await checkConnection(baseUrl, () => updateConnectionStatus(currentLang));
+    if (!isConnected) {
+        return; // Skip data fetching if connection is down
+    }
 
         // Update all table counts only if connected
         tableNames.forEach(tableName => {
-            fetchTableCount(tableName, baseUrl, translations, getCurrentLanguage())
+            fetchTableCount(tableName, baseUrl, translations, currentLang)
                 .then(newCount => {
                     const oldCount = previousCounts[tableName];
                     
@@ -292,10 +339,10 @@ function startMonitoring() {
             const tableName = tableContainer.id;
             fetchTableData(
                 tableName, 
-                false, 
-                baseUrl, 
-                translations, 
-                getCurrentLanguage(), 
+                false,
+                baseUrl,
+                translations,
+                currentLang,
                 updateSingleTable
             );
         });
@@ -1167,17 +1214,22 @@ function initializePageTitle() {
     const pageTitle = document.getElementById('pageTitle');
     const currentDb = getCurrentDatabaseKey();
 
-    // Load saved title for current database
     if (currentDb) {
         const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
         const savedTitle = savedTitles[currentDb];
         
         if (savedTitle) {
-            pageTitle.textContent = savedTitle;
-        } else {
-            pageTitle.textContent = 'Edit page title'; // Default title
+            requestAnimationFrame(() => {
+                pageTitle.textContent = savedTitle;
+                document.title = savedTitle;
+            });
         }
     }
+    
+    // Add initialized class after checking for saved title
+    requestAnimationFrame(() => {
+        pageTitle.classList.add('initialized');
+    });
 
     pageTitle.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -1205,6 +1257,7 @@ function savePageTitle() {
         const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
         savedTitles[currentDb] = titleText;
         localStorage.setItem('pageTitles', JSON.stringify(savedTitles));
+        document.title = titleText;
     }
 }
 
