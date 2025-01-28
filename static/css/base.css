@@ -18,12 +18,6 @@
     background: #bdbdbd;
 }
 
-/* For Firefox */
-* {
-    scrollbar-width: thin;
-    scrollbar-color: #cdcdcd transparent;
-}
-
 :root {
     /* Material Design 3 Light Theme */
     --md-sys-color-primary: #1e6fd9;

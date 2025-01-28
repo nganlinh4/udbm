@@ -547,6 +547,50 @@ function toggleTable(tableName) {
 document.addEventListener('DOMContentLoaded', () => {
     const initialSetup = document.getElementById('initial-setup');
     const mainInterface = document.getElementById('main-interface');
+
+    // Initialize favicon controls
+    const faviconToggle = document.getElementById('faviconToggle');
+    const faviconUpload = document.getElementById('faviconUpload');
+    const defaultFaviconPath = '/static/monitor_icon.png';
+    
+    // Load saved favicon preferences
+    const savedFavicon = localStorage.getItem('customFavicon');
+    const useDefaultFavicon = localStorage.getItem('useDefaultFavicon') === 'true';
+    
+    // Initialize toggle state
+    faviconToggle.checked = useDefaultFavicon;
+    updateFavicon();
+
+    // Handle favicon toggle
+    faviconToggle.addEventListener('change', () => {
+        localStorage.setItem('useDefaultFavicon', faviconToggle.checked);
+        updateFavicon();
+    });
+
+    // Handle favicon upload
+    faviconUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                localStorage.setItem('customFavicon', e.target.result);
+                updateFavicon();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function updateFavicon() {
+        const favicon = document.querySelector('link[rel="icon"]');
+        if (faviconToggle.checked) {
+            favicon.href = defaultFaviconPath;
+        } else {
+            const customFavicon = localStorage.getItem('customFavicon');
+            if (customFavicon) {
+                favicon.href = customFavicon;
+            }
+        }
+    }
     
     // Add loaded class immediately to make content visible
     document.body.classList.add('loaded');

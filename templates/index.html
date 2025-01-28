@@ -172,6 +172,25 @@
                             <span class="lang-en">Go Back</span>
                         </span>
                     </button>
+                    <div class="favicon-controls">
+                        <div class="favicon-switch">
+                            <span class="switch-label">
+                                <span class="lang-ko">기본 파비콘 사용</span>
+                                <span class="lang-en">Use Default Favicon</span>
+                            </span>
+                            <label class="switch">
+                                <input type="checkbox" id="faviconToggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="favicon-upload">
+                            <input type="file" id="faviconUpload" accept="image/x-icon,image/png" style="display: none;">
+                            <button class="upload-button" onclick="document.getElementById('faviconUpload').click()">
+                                <span class="lang-ko">파비콘 업로드</span>
+                                <span class="lang-en">Upload Favicon</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
