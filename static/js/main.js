@@ -902,6 +902,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 deleteBtn.innerHTML = '×';
                 deleteBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
+                    const currentDb = getCurrentDatabaseKey();
                     delete savedConfigs[key];
                     
                     // If this was the last database
@@ -911,7 +912,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         location.reload(); // Refresh page to reset state
                     } else {
                         setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
-                        updateDbList();
+                        // If the deleted database was the current one, switch to another database
+                        if (key === currentDb) {
+                            const nextDbKey = Object.keys(savedConfigs)[0];
+                            switchDatabase(savedConfigs[nextDbKey]);
+                        } else {
+                            updateDbList();
+                        }
                     }
                 });
                 
