@@ -758,14 +758,11 @@ def update_cell(table_name, row_id, column):
 def get_schema():
     try:
         global current_db_config
-        logger.info("Schema endpoint hit")
         
         if not current_db_config:
             logger.error("No database configured for schema request")
             return jsonify({'error': 'No database configured'}), 400
             
-        logger.info(f"Database config: {current_db_config['db_type']} @ {current_db_config['host']}/{current_db_config['database']}")
-        
         tables = {}
         relationships = []
 
@@ -782,8 +779,6 @@ def get_schema():
                 AND table_type = 'BASE TABLE'
             """)
             table_names = [row[0] for row in cursor.fetchall()]
-            logger.info(f"Found tables: {table_names}")
-            logger.info(f"Current database name: {current_db_config['database']}")
             
             # Get columns for each table
             for table_name in table_names:
@@ -847,12 +842,8 @@ def get_schema():
                         """, (table_name,))
                         
                         fk_results = dict_cursor.fetchall()
-                        logger.info(f"Foreign key constraints for table {table_name}:")
                         
                         for row in fk_results:
-                            logger.info(f"  Constraint: {row['constraint_name']}")
-                            logger.info(f"    From: {row['table_name']}.{row['column_name']}")
-                            logger.info(f"    To: {row['foreign_table_name']}.{row['foreign_column_name']}")
                             
                             if row['foreign_table_name'] not in IGNORED_TABLES:
                                 rel = {
@@ -866,7 +857,6 @@ def get_schema():
                                     }
                                 }
                                 relationships.append(rel)
-                                logger.info(f"Added relationship: {rel}")
                         dict_cursor.close()
                     except psycopg2.Error as e:
                         logger.warning(f"Error getting foreign keys for table {table_name}: {str(e)}")
