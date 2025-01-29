@@ -2,19 +2,35 @@ let currentData = null;
 let schemaData = null; // Persistent cache for schema data
 
 export function initializeSchema(schemaButton, modal, loading, error, container) {
-    if (schemaButton.dataset.initialized) return;
+    console.log('Initializing schema functionality...');
+    
+    if (schemaButton.dataset.initialized) {
+        console.log('Schema already initialized, skipping');
+        return;
+    }
     schemaButton.dataset.initialized = 'true';
+    console.log('Schema initialized');
 
     // Ensure mermaid is loaded
     if (typeof mermaid === 'undefined') {
         console.error('Mermaid library not loaded!');
         return;
     }
+    console.log('Mermaid library found');
+
+    if (!window.mermaidPromise) {
+        console.error('Mermaid promise not initialized');
+        return;
+    }
+    console.log('Mermaid promise found');
 
     schemaButton.addEventListener('click', async () => {
+        console.log('Schema button clicked');
         try {
             // Wait for mermaid to be loaded
+            console.log('Waiting for mermaid to load...');
             await window.mermaidPromise;
+            console.log('Mermaid loaded successfully');
 
             modal.style.display = 'block';
             setTimeout(() => modal.classList.add('visible'), 10);
@@ -34,7 +50,13 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
             error.style.display = 'none';
 
             try {
-                const response = await fetch(`${window.location.origin}/schema`);
+                console.log('Fetching schema data...');
+                const schemaUrl = `${window.location.origin}/schema`;
+                console.log('Schema URL:', schemaUrl);
+                const response = await fetch(schemaUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const data = await response.json();
                 
                 if (data.error) {
@@ -42,6 +64,7 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                 }
 
                 console.log('Raw Schema Data:', data);
+                console.log('Raw Relationships:', data.relationships);
 
                 // Filter out SequelizeMeta table
                 const filteredTables = { ...data.tables };
@@ -51,6 +74,8 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                 const filteredRelationships = data.relationships.filter(rel =>
                     rel.from.table !== 'SequelizeMeta' && rel.to.table !== 'SequelizeMeta'
                 );
+
+                console.log('Filtered Relationships:', filteredRelationships);
 
                 // Debug output
                 console.log('Filtered Tables:', filteredTables);
@@ -75,7 +100,64 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         }
     });
 
+    // Add click handler for schema button
+    console.log('Adding schema button click handler...');
+    schemaButton.onclick = async () => {
+        console.log('Schema button clicked');
+        try {
+            // Wait for mermaid to be loaded
+            console.log('Waiting for mermaid to load...');
+            await window.mermaidPromise;
+            console.log('Mermaid loaded successfully');
+
+            modal.style.display = 'block';
+            setTimeout(() => modal.classList.add('visible'), 10);
+
+            try {
+                // Only fetch schema if we don't have cached data
+                if (!schemaData) {
+                    console.log('No cached schema data, fetching from server...');
+                    loading.style.display = 'block';
+                    error.style.display = 'none';
+
+                    console.log('Fetching schema...');
+                    const response = await fetch('/schema');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    console.log('Raw schema data:', data);
+
+                    if (data.relationships && data.relationships.length > 0) {
+                        console.log('Found relationships:', data.relationships);
+                        schemaData = data;
+                        currentData = data;
+                        renderMermaidSchema(container, data);
+                    } else {
+                        console.warn('No relationships found in schema data');
+                        error.textContent = 'No relationships found in schema';
+                        error.style.display = 'block';
+                    }
+                } else {
+                    console.log('Using cached schema data');
+                    renderMermaidSchema(container, schemaData);
+                }
+            } catch (err) {
+                console.error('Error fetching schema:', err);
+                error.textContent = err.message;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        } catch (err) {
+            console.error('Failed to initialize mermaid:', err);
+            error.textContent = 'Failed to initialize diagram renderer';
+            error.style.display = 'block';
+        }
+    };
+
     // Handle modal close
+    console.log('Adding modal close handler...');
     modal.querySelector('.schema-close').addEventListener('click', () => {
         modal.classList.remove('visible');
         setTimeout(() => {
@@ -164,9 +246,17 @@ function generateMermaidDefinition(data) {
     });
 
     // Then define relationships
-    const relationshipDefs = data.relationships.map(rel =>
-        `    ${rel.from.table} ||--o{ ${rel.to.table} : "${rel.from.column} > ${rel.to.column}"`
-    );
+    console.log('Processing relationships for Mermaid:', data.relationships);
+    console.log('Generating Mermaid relationships from:', data.relationships);
+    const relationshipDefs = data.relationships.map(rel => {
+        // Log each relationship being processed
+        console.log('Processing relationship:', JSON.stringify(rel));
+        // Format: [Entity1] [Relationship] [Entity2] : [Label]
+        // Relationship types: ||--o|, }|--|{, ||--||, ||--o{
+        const def = `    ${rel.from.table} }|--|| ${rel.to.table} : "${rel.from.column} > ${rel.to.column}"`;
+        console.log('Generated relationship definition:', def);
+        return def;
+    });
 
     // Combine everything with careful spacing to avoid Mermaid parsing issues
     const definition = [
@@ -174,6 +264,8 @@ function generateMermaidDefinition(data) {
         tableDefs.join('\n'),
         relationshipDefs.join('\n')
     ].join('\n\n');
+
+    console.log('Final Mermaid definition:', definition);
 
     console.log('Generated Mermaid Definition:', definition);
     return definition;
@@ -211,6 +303,9 @@ async function renderMermaidSchema(container, data) {
         mermaid.initialize({
             startOnLoad: false,
             theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+            themeVariables: {
+                'line-length': 50
+            },
             er: {
                 diagramPadding: 20,
                 layoutDirection: 'TB',
@@ -224,7 +319,13 @@ async function renderMermaidSchema(container, data) {
                 attributeBackground: '#fafafa',
                 wrap: true,
                 titleTopMargin: 30,
-                entitySpacing: 40
+                entitySpacing: 80,
+                relativeEdges: true
+            },
+            flowchart: {
+                curve: 'basis',
+                padding: 20,
+                useMaxWidth: true
             },
             securityLevel: 'loose'
         });

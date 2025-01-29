@@ -758,9 +758,14 @@ def update_cell(table_name, row_id, column):
 def get_schema():
     try:
         global current_db_config
+        logger.info("Schema endpoint hit")
+        
         if not current_db_config:
+            logger.error("No database configured for schema request")
             return jsonify({'error': 'No database configured'}), 400
             
+        logger.info(f"Database config: {current_db_config['db_type']} @ {current_db_config['host']}/{current_db_config['database']}")
+        
         tables = {}
         relationships = []
 
@@ -777,6 +782,8 @@ def get_schema():
                 AND table_type = 'BASE TABLE'
             """)
             table_names = [row[0] for row in cursor.fetchall()]
+            logger.info(f"Found tables: {table_names}")
+            logger.info(f"Current database name: {current_db_config['database']}")
             
             # Get columns for each table
             for table_name in table_names:
@@ -819,34 +826,51 @@ def get_schema():
                     tables[table_name] = columns
                     
                     try:
-                        # Get foreign key relationships
-                        cursor.execute("""
+                        # Create a new cursor with RealDictCursor for foreign keys
+                        dict_cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                        dict_cursor.execute("""
                             SELECT
-                                kcu.column_name,
-                                ccu.table_name AS foreign_table_name,
-                                ccu.column_name AS foreign_column_name
-                            FROM information_schema.table_constraints AS tc
-                            JOIN information_schema.key_column_usage AS kcu
-                            ON tc.constraint_name = kcu.constraint_name
-                            JOIN information_schema.constraint_column_usage AS ccu
-                            ON ccu.constraint_name = tc.constraint_name
-                            WHERE tc.constraint_type = 'FOREIGN KEY'
-                            AND tc.table_name = %s
+                                con.conname as constraint_name,
+                                src.relname as table_name,
+                                att.attname as column_name,
+                                dst.relname as foreign_table_name,
+                                att2.attname as foreign_column_name
+                            FROM pg_constraint con
+                            JOIN pg_class src ON src.oid = con.conrelid
+                            JOIN pg_class dst ON dst.oid = con.confrelid
+                            JOIN pg_namespace nsp ON nsp.oid = con.connamespace
+                            JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ANY(con.conkey)
+                            JOIN pg_attribute att2 ON att2.attrelid = con.confrelid AND att2.attnum = ANY(con.confkey)
+                            WHERE con.contype = 'f'
+                            AND nsp.nspname = 'public'
+                            AND src.relname = %s;
                         """, (table_name,))
                         
-                        for fk in cursor.fetchall():
-                            if fk[1] not in IGNORED_TABLES:
-                                relationships.append({
-                                    'from': {'table': table_name, 'column': fk[0]},
-                                    'to': {'table': fk[1], 'column': fk[2]}
-                                })
+                        fk_results = dict_cursor.fetchall()
+                        logger.info(f"Foreign key constraints for table {table_name}:")
+                        
+                        for row in fk_results:
+                            logger.info(f"  Constraint: {row['constraint_name']}")
+                            logger.info(f"    From: {row['table_name']}.{row['column_name']}")
+                            logger.info(f"    To: {row['foreign_table_name']}.{row['foreign_column_name']}")
+                            
+                            if row['foreign_table_name'] not in IGNORED_TABLES:
+                                rel = {
+                                    'from': {
+                                        'table': row['table_name'],
+                                        'column': row['column_name']
+                                    },
+                                    'to': {
+                                        'table': row['foreign_table_name'],
+                                        'column': row['foreign_column_name']
+                                    }
+                                }
+                                relationships.append(rel)
+                                logger.info(f"Added relationship: {rel}")
+                        dict_cursor.close()
                     except psycopg2.Error as e:
                         logger.warning(f"Error getting foreign keys for table {table_name}: {str(e)}")
-                        if fk[1] not in IGNORED_TABLES:
-                            relationships.append({
-                                'from': {'table': table_name, 'column': fk[0]},
-                                'to': {'table': fk[1], 'column': fk[2]}
-                            })
+                        continue
             
             cursor.close()
             connection.close()
