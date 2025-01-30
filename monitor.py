@@ -531,9 +531,6 @@ def add_row(table_name):
                 # Use RealDictCursor for PostgreSQL
                 cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                 
-                # Disable foreign key checks
-                cursor.execute("SET session_replication_role = 'replica';")
-                
                 # Get column information including constraints
                 cursor.execute("""
                     SELECT column_name,
@@ -587,9 +584,6 @@ def add_row(table_name):
                 
                 cursor.execute(query, values)
                 new_row = cursor.fetchone()
-                
-                # Re-enable foreign key checks
-                cursor.execute("SET session_replication_role = 'origin';")
                 connection.commit()
                 
                 return jsonify(dict(new_row))
@@ -647,12 +641,8 @@ def delete_row(table_name, row_id):
 
         if current_db_config.get('db_type') == 'postgresql':
             try:
-                # Disable foreign key checks
-                cursor.execute("SET session_replication_role = 'replica';")
                 # Delete the row
                 cursor.execute(f'DELETE FROM "{table_name}" WHERE id = %s', (row_id,))
-                # Re-enable foreign key checks
-                cursor.execute("SET session_replication_role = 'origin';")
             except psycopg2.Error as e:
                 return jsonify({'error': str(e)}), 500
         else:
@@ -689,12 +679,8 @@ def update_cell(table_name, row_id, column):
 
         if current_db_config.get('db_type') == 'postgresql':
             try:
-                # Disable foreign key checks
-                cursor.execute("SET session_replication_role = 'replica';")
                 cursor.execute(f'UPDATE "{table_name}" SET "{column}" = %s WHERE id = %s',
-                             (data['value'], row_id))
-                # Re-enable foreign key checks
-                cursor.execute("SET session_replication_role = 'origin';")
+                          (data['value'], row_id))
             except psycopg2.Error as e:
                 return jsonify({'error': str(e)}), 500
         else:
