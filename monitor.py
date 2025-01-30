@@ -531,51 +531,61 @@ def add_row(table_name):
                 # Use RealDictCursor for PostgreSQL
                 cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                 
-                # Get column information including constraints
+                # Get column information including primary key info
                 cursor.execute("""
-                    SELECT column_name,
-                           data_type,
-                           is_nullable,
-                           column_default,
-                           CASE
-                               WHEN is_nullable = 'NO' AND column_default IS NULL THEN true
-                               ELSE false
-                           END as requires_value
-                    FROM information_schema.columns
-                    WHERE table_schema = 'public'
-                    AND table_name = %s
-                    ORDER BY ordinal_position""", (table_name,))
+                    SELECT DISTINCT ON (c.column_name)
+                        c.column_name,
+                        c.data_type,
+                        c.is_nullable,
+                        c.column_default,
+                        CASE
+                            WHEN pk.contype = 'p' THEN true
+                            ELSE false
+                        END as is_primary
+                    FROM information_schema.columns c
+                    LEFT JOIN pg_attribute a ON
+                        a.attname = c.column_name AND
+                        a.attrelid = %s::regclass
+                    LEFT JOIN (
+                        SELECT contype, conkey, conrelid
+                        FROM pg_constraint
+                        WHERE contype = 'p'
+                    ) pk ON
+                        pk.conrelid = a.attrelid AND
+                        a.attnum = ANY(pk.conkey)
+                    WHERE c.table_name = %s
+                    AND c.table_schema = 'public'
+                    ORDER BY c.column_name, c.ordinal_position
+                """, (table_name, table_name))
                 columns_info = cursor.fetchall()
-
+                
                 # Prepare columns and values with appropriate defaults
                 columns = []
                 values = []
                 for col in columns_info:
                     col_name = col['column_name']
+                    
+                    # Skip auto-incrementing columns
+                    if col['data_type'] == 'integer' and col['column_default'] and 'nextval' in str(col['column_default']):
+                        continue
+                        
                     columns.append(col_name)
                     
-                    # Handle different data types and constraints
-                    if col['data_type'] == 'integer' and col['column_default'] and 'nextval' in str(col['column_default']):
-                        # Skip auto-incrementing columns
-                        continue
-                    elif col['requires_value']:
-                        if col['data_type'] == 'integer':
-                            values.append(0)  # Default integer
-                        elif col['data_type'] in ('timestamp', 'timestamp without time zone'):
-                            values.append('1970-01-01 00:00:00')  # Default timestamp
-                        elif col['data_type'] in ('date'):
-                            values.append('1970-01-01')  # Default date
-                        elif col['data_type'] in ('boolean'):
-                            values.append(False)  # Default boolean
-                        else:
-                            values.append('')  # Default string
+                    # For UUID primary keys, always generate a new UUID
+                    if col['data_type'] == 'uuid' and col['is_primary']:
+                        import uuid
+                        values.append(str(uuid.uuid4()))
                     else:
-                        values.append(None)  # NULL for nullable columns
-                    columns.append(col_name)
-
+                        # For all other fields, just use NULL
+                        values.append(None)
+                
+                # Validate column-value alignment
+                if len(columns) != len(values):
+                    raise ValueError(f"Column-value mismatch: {len(columns)} columns vs {len(values)} values")
+                
                 # Insert empty row
                 columns_str = ', '.join(f'"{col}"' for col in columns)
-                values_str = ', '.join(['%s'] * len(columns))
+                values_str = ', '.join(['%s'] * len(values))  # Ensure placeholders match values
                 
                 query = f'INSERT INTO "{table_name}" ({columns_str}) VALUES ({values_str}) RETURNING *'
                 logger.debug(f"PostgreSQL insert query for {table_name}: {query}")
