@@ -634,8 +634,78 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         }
     });
 
-    // Add keydown handler for 'D', 'A', and 'X' keys
+    // Add keydown handler for 'D', 'A', 'X', and 'Q' keys
     document.addEventListener('keydown', async (e) => {
+        // Handle Q key for query popup
+        if (e.key.toLowerCase() === 'q' && isAdminMode) {
+            const queryPopup = document.getElementById('queryPopup');
+            const queryInput = document.getElementById('queryInput');
+            const executeButton = document.getElementById('executeQuery');
+            const resultArea = document.getElementById('queryResult');
+            
+            queryPopup.classList.add('visible');
+            queryInput.focus();
+            
+            // Clear previous result
+            resultArea.textContent = '';
+            
+            // Handle execute button click
+            const handleExecute = async () => {
+                try {
+                    const response = await fetch(`${baseUrl}/execute_query`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: queryInput.value })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.error) {
+                        resultArea.textContent = `Error: ${data.error}`;
+                        return;
+                    }
+                    
+                    if (data.results) {
+                        resultArea.textContent = JSON.stringify(data.results, null, 2);
+                    } else {
+                        resultArea.textContent = data.message;
+                    }
+                } catch (error) {
+                    resultArea.textContent = `Error: ${error.message}`;
+                }
+            };
+            
+            // Clean up previous event listeners
+            executeButton.removeEventListener('click', handleExecute);
+            executeButton.addEventListener('click', handleExecute);
+            
+            // Handle close button
+            const closeButton = queryPopup.querySelector('.query-close');
+            const handleClose = () => {
+                queryPopup.classList.remove('visible');
+            };
+            
+            closeButton.removeEventListener('click', handleClose);
+            closeButton.addEventListener('click', handleClose);
+            
+            // Handle Escape key
+            queryPopup.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    handleClose();
+                }
+            }, { once: true });
+            
+            // Handle Enter with Ctrl/Cmd
+            queryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    handleExecute();
+                }
+            });
+            
+            return;
+        }
         if ((e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'x')
             && !isEditing && isAdminMode) {
             const focusedCell = table.querySelector('td.focused');

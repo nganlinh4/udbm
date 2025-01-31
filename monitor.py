@@ -1034,6 +1034,61 @@ def after_request(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, DELETE, OPTIONS'
     return response
 
+# Add custom query endpoint
+@app.route('/execute_query', methods=['POST'])
+def execute_query():
+    if not current_db_config:
+        return jsonify({'error': 'No database configured'}), 400
+        
+    try:
+        data = request.json
+        if not data or 'query' not in data:
+            return jsonify({'error': 'No query provided'}), 400
+            
+        query = data['query'].strip()
+        if not query:
+            return jsonify({'error': 'Empty query'}), 400
+            
+        connection = get_db_connection()
+        cursor = None
+        
+        try:
+            if current_db_config.get('db_type') == 'postgresql':
+                cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            else:
+                cursor = connection.cursor(dictionary=True)
+                
+            cursor.execute(query)
+            
+            # For SELECT queries, fetch results
+            if query.strip().lower().startswith('select'):
+                results = cursor.fetchall()
+                if isinstance(results, list):
+                    results = [dict(row) for row in results]
+                return jsonify({
+                    'success': True,
+                    'results': results,
+                    'rowCount': len(results)
+                })
+            
+            # For other queries that modify data
+            connection.commit()
+            rowcount = cursor.rowcount
+            return jsonify({
+                'success': True,
+                'message': f'Query executed successfully. Rows affected: {rowcount}',
+                'rowCount': rowcount
+            })
+            
+        finally:
+            if cursor:
+                cursor.close()
+            connection.close()
+            
+    except Exception as e:
+        logger.error(f"Error executing custom query: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # Add error handlers
 @app.errorhandler(500)
 def handle_500(e):

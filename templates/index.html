@@ -277,6 +277,25 @@
         </div>
     </div>
     <div id="error-message" class="error" style="display: none;"></div>
+    
+    <!-- Query popup -->
+    <div id="queryPopup" class="query-popup">
+        <div class="query-content">
+            <div class="query-header">
+                <span class="lang-ko">사용자 정의 쿼리</span>
+                <span class="lang-en">Custom Query</span>
+                <button class="query-close" title="Close">&times;</button>
+            </div>
+            <div class="query-form">
+                <textarea id="queryInput" placeholder="SELECT * FROM table_name"></textarea>
+                <button id="executeQuery">
+                    <span class="lang-ko">실행</span>
+                    <span class="lang-en">Execute</span>
+                </button>
+            </div>
+            <div id="queryResult" class="query-result"></div>
+        </div>
+    </div>
     <div class="table-buttons-line">
         {% for table in tables %}
         <button class="table-button" data-table="{{ table.name }}" data-theme="{{ loop.index0 % 10 }}">
