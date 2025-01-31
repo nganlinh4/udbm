@@ -637,8 +637,14 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     // Add keydown handler for 'D', 'A', 'X', and 'Q' keys
     document.addEventListener('keydown', async (e) => {
         // Handle Q key for query popup
-        if (e.key.toLowerCase() === 'q' && isAdminMode) {
-            const queryPopup = document.getElementById('queryPopup');
+        // Prevent query popup when typing in query input or when query popup is visible
+        const queryPopup = document.getElementById('queryPopup');
+        const isQueryInputFocused = document.activeElement && document.activeElement.id === 'queryInput';
+        const isQueryPopupVisible = queryPopup && queryPopup.classList.contains('visible');
+        
+        if (e.key.toLowerCase() === 'q' && isAdminMode && !isQueryInputFocused && !isQueryPopupVisible) {
+          e.preventDefault();
+            
             const queryInput = document.getElementById('queryInput');
             const executeButton = document.getElementById('executeQuery');
             const resultArea = document.getElementById('queryResult');
@@ -659,7 +665,11 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                 <span class="lang-ko">(Ctrl+Enter) 실행</span>
                 <span class="lang-en">(Ctrl+Enter) Execute</span>
             `;
-            
+            queryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'q' && e.ctrlKey) {
+                    e.stopPropagation(); // Prevent triggering the global Q handler
+                }
+            });
             // Handle query history navigation
             queryInput.addEventListener('keydown', (e) => {
                 if (e.key === 'ArrowUp') {
