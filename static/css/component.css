@@ -2479,7 +2479,6 @@ html[data-lang="en"] .swipe-guide::after {
     display: flex;
     flex-direction: column;
     border: 1px solid var(--md-sys-color-outline);
-    resize: vertical;
     position: relative;
 }
 
