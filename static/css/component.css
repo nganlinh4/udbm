@@ -2343,10 +2343,28 @@ html[data-lang="en"] .swipe-guide::after {
     border-radius: 16px;
     box-shadow: var(--md-elevation-level3);
     width: 800px;
-    max-width: 90vw;
-    max-height: 90vh;
+    max-width: 110vw;
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
+    resize: both;
+    overflow: auto;
+    position: relative;
+    min-width: 400px;
+    min-height: 300px;
+}
+
+/* Add resize handle styling */
+.query-content::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 15px;
+    height: 15px;
+    cursor: se-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--md-sys-color-outline) 50%);
+    border-bottom-right-radius: 16px;
 }
 
 .query-header {
@@ -2387,12 +2405,13 @@ html[data-lang="en"] .swipe-guide::after {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    flex: 1;
+    flex: -1;
     min-height: 0;
+    overflow: hidden;
 }
 
 #queryInput {
-    width: 96%;
+    width: calc(100% - 36px);
     height: 120px;
     padding: 16px;
     border: 2px solid var(--md-sys-color-outline);
@@ -2403,6 +2422,9 @@ html[data-lang="en"] .swipe-guide::after {
     background: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
     transition: all 0.2s ease;
+    min-height: 60px;
+    max-height: 300px;
+    box-sizing: border-box;
 }
 
 #queryInput:focus {
@@ -2446,16 +2468,19 @@ html[data-lang="en"] .swipe-guide::after {
 
 .query-result {
     flex: 1;
-    min-height: 0;
+    min-height: 150px;
     margin-top: 20px;
     font-family: 'Roboto Mono', monospace;
     font-size: 14px;
     border-radius: 12px;
-    background: #ffffff;
+    background: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
-    overflow: hidden;
+    overflow: auto;
     display: flex;
     flex-direction: column;
+    border: 1px solid var(--md-sys-color-outline);
+    resize: vertical;
+    position: relative;
 }
 
 .query-table-wrapper {
