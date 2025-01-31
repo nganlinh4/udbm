@@ -634,9 +634,10 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         }
     });
 
-    // Add keydown handler for 'D' and 'A' keys
+    // Add keydown handler for 'D', 'A', and 'X' keys
     document.addEventListener('keydown', async (e) => {
-        if ((e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a') && !isEditing && isAdminMode) {
+        if ((e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'x')
+            && !isEditing && isAdminMode) {
             const focusedCell = table.querySelector('td.focused');
             if (!focusedCell) return;
 
@@ -644,7 +645,59 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             if (!row) return;
 
             // Get row ID from first cell
-            if (e.key.toLowerCase() === 'd') {
+            if (e.key.toLowerCase() === 'x') {
+                const columnIndex = Array.from(row.cells).indexOf(focusedCell);
+                const valueToDelete = focusedCell.textContent;
+                const columnName = table.querySelector(`th:nth-child(${columnIndex + 1})`).textContent;
+
+                try {
+                    const response = await fetch(`${baseUrl}/delete/${tableName}/column/${columnName}/value/${valueToDelete}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Delete failed');
+                    }
+
+                    // Find all rows with the same value in the same column
+                    const rowsToDelete = Array.from(table.querySelectorAll('tr')).filter(r => {
+                        return r.cells[columnIndex] && r.cells[columnIndex].textContent === valueToDelete;
+                    });
+
+                    // Add deleting animation to all matching rows
+                    rowsToDelete.forEach(r => {
+                        r.classList.add('deleting');
+                    });
+                    
+                    // Remove rows after animation
+                    setTimeout(() => {
+                        rowsToDelete.forEach(r => r.remove());
+                    }, 300);
+
+                    // Show success popup
+                    const deletePopup = document.getElementById('deletePopup');
+                    deletePopup.querySelector('.warning-icon').textContent = '✓';
+                    deletePopup.querySelector('.lang-en').textContent = 'Matching rows have been deleted';
+                    deletePopup.querySelector('.lang-ko').textContent = '동일한 값을 가진 행이 삭제되었습니다';
+                    deletePopup.classList.add('show');
+                    setTimeout(() => {
+                        deletePopup.classList.remove('show');
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('Error deleting rows:', error);
+                    const deletePopup = document.getElementById('deletePopup');
+                    const icon = deletePopup.querySelector('.warning-icon');
+                    icon.textContent = '⚠';
+                    deletePopup.querySelector('.lang-en').textContent = 'Failed to delete matching rows';
+                    deletePopup.querySelector('.lang-ko').textContent = '행 삭제에 실패했습니다';
+                    deletePopup.classList.add('show');
+                    setTimeout(() => {
+                        icon.textContent = '✓';
+                        deletePopup.classList.remove('show');
+                    }, 2000);
+                }
+            } else if (e.key.toLowerCase() === 'd') {
                 const rowId = row.cells[0].textContent;
 
                 try {

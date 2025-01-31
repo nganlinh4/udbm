@@ -677,6 +677,95 @@ def delete_row(table_name, row_id):
         if 'connection' in locals():
             connection.close()
 
+@app.route('/delete/<table>/column/<column>/value/<value>', methods=['DELETE'])
+def delete_rows_by_column_value(table, column, value):
+    connection = None
+    try:
+        # Validate input parameters
+        if table in IGNORED_TABLES:
+            return jsonify({'error': 'Cannot delete from ignored table'}), 400
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Validate table exists
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = %s
+                )
+            """, (table,))
+            table_exists = cursor.fetchone()[0]
+        else:
+            cursor.execute("""
+                SELECT COUNT(*) FROM information_schema.tables 
+                WHERE table_schema = DATABASE() 
+                AND table_name = %s
+            """, (table,))
+            table_exists = cursor.fetchone()[0] > 0
+
+        if not table_exists:
+            return jsonify({'error': 'Table not found'}), 404
+
+        # Validate column exists
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'public' 
+                    AND table_name = %s 
+                    AND column_name = %s
+                )
+            """, (table, column))
+            column_exists = cursor.fetchone()[0]
+        else:
+            cursor.execute("""
+                SELECT COUNT(*) FROM information_schema.columns 
+                WHERE table_schema = DATABASE() 
+                AND table_name = %s 
+                AND column_name = %s
+            """, (table, column))
+            column_exists = cursor.fetchone()[0] > 0
+
+        if not column_exists:
+            return jsonify({'error': 'Column not found in table'}), 404
+
+        # Build safe query using properly quoted identifiers
+        if current_db_config.get('db_type') == 'postgresql':
+            query = f'DELETE FROM "{table}" WHERE "{column}" = %s'
+        else:
+            query = f'DELETE FROM `{table}` WHERE `{column}` = %s'
+
+        # Execute delete with parameterized value
+        cursor.execute(query, (value,))
+        affected_rows = cursor.rowcount
+        connection.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Deleted {affected_rows} row(s)',
+            'deleted_rows': affected_rows
+        })
+
+    except (mysql.connector.Error, psycopg2.Error) as e:
+        logger.error(f"Database error deleting rows: {str(e)}")
+        if connection:
+            connection.rollback()
+        error_msg = str(e)
+        if 'foreign key constraint' in error_msg.lower():
+            return jsonify({'error': 'Cannot delete due to foreign key constraints'}), 409
+        return jsonify({'error': error_msg}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        if connection:
+            connection.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+    finally:
+        if connection:
+            connection.close()
+
 @app.route('/update/<table_name>/<row_id>/<column>', methods=['PUT'])
 def update_cell(table_name, row_id, column):
     try:
