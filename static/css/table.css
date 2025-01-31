@@ -84,101 +84,8 @@ td {
     /* Align with table border */
 }
 
-.table-scroll-wrapper::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-    background: transparent;
-}
 
-.table-scroll-wrapper::-webkit-scrollbar-track {
-    background: transparent;
-    margin: 4px;
-}
 
-.table-container.theme-0 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #9FA8DA;
-}
-
-.table-container.theme-1 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #80CBC4;
-}
-
-.table-container.theme-2 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #F48FB1;
-}
-
-.table-container.theme-3 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #FFCC80;
-}
-
-.table-container.theme-4 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #A5D6A7;
-}
-
-.table-container.theme-5 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #CE93D8;
-}
-
-.table-container.theme-6 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #81D4FA;
-}
-
-.table-container.theme-7 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #FFF176;
-}
-
-.table-container.theme-8 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #BCAAA4;
-}
-
-.table-container.theme-9 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #B0BEC5;
-}
-
-.table-container.theme-0 .table-scroll-wrapper {
-    scrollbar-color: #9FA8DA #f5f5f500;
-}
-
-.table-container.theme-1 .table-scroll-wrapper {
-    scrollbar-color: #80CBC4 #f5f5f500;
-}
-
-.table-container.theme-2 .table-scroll-wrapper {
-    scrollbar-color: #F48FB1 #f5f5f500;
-}
-
-.table-container.theme-3 .table-scroll-wrapper {
-    scrollbar-color: #FFCC80 #f5f5f500;
-}
-
-.table-container.theme-4 .table-scroll-wrapper {
-    scrollbar-color: #A5D6A7 #f5f5f500;
-}
-
-.table-container.theme-5 .table-scroll-wrapper {
-    scrollbar-color: #CE93D8 #f5f5f500;
-}
-
-.table-container.theme-6 .table-scroll-wrapper {
-    scrollbar-color: #81D4FA #f5f5f500;
-}
-
-.table-container.theme-7 .table-scroll-wrapper {
-    scrollbar-color: #FFF176 #f5f5f500;
-}
-
-.table-container.theme-8 .table-scroll-wrapper {
-    scrollbar-color: #BCAAA4 #f5f5f500;
-}
-
-.table-container.theme-9 .table-scroll-wrapper {
-    scrollbar-color: #B0BEC5 #f5f5f500;
-}
-
-.table-scroll-wrapper {
-    scrollbar-width: thin;
-    scrollbar-color: #cdcdcd #f5f5f5;
-}
 
 .hidden-table {
     transform: scaleY(0) !important;
@@ -392,7 +299,7 @@ thead tr th {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    min-width: 100px;
+    min-width: 25px;
 }
 
 thead {

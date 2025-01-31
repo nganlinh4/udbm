@@ -2344,8 +2344,9 @@ html[data-lang="en"] .swipe-guide::after {
     padding: 20px;
     border-radius: 12px;
     box-shadow: var(--md-elevation-level3);
-    width: 80%;
-    max-width: 600px;
+    width: fit-content;
+    min-width: 600px;
+    max-width: 90vw;
 }
 
 .query-header {
@@ -2384,7 +2385,7 @@ html[data-lang="en"] .swipe-guide::after {
 }
 
 #queryInput {
-    width: 95%;
+    width: 98%;
     height: 120px;
     padding: 12px;
     border: 2px solid var(--md-sys-color-outline);
@@ -2412,17 +2413,22 @@ html[data-lang="en"] .swipe-guide::after {
     cursor: pointer;
     font-weight: 500;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+#executeQuery .shortcut {
+    font-size: 0.8em;
+    opacity: 0.7;
 }
 
 #executeQuery:hover {
     transform: translateY(-1px);
     box-shadow: var(--md-elevation-level2);
-}
-
 .query-result {
     margin-top: 16px;
-    max-height: 300px;
-    overflow-y: auto;
     font-family: 'Roboto Mono', monospace;
     font-size: 14px;
     padding: 12px;
@@ -2430,6 +2436,132 @@ html[data-lang="en"] .swipe-guide::after {
     background: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface);
     white-space: pre-wrap;
+    width: fit-content;
+    max-height: 300px;
+    overflow: auto;
+}
+
+/* Table styles for query results */
+.table-scroll-wrapper {
+    max-height: 300px;
+    overflow: auto;
+    border-radius: 4px;
+    margin: -12px;
+}
+
+.query-result table {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    width: auto;
+}
+
+.query-result th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--md-sys-color-surface-container);
+    font-weight: 600;
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+    white-space: nowrap;
+}
+
+.query-result td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+    white-space: nowrap;
+}
+
+.query-result tr:hover td {
+    background: var(--md-sys-color-surface-variant);
+}
+
+.query-result:not(:has(table)) {
+    max-height: 300px;
+    overflow: auto;
+}
+
+.query-table-wrapper {
+    max-height: 300px;
+    overflow: auto;
+    border-radius: 4px;
+    position: relative;
+}
+
+.query-result table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+}
+
+.query-result thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.query-result th {
+    background: var(--md-sys-color-surface-container);
+    padding: 4px 8px;
+    text-align: left;
+    border: 1px solid var(--md-sys-color-outline);
+    white-space: nowrap;
+}
+
+.query-result td {
+    padding: 2px 8px;
+    border: 1px solid var(--md-sys-color-outline);
+    white-space: nowrap;
+}
+
+.query-result tr:nth-child(even) {
+    background: var(--md-sys-color-surface);
+}
+
+.query-result tr:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+    width: fit-content;
+}
+
+.query-result table {
+    border-collapse: collapse;
+    margin: 0;
+    padding: 0;
+    width: auto;
+}
+
+.query-result th {
+    background: var(--md-sys-color-surface-container);
+    padding: 8px 12px;
+    text-align: left;
+    border: 1px solid var(--md-sys-color-outline);
+}
+
+.query-result td {
+    padding: 6px 12px;
+    border: 1px solid var(--md-sys-color-outline);
+}
+
+.query-result tr:nth-child(even) {
+    background: var(--md-sys-color-surface);
+}
+
+#executeQuery {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#executeQuery .shortcut {
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+#executeQuery:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--md-elevation-level2);
 }
 
 [data-theme="dark"] .query-content {
@@ -2437,5 +2569,28 @@ html[data-lang="en"] .swipe-guide::after {
 }
 
 [data-theme="dark"] .query-result {
+    background: var(--md-sys-color-surface);
+}
+
+.query-result table {
+    border-collapse: collapse;
+    margin: 0;
+    padding: 0;
+    width: auto;
+}
+
+.query-result th {
+    background: var(--md-sys-color-surface-container);
+    padding: 8px 12px;
+    text-align: left;
+    border: 1px solid var(--md-sys-color-outline);
+}
+
+.query-result td {
+    padding: 6px 12px;
+    border: 1px solid var(--md-sys-color-outline);
+}
+
+.query-result tr:nth-child(even) {
     background: var(--md-sys-color-surface);
 }

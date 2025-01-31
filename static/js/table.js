@@ -642,6 +642,11 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             const queryInput = document.getElementById('queryInput');
             const executeButton = document.getElementById('executeQuery');
             const resultArea = document.getElementById('queryResult');
+            const queryContent = document.querySelector('.query-content');
+            
+            // Load saved query history from localStorage
+            const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
+            let historyIndex = -1;
             
             queryPopup.classList.add('visible');
             queryInput.focus();
@@ -649,8 +654,41 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             // Clear previous result
             resultArea.textContent = '';
             
+            // Set Execute button style with Ctrl+Enter text
+            executeButton.innerHTML = `
+                <span class="lang-ko">(Ctrl+Enter) 실행</span>
+                <span class="lang-en">(Ctrl+Enter) Execute</span>
+            `;
+            
+            // Handle query history navigation
+            queryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (historyIndex < queryHistory.length - 1) {
+                        historyIndex++;
+                        queryInput.value = queryHistory[historyIndex];
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (historyIndex > -1) {
+                        historyIndex--;
+                        queryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+                    }
+                }
+            });
+            
             // Handle execute button click
             const handleExecute = async () => {
+                const query = queryInput.value.trim();
+                if (!query) return;
+                
+                // Save to history (if not already the most recent)
+                if (!queryHistory.includes(query)) {
+                    queryHistory.unshift(query);
+                    if (queryHistory.length > 50) queryHistory.pop(); // Keep last 50 queries
+                    localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+                }
+                historyIndex = -1;
                 try {
                     const response = await fetch(`${baseUrl}/execute_query`, {
                         method: 'POST',
@@ -667,7 +705,58 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                     }
                     
                     if (data.results) {
-                        resultArea.textContent = JSON.stringify(data.results, null, 2);
+                        // Check if results is array of objects (table format)
+                        if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                            // Clear previous content
+                            resultArea.innerHTML = '';
+                            
+                            // Create table wrapper with dynamic width
+                            const queryContent = document.querySelector('.query-content');
+                            queryContent.style.width = '100%';
+                            queryContent.style.maxWidth = '80%';
+                            queryContent.style.overflowX = 'auto';
+
+                            const tableWrapper = document.createElement('div');
+                            tableWrapper.className = 'table-scroll-wrapper';
+                            tableWrapper.style.width = '100%';
+                            tableWrapper.style.maxWidth = '100%';
+                            
+                            const table = document.createElement('table');
+                            table.style.width = '100%';
+                            
+                            // Create header
+                            const thead = document.createElement('thead');
+                            const headerRow = document.createElement('tr');
+                            Object.keys(data.results[0]).forEach(key => {
+                                const th = document.createElement('th');
+                                th.textContent = key;
+                                headerRow.appendChild(th);
+                            });
+                            thead.appendChild(headerRow);
+                            table.appendChild(thead);
+                            
+                            // Create body
+                            const tbody = document.createElement('tbody');
+                            data.results.forEach(row => {
+                                const tr = document.createElement('tr');
+                                Object.values(row).forEach(value => {
+                                    const td = document.createElement('td');
+                                    td.textContent = value === null ? 'NULL' : value;
+                                    tr.appendChild(td);
+                                });
+                                tbody.appendChild(tr);
+                            });
+                            table.appendChild(tbody);
+                            
+                            // Append table to wrapper and wrapper to result area
+                            tableWrapper.appendChild(table);
+                            resultArea.appendChild(tableWrapper);
+
+                            // Auto-adjust column widths after data is loaded
+                            setTimeout(() => adjustColumnWidths(table), 0);
+                        } else {
+                            resultArea.textContent = JSON.stringify(data.results, null, 2);
+                        }
                     } else {
                         resultArea.textContent = data.message;
                     }
@@ -696,11 +785,15 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                 }
             }, { once: true });
             
+            let isExecuting = false;
             // Handle Enter with Ctrl/Cmd
             queryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !isExecuting) {
                     e.preventDefault();
-                    handleExecute();
+                    isExecuting = true;
+                    handleExecute().finally(() => {
+                        isExecuting = false;
+                    });
                 }
             });
             
