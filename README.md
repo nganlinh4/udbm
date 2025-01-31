@@ -87,7 +87,7 @@ Just scroll down, the monitoring will automatically pauses, it will auto resume 
 
 ### Add, Delete, Alter Data
 
-When ADMIN MODE is turned on, the page will allow for selecting data cell. Add an empty row to the table: Select cell + Press A. Delete a row: Select cell + Press D. Edit cell value: Select cell + click once more or Double click a cell, type your edits and press Enter.
+When ADMIN MODE is turned on, the page will allow for selecting data cell and do various actions to the DB while ignoring foreign key checks.
 
 ![Admin mode](readme_assets/admin.png)
 
