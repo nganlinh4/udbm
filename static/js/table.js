@@ -723,7 +723,6 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                             // Create table wrapper with dynamic width
                             const queryContent = document.querySelector('.query-content');
                             queryContent.style.width = '100%';
-                            queryContent.style.maxWidth = '80%';
                             queryContent.style.overflowX = 'auto';
 
                             const tableWrapper = document.createElement('div');
