@@ -343,7 +343,7 @@ input:checked ~ .theme-icon.moon-icon,
     display: inline-block;
     width: 44px;
     height: 24px;
-    margin: 0 4px;
+    margin: 0 -6px;
 }
 
 .switch input {
@@ -401,7 +401,7 @@ input:checked + .switch-slider {
     height: 20px;
     width: 20px;
     left: 2px;
-    bottom: 2px;
+    bottom: 2.5px;
     background-color: white;
     transition: .3s;
     border-radius: 50%;

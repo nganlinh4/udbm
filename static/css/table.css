@@ -1,3 +1,65 @@
+/* Arrangement toggle styles */
+.arrangement-mode {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.05);
+    margin-right: 10px;
+}
+
+.arrangement-label {
+    font-size: 0.85em;
+    color: var(--md-sys-color-on-surface);
+}
+
+.arrangement-switch {
+    margin: 0;
+    transform: scale(0.7);
+}
+
+.arrangement-switch .switch-slider {
+    width: 28px;
+    height: 16px;
+    top: 4px;
+    left: 8px;
+}
+
+.arrangement-switch .switch-slider::before {
+    width: 20px;
+    height: 20px;
+    top: -3px;
+    left: -6px;
+}
+
+.table-section.relation-group {
+    border-left: 2px solid var(--md-sys-color-primary);
+    /* margin-left: 16px; */
+    padding-left: 12px;
+    transition: all 0.3s ease;
+}
+
+/* Dark theme support */
+[data-theme="dark"] .arrangement-mode {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.arrangement-switch .tooltip {
+    top: -70px;
+    left: 70px;
+    scale: 1.5;
+}
+
+.arrangement-switch .tooltip::after {
+    top: 30px;
+}
+
+.arrangement-switch:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
 /* Fix white bar above table header */
 .table-scroll-wrapper {
     background-color: #00000000;
