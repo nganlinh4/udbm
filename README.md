@@ -30,7 +30,6 @@ A real-time web-based database monitoring system that focus on monitoring tables
 ## Future Plans
 
 (please recommend me more features)
-- Execute custom SQL queries
 - Support for more SQL types besides MySQL and PostgreSQL
 
 ## Installation
@@ -85,11 +84,12 @@ Just scroll down, the monitoring will automatically pauses, it will auto resume 
 
 ![Historical Data View](readme_assets/tooltip.png)
 
-### Add, Delete, Alter Data
+### Add, Delete, Alter Data, Custom Query
 
-When ADMIN MODE is turned on, the page will allow for selecting data cell and do various actions to the DB while ignoring foreign key checks.
+When ADMIN MODE is turned on, the page will allow for executing custom queries or selecting data cell and do various actions to the DB while ignoring foreign key checks.
 
 ![Admin mode](readme_assets/admin.png)
+![Admin mode](readme_assets/custom.png)
 
 ## License
 
