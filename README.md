@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 ### (Optional) Testing with Sample Databases
 
-- `python create_db.py`: Creates two sample databases (mock_db and fake_db) - one small and one large with predefined schemas. Use this if you want to quickly test the system without having any existing databases. Before running this, go to config.py to define your host, MySQL username, password.
+- `python create_db.py`: Creates two sample databases (mock_db and fake_db, based on your defined `config.py`) - one small and one large with predefined schemas. Use this if you want to quickly test the system without having any existing databases. Before running this, go to config.py to define your host, MySQL username, password.
 - `python simulation.py`: Simulates three basic database operations (insert, update, delete) on the sample databases (if successes, the monitor page will have indicating animations like the below).
 
 ![Database Operations Animation](readme_assets/animation.png)
