@@ -30,7 +30,6 @@ A real-time web-based database monitoring system that focus on monitoring tables
 ## Future Plans
 
 (please recommend me more features)
-- Convert to Node.js project
 - Support for more SQL types besides MySQL and PostgreSQL
 
 ## Installation
