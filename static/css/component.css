@@ -400,7 +400,7 @@ input:checked + .switch-slider {
     height: 20px;
     width: 20px;
     left: 2px;
-    bottom: 2.5px;
+    bottom: 2px;
     background-color: white;
     transition: .3s;
     border-radius: 50%;

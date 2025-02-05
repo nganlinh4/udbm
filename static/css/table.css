@@ -275,6 +275,11 @@ tbody tr:last-child td {
     background: #c8e6c9;
 }
 
+[data-theme="dark"] .table-section.sortable-ghost {
+    opacity: 0.4;
+    background: #0a6850;
+}
+
 .drag-handle {
     cursor: grab;
     padding: 4px 8px;
