@@ -43,8 +43,69 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (arrangementToggle) {
+        // Load saved state
+        // Load saved state and apply immediately
+        const savedState = localStorage.getItem('arrangementMode') === 'true';
+        arrangementToggle.checked = savedState;
+        isRelationMode = savedState;
+        
+        // Apply the saved arrangement state immediately after schema data is loaded
+        setTimeout(() => {
+            if (savedState) {
+                // Add transitions
+                const tableSections = document.querySelectorAll('.table-section');
+                const tablePills = document.querySelectorAll('.table-button');
+                tableSections.forEach(section => {
+                    section.style.transition = 'all 0.3s ease-out';
+                });
+                tablePills.forEach(pill => {
+                    pill.style.transition = 'all 0.3s ease-out';
+                });
+
+                // Get sorted order and apply arrangement
+                const sortedOrder = getSortedTableOrder();
+                const tablesContainer = document.getElementById('tables-container');
+                const buttonsLine = document.querySelector('.table-buttons-line');
+
+                // Rearrange table sections
+                sortedOrder.forEach(tableName => {
+                    const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+                    if (section) {
+                        tablesContainer.appendChild(section);
+                    }
+                });
+
+                // Rearrange table pills
+                sortedOrder.forEach(tableName => {
+                    const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
+                    if (pill) {
+                        buttonsLine.appendChild(pill);
+                    }
+                });
+
+                // Mark related tables
+                tableSections.forEach(section => {
+                    const tableName = section.getAttribute('data-table-name');
+                    if (hasRelations(tableName)) {
+                        section.classList.add('relation-group');
+                    }
+                });
+
+                // Clean up transitions
+                setTimeout(() => {
+                    tableSections.forEach(section => {
+                        section.style.transition = '';
+                    });
+                    tablePills.forEach(pill => {
+                        pill.style.transition = '';
+                    });
+                }, 300);
+            }
+        }, 0);
+        // Add change event listener
         arrangementToggle.addEventListener('change', (e) => {
             isRelationMode = e.target.checked;
+            localStorage.setItem('arrangementMode', e.target.checked);
             const tableSections = document.querySelectorAll('.table-section');
             const tablePills = document.querySelectorAll('.table-button');
             
