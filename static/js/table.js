@@ -417,6 +417,22 @@ function arrangeAlphabetically() {
     }, sortedNames.length * 50 + 300);
 }
 
+function formatJsonCell(value) {
+    try {
+        // If it's already an object, use it directly
+        const jsonObj = typeof value === 'object' ? value : JSON.parse(value);
+        const formattedJson = JSON.stringify(jsonObj, null, 2);
+        // Create a wrapper div with custom styling
+        const wrapper = document.createElement('div');
+        wrapper.className = 'json-cell';
+        wrapper.style.whiteSpace = 'pre-wrap';
+        wrapper.textContent = formattedJson;
+        return wrapper;
+    } catch (e) {
+        return value;
+    }
+}
+
 function updateTableRows(tbody, tableData, columns) {
     const currentRows = Array.from(tbody.querySelectorAll('tr')).length;
     const newRowCount = tableData.length;
@@ -439,7 +455,18 @@ function updateTableRows(tbody, tableData, columns) {
         const rowKey = cells[0]?.textContent;
         existingRows.set(rowKey, {
             element: tr,
-            data: Array.from(cells).map(cell => cell.textContent)
+            data: Array.from(cells).map(cell => {
+                const jsonCell = cell.querySelector('.json-cell');
+                if (jsonCell) {
+                    try {
+                        // Parse JSON data for proper comparison
+                        return JSON.parse(jsonCell.textContent);
+                    } catch (e) {
+                        return jsonCell.textContent;
+                    }
+                }
+                return cell.textContent;
+            })
         });
     });
 
@@ -452,20 +479,42 @@ function updateTableRows(tbody, tableData, columns) {
         const tr = document.createElement('tr');
         
         if (existing) {
-            // Check if data changed
+            // Check if data changed by comparing actual values
             const hasChanged = columns.some((col, idx) => {
-                const newVal = row[col] !== null ? String(row[col]) : '';
-                return existing.data[idx] !== newVal;
+                const newVal = row[col];
+                const existingVal = existing.data[idx];
+                
+                // Special handling for JSON comparison
+                if (typeof newVal === 'object' && newVal !== null) {
+                    try {
+                        // Deep compare objects
+                        return JSON.stringify(newVal) !== JSON.stringify(existingVal);
+                    } catch (e) {
+                        return true;
+                    }
+                }
+                
+                return String(newVal !== null ? newVal : '') !== String(existingVal !== null ? existingVal : '');
             });
 
-            if (hasChanged || animateAll) {
+            if (hasChanged) {
                 tr.classList.add('changed');
             }
             
             columns.forEach((col, idx) => {
                 const td = document.createElement('td');
-                const newVal = row[col] !== null ? String(row[col]) : '';
-                td.textContent = newVal;
+                const val = row[col];
+                
+                if (val !== null) {
+                    if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
+                        const jsonView = formatJsonCell(val);
+                        td.appendChild(jsonView);
+                    } else {
+                        td.textContent = String(val);
+                    }
+                } else {
+                    td.textContent = '';
+                }
                 tr.appendChild(td);
             });
             
@@ -475,10 +524,21 @@ function updateTableRows(tbody, tableData, columns) {
             if (currentRows > 0) {
                 tr.classList.add('new-row');
             }
+            
             columns.forEach(col => {
                 const td = document.createElement('td');
                 const val = row[col];
-                td.textContent = val !== null ? String(val) : '';
+                
+                if (val !== null) {
+                    if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
+                        const jsonView = formatJsonCell(val);
+                        td.appendChild(jsonView);
+                    } else {
+                        td.textContent = String(val);
+                    }
+                } else {
+                    td.textContent = '';
+                }
                 tr.appendChild(td);
             });
         }
@@ -805,7 +865,17 @@ function appendTableData(tableName, tableInfo, translations, currentLang) {
             tableInfo.columns.forEach(col => {
                 const td = document.createElement('td');
                 const val = row[col];
-                td.textContent = val !== null ? String(val) : '';
+                
+                if (val !== null) {
+                    if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
+                        const jsonView = formatJsonCell(val);
+                        td.appendChild(jsonView);
+                    } else {
+                        td.textContent = String(val);
+                    }
+                } else {
+                    td.textContent = '';
+                }
                 tr.appendChild(td);
             });
             tbody.appendChild(tr);
@@ -909,12 +979,26 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             window.toggleMonitoring();
         }
 
-        originalValue = cell.textContent;
+        const jsonCell = cell.querySelector('.json-cell');
+        originalValue = jsonCell ? jsonCell.textContent : cell.textContent;
         currentEditCell = cell;
         isEditing = true;
         cell.classList.add('editing');
-        const input = document.createElement('input');
-        input.value = originalValue;
+        
+        const input = document.createElement('textarea');
+        if (jsonCell) {
+            input.style.minHeight = '100px';
+            input.style.width = '100%';
+            try {
+                // Format JSON for editing
+                const parsed = JSON.parse(originalValue);
+                input.value = JSON.stringify(parsed, null, 2);
+            } catch (e) {
+                input.value = originalValue;
+            }
+        } else {
+            input.value = originalValue;
+        }
 
         // Store editing state for monitoring updates
         const row = cell.closest('tr');
@@ -935,6 +1019,11 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                 const columnName = table.querySelector('th:nth-child(' + (columnIndex + 1) + ')').textContent;
                 
                 try {
+                    // Validate JSON if it's a JSON cell
+                    if (jsonCell) {
+                        JSON.parse(newValue); // Will throw if invalid
+                    }
+                    
                     const response = await fetch(`${baseUrl}/update/${tableName}/${rowId}/${columnName}`, {
                         method: 'PUT',
                         headers: {
@@ -942,14 +1031,20 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                         },
                         body: JSON.stringify({ value: newValue })
                     });
-
+                    
                     if (!response.ok) {
                         throw new Error('Update failed');
                     }
-
-                    cell.textContent = newValue;
+                    
+                    if (jsonCell) {
+                        const newJsonView = formatJsonCell(newValue);
+                        cell.textContent = '';
+                        cell.appendChild(newJsonView);
+                    } else {
+                        cell.textContent = newValue;
+                    }
                     originalValue = newValue;
-
+                    
                     // Show success popup
                     const deletePopup = document.getElementById('deletePopup');
                     deletePopup.querySelector('.warning-icon').textContent = '✓';
@@ -961,19 +1056,23 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                     }, 2000);
                 } catch (error) {
                     console.error('Error updating cell:', error);
+                    if (jsonCell) {
+                        const errorMessage = error instanceof SyntaxError ? 'Invalid JSON format' : 'Failed to update value';
+                        const koreanMessage = error instanceof SyntaxError ? 'JSON 형식이 잘못되었습니다' : '값 업데이트에 실패했습니다';
+                        
+                        const deletePopup = document.getElementById('deletePopup');
+                        const icon = deletePopup.querySelector('.warning-icon');
+                        icon.textContent = '⚠';
+                        deletePopup.querySelector('.lang-en').textContent = errorMessage;
+                        deletePopup.querySelector('.lang-ko').textContent = koreanMessage;
+                        deletePopup.classList.add('show');
+                        setTimeout(() => {
+                            icon.textContent = '✓';
+                            deletePopup.classList.remove('show');
+                        }, 2000);
+                        return;
+                    }
                     restoreCell(cell);
-                    // Show error popup
-                    const deletePopup = document.getElementById('deletePopup');
-                    const icon = deletePopup.querySelector('.warning-icon');
-                    icon.textContent = '⚠';
-                    deletePopup.querySelector('.lang-en').textContent = 'Failed to update value';
-                    deletePopup.querySelector('.lang-ko').textContent = '값 업데이트에 실패했습니다';
-                    deletePopup.classList.add('show');
-                    setTimeout(() => {
-                        icon.textContent = '✓';
-                        deletePopup.classList.remove('show');
-                    }, 2000);
-                    return;
                 }
             } else {
                 restoreCell(cell);
@@ -984,12 +1083,11 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             currentEditCell = null;
         };
 
+        // Handle both Enter (with ctrl/cmd) and blur events
         input.addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter') {
+            if ((e.key === 'Enter' && (e.ctrlKey || e.metaKey)) || e.key === 'Escape') {
                 e.preventDefault();
-                handleEditComplete(input.value, true);
-            } else if (e.key === 'Escape') {
-                handleEditComplete(originalValue, false);
+                handleEditComplete(input.value, e.key !== 'Escape');
             }
         });
 
@@ -1406,36 +1504,73 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
 
 export function adjustColumnWidths(table) {
     const columns = Array.from(table.querySelectorAll('th'));
-    columns.forEach((th, index) => {
-        // Reset any existing widths
-        th.style.width = '';
+    const PADDING = 32;
+    const MIN_JSON_WIDTH = 0;
+    const MAX_JSON_WIDTH = 800;
+    const INDENT_SIZE = 2;
+    const NESTING_PADDING = 20; // Extra padding per nesting level
 
-        // Calculate the max width needed for this column
+    columns.forEach((th, index) => {
+        th.style.width = '';
         const cells = Array.from(table.querySelectorAll(`td:nth-child(${index + 1})`));
         const allCells = [th, ...cells];
         let maxWidth = 0;
+        let hasJsonCells = false;
+        let maxNestingLevel = 0;
 
         allCells.forEach(cell => {
-            const cellText = cell.innerText || cell.textContent;
-            const cellFont = window.getComputedStyle(cell).font;
-            const cellWidth = getTextWidth(cellText, cellFont);
-            if (cellWidth > maxWidth) {
-                maxWidth = cellWidth;
+            const jsonCell = cell.querySelector('.json-cell');
+            if (jsonCell) {
+                hasJsonCells = true;
+                try {
+                    const jsonObj = JSON.parse(jsonCell.textContent);
+                    const formattedJson = JSON.stringify(jsonObj, null, INDENT_SIZE);
+                    const lines = formattedJson.split('\n');
+                    const cellFont = window.getComputedStyle(jsonCell).font;
+
+                    // Calculate max nesting level
+                    const currentNesting = Math.max(...lines.map(line => 
+                        (line.match(/^\s+/)?.[0].length || 0) / INDENT_SIZE
+                    ));
+                    maxNestingLevel = Math.max(maxNestingLevel, currentNesting);
+
+                    lines.forEach(line => {
+                        const indentLevel = line.search(/\S/);
+                        const indentWidth = getTextWidth(' '.repeat(indentLevel), cellFont);
+                        const content = line.trim();
+                        const contentWidth = getTextWidth(content, cellFont);
+                        maxWidth = Math.max(maxWidth, indentWidth + contentWidth);
+                    });
+                } catch (e) {
+                    maxWidth = Math.max(maxWidth, getTextWidth(jsonCell.textContent, window.getComputedStyle(jsonCell).font));
+                }
+            } else {
+                const cellText = cell.textContent;
+                const cellFont = window.getComputedStyle(cell).font;
+                const cellWidth = getTextWidth(cellText, cellFont);
+                maxWidth = Math.max(maxWidth, cellWidth);
             }
         });
 
-        // Apply the width to the header and cells (add padding as needed)
-        let finalWidth = maxWidth + 24; // Add padding
-
-        // Add extra width to the final column for the delete button
+        // Add padding and handle special cases
+        let finalWidth = maxWidth + PADDING;
+        if (hasJsonCells) {
+            // Add extra padding based on maximum nesting level
+            finalWidth += maxNestingLevel * NESTING_PADDING;
+            finalWidth = Math.max(finalWidth, MIN_JSON_WIDTH);
+            finalWidth = Math.min(finalWidth, MAX_JSON_WIDTH);
+        }
         if (index === columns.length - 1) {
-            finalWidth += 30; // Extra width for the 'x' button
+            finalWidth += 30;
         }
 
-        th.style.width = `${finalWidth}px`;
-
-        cells.forEach(cell => {
+        // Apply the width uniformly
+        [th, ...cells].forEach(cell => {
             cell.style.width = `${finalWidth}px`;
+            cell.style.minWidth = `${finalWidth}px`;
+            if (!cell.querySelector('.json-cell')) {
+                cell.style.maxWidth = `${finalWidth}px`;
+            }
         });
     });
 }

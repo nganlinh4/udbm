@@ -1,3 +1,6 @@
+import { getTextWidth } from './utils.js';
+import { adjustColumnWidths } from './table.js';
+
 // Constants
 const ROWS_PER_LOAD = 50;
 const baseUrl = window.location.origin;
@@ -874,48 +877,9 @@ function toggleTable(tableName) {
 
 // Add a function to adjust column widths to fit content
 function adjustColumnWidths(table) {
-    const columns = Array.from(table.querySelectorAll('th'));
-    columns.forEach((th, index) => {
-        // Reset any existing widths
-        th.style.width = '';
-
-        // Calculate the max width needed for this column
-        const cells = Array.from(table.querySelectorAll(`td:nth-child(${index + 1})`));
-        const allCells = [th, ...cells];
-        let maxWidth = 0;
-
-        allCells.forEach(cell => {
-            const cellText = cell.innerText || cell.textContent;
-            const cellFont = window.getComputedStyle(cell).font;
-            const cellWidth = getTextWidth(cellText, cellFont);
-            if (cellWidth > maxWidth) {
-                maxWidth = cellWidth;
-            }
-        });
-
-        // Apply the width to the header and cells (add padding as needed)
-        let finalWidth = maxWidth + 24; // Add padding
-
-        // Add extra width to the final column for the delete button
-        if (index === columns.length - 1) {
-            finalWidth += 30; // Extra width for the 'x' button
-        }
-
-        th.style.width = `${finalWidth}px`;
-
-        cells.forEach(cell => {
-            cell.style.width = `${finalWidth}px`;
-        });
-    });
-}
-
-// Utility function to get text width in pixels
-function getTextWidth(text, font) {
-    // Reuse canvas object for better performance
-    const canvas = getTextWidth.canvas || (getTextWidth.canvas = document.createElement('canvas'));
-    const context = canvas.getContext('2d');
-    context.font = font || '16px Arial';
-    return context.measureText(text).width;
+    // Simply use the improved version from table.js
+    const tableClass = window.require('./table.js');
+    tableClass.adjustColumnWidths(table);
 }
 
 // Add new function to update language display

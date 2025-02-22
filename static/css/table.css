@@ -151,8 +151,13 @@ td {
     /* Align with table border */
 }
 
-
-
+.table-scroll-wrapper td {
+    max-width: none !important;  /* Override previous max-width constraints */
+    vertical-align: top;  /* Align content to top for better readability */
+    padding: 8px;  /* Reduce base padding to better handle JSON cells */
+    box-sizing: border-box;
+    position: relative;
+}
 
 .hidden-table {
     transform: scaleY(0) !important;
@@ -227,6 +232,15 @@ td {
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+td:has(.json-cell) {
+    padding: 0;  /* Slightly reduced padding for JSON cells to account for .json-cell's own padding */
+    background: linear-gradient(
+        90deg,
+        transparent calc(100% - 1px),
+        rgba(0, 0, 0, 0.03) calc(100% - 1px)
+    );
+}
+
 td.editing {
     padding: 12px;
 }
@@ -239,6 +253,20 @@ td.editing input {
     background: var(--md-sys-color-surface);
     font-size: inherit;
     font-family: inherit;
+}
+
+td.editing textarea {
+    min-height: 200px;  /* Increased from 100px */
+    width: 100%;
+    font-size: 0.9em;
+    line-height: 1.4;
+    padding: 8px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 4px;
+    resize: vertical;
+    background: var(--md-sys-color-surface);
+    box-sizing: border-box;
+    margin: 0;
 }
 
 [data-theme="dark"] td.editing input {
@@ -472,7 +500,6 @@ tr {
 [data-theme="dark"] .table-container.theme-9 thead th {
     background-color: #263238;
 }
-
 
 .table-button.active {
     background: #1a73e8;
@@ -1148,4 +1175,58 @@ tr.deleting {
         opacity: 0;
         transform: translateX(100%);
     }
+}
+
+/* Add CSS styles for JSON cell formatting */
+.json-cell {
+    white-space: pre-wrap;
+    font-size: 0.9em;
+    line-height: 1.2;
+    border-radius: 4px;
+    padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere; /* Changed from break-word for better wrapping of long strings */
+    word-break: break-word; /* Changed from normal to better handle long JSON keys */
+    word-spacing: normal;
+    tab-size: 2;
+    -moz-tab-size: 2;
+    display: block;
+    height: 100%;
+    margin: 0;
+}
+
+/* Improve readability of wrapped JSON content */
+.json-cell:not(.editing)::before {
+    content: "";
+    white-space: pre-wrap;
+    tab-size: 2;
+    -moz-tab-size: 2;
+}
+
+/* Add subtle indent guides for better visual hierarchy */
+td:has(.json-cell) {
+    padding: 0;
+    background: linear-gradient(
+        90deg,
+        transparent calc(100% - 1px),
+        rgba(0, 0, 0, 0.03) calc(100% - 1px)
+    );
+}
+
+/* Dark theme improvements */
+[data-theme="dark"] td:has(.json-cell) {
+    background: linear-gradient(
+        90deg,
+        transparent calc(100% - 1px),
+        rgba(255, 255, 255, 0.03) calc(100% - 1px)
+    );
+}
+
+[data-theme="dark"] .json-cell {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .json-cell:hover {
+    background: rgba(255, 255, 255, 0.04);
 }
