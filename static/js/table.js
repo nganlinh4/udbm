@@ -1001,28 +1001,25 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         input.style.resize = 'none';
         input.style.boxSizing = 'border-box';
 
-        if (jsonCell) {
-            input.style.minHeight = '100px';
-            input.style.width = '100%';
-            try {
-                // Format JSON for editing
-                const parsed = typeof originalValue === 'object' ? originalValue : JSON.parse(originalValue);
-                input.value = JSON.stringify(parsed, null, 2);
-            } catch (e) {
-                input.value = originalValue;
-            }
-        } else {
-            input.value = originalValue;
-        }
+        input.value = jsonCell ? JSON.stringify(JSON.parse(originalValue), null, 2) : originalValue;
 
         // Adjust height on content change
         const adjustHeight = () => {
-            const minHeight = jsonCell ? 100 : 24; // Use larger min height for JSON
-            input.style.height = 'auto';
+            input.style.height = '0'; // Reset height
+            const minHeight = jsonCell ? 100 : Math.max(24, input.scrollHeight);
             const newHeight = Math.max(minHeight, input.scrollHeight);
             input.style.height = `${newHeight}px`;
-            input.style.minHeight = `${minHeight}px`;
         };
+
+        // Handle input height adjustments
+        input.addEventListener('input', adjustHeight);
+        
+        // Initial height adjustment
+        cell.appendChild(input);
+        requestAnimationFrame(() => {
+            adjustHeight();
+            input.focus();
+        });
 
         // Store editing state for monitoring updates
         const row = cell.closest('tr');
@@ -1106,12 +1103,6 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             isEditing = false;
             currentEditCell = null;
         };
-
-        // Handle input height adjustments
-        input.addEventListener('input', adjustHeight);
-        // Initial height adjustment after a brief delay to ensure content is rendered
-        requestAnimationFrame(adjustHeight);
-        input.style.overflowY = input.scrollHeight > input.clientHeight ? 'auto' : 'hidden';
 
         // Handle Enter, Tab, and Escape events
         input.addEventListener('keydown', async (e) => {

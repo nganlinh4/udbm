@@ -240,32 +240,39 @@ td:has(.json-cell) {
 }
 
 td.editing {
-    padding: 6px;
+    padding: 0;
+    height: 100%;
 }
 
-td.editing input {
+td.editing textarea {
     width: 100%;
     height: 100%;
-    border: none;
-    outline: none;
-    background: var(--md-sys-color-surface);
-    font-size: inherit;
-    font-family: inherit;
-}
-
-td.editing textarea { /* Increased from 100px */
-    width: 100%;
-    font-size: 0.9em;
-    line-height: 1.2;
     padding: 8px;
-    border: 0px;
-    border-radius: 4px;
-    resize: vertical;
+    border: 0;
+    resize: none;
     background: var(--md-sys-color-surface);
     box-sizing: border-box;
     margin: 0;
     font-family: inherit;
     outline: none;
+    overflow-y: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Match display mode line height and font size */
+td:not(:has(.json-cell)) textarea {
+    font-size: 1em;
+    line-height: inherit;
+    min-height: 24px;
+}
+
+td:has(.json-cell) textarea {
+    font-size: 0.9rem; /* Match JSON display size */
+    line-height: 1.2;
+    min-height: 100px;
+    resize: vertical;
+    height: auto;
 }
 
 [data-theme="dark"] td.editing input {
@@ -1179,7 +1186,7 @@ tr.deleting {
 /* Add CSS styles for JSON cell formatting */
 .json-cell {
     white-space: pre-wrap;
-    font-size: 0.9em;
+    font-size: 0.9rem;  /* Changed to rem to match edit mode */
     line-height: 1.2;
     border-radius: 4px;
     padding: 8px;
