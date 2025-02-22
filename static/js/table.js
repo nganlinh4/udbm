@@ -1,17 +1,86 @@
 import { setCookie, getCookie, getTextWidth, translations, getCurrentLanguage } from './utils.js';
 
-// Constants
+// Constants and state variables
 const ROWS_PER_LOAD = 50;
-
-// Global state variables
-let tableChunks = {};  // Store the current chunk range for each table
+let tableChunks = {};
 let isLoading = {};
 let autoScrolling = false;
 let isAdminMode = false;
-
-// Global state variables
 let isRelationMode = false;
 let schemaData = null;
+
+// Helper function to get sorted table order based on relationships
+function getSortedTableOrder() {
+    if (!schemaData || !schemaData.relationships) {
+        return Array.from(document.querySelectorAll('.table-section'))
+            .map(section => section.getAttribute('data-table-name'));
+    }
+
+    // Build relationship graph
+    const relationGraph = new Map();
+    const connectionCounts = new Map();
+    
+    // Initialize maps with all tables
+    document.querySelectorAll('.table-section').forEach(section => {
+        const tableName = section.getAttribute('data-table-name');
+        relationGraph.set(tableName, new Set());
+        connectionCounts.set(tableName, 0);
+    });
+    
+    // Add relationships and count connections
+    schemaData.relationships.forEach(rel => {
+        relationGraph.get(rel.from.table).add(rel.to.table);
+        relationGraph.get(rel.to.table).add(rel.from.table);
+        connectionCounts.set(rel.from.table, (connectionCounts.get(rel.from.table) || 0) + 1);
+        connectionCounts.set(rel.to.table, (connectionCounts.get(rel.to.table) || 0) + 1);
+    });
+
+    // Sort tables by connection count and then group related tables
+    const visited = new Set();
+    const sortedTables = [];
+    
+    // Sort by connection count first
+    const tablesByConnections = Array.from(connectionCounts.entries())
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([table]) => table);
+
+    // Helper function to add related tables
+    function addRelatedTables(tableName) {
+        if (visited.has(tableName)) return;
+        visited.add(tableName);
+        sortedTables.push(tableName);
+        
+        // Add directly related tables
+        if (relationGraph.has(tableName)) {
+            Array.from(relationGraph.get(tableName))
+                .sort((a, b) => {
+                    const countDiff = (connectionCounts.get(b) || 0) - (connectionCounts.get(a) || 0);
+                    return countDiff !== 0 ? countDiff : a.localeCompare(b);
+                })
+                .forEach(related => {
+                    if (!visited.has(related)) {
+                        addRelatedTables(related);
+                    }
+                });
+        }
+    }
+
+    // Process all tables
+    tablesByConnections.forEach(tableName => {
+        if (!visited.has(tableName)) {
+            addRelatedTables(tableName);
+        }
+    });
+
+    return sortedTables;
+}
+
+// Helper function to check if a table has relations
+function hasRelations(tableName) {
+    return schemaData?.relationships?.some(rel =>
+        rel.from.table === tableName || rel.to.table === tableName
+    ) || false;
+}
 
 // Preload schema data when page loads
 async function loadSchemaData() {
@@ -25,25 +94,56 @@ async function loadSchemaData() {
     }
 }
 
-// Initialize admin mode and arrangement handler
-let initialArrangement = localStorage.getItem('arrangementMode') === 'true';
+// Load schema data immediately when script loads
+loadSchemaData().then(() => {
+    // Hide content and prepare initial arrangement
+    const tablesContainer = document.getElementById('tables-container');
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    const savedArrangement = localStorage.getItem('arrangementMode');
+    const initialArrangement = savedArrangement !== null ? JSON.parse(savedArrangement) : false;
+    
+    if (tablesContainer && buttonsLine && schemaData) {
+        const tableSections = document.querySelectorAll('.table-section');
+        const sortedOrder = initialArrangement ? getSortedTableOrder() :
+            Array.from(tableSections).map(section => section.getAttribute('data-table-name')).sort();
 
-// Set initial arrangement state before DOM is fully loaded
+        sortedOrder.forEach(tableName => {
+            const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+            if (section) {
+                tablesContainer.appendChild(section);
+            }
+            const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
+            if (pill) {
+                buttonsLine.appendChild(pill);
+            }
+        });
+
+        // Show content after initial arrangement
+        requestAnimationFrame(() => {
+            tablesContainer.style.opacity = '1';
+            buttonsLine.style.opacity = '1';
+        });
+    }
+});
+
+// Initialize visibility control
+(function hideContentImmediately() {
+    const tablesContainer = document.getElementById('tables-container');
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    if (tablesContainer && buttonsLine) {
+        tablesContainer.style.opacity = '0';
+        buttonsLine.style.opacity = '0';
+        tablesContainer.style.transition = 'opacity 0.3s ease-out';
+        buttonsLine.style.transition = 'opacity 0.3s ease-out';
+    }
+})();
+
+// Set up initial arrangement and admin mode
 document.addEventListener('DOMContentLoaded', async () => {
     const adminToggle = document.getElementById('adminToggle');
     const arrangementToggle = document.getElementById('arrangementToggle');
     
-    // Load schema data first
-    await loadSchemaData();
-    
-    // Hide content until we arrange it
-    const tablesContainer = document.getElementById('tables-container');
-    const buttonsLine = document.querySelector('.table-buttons-line');
-    if (tablesContainer && buttonsLine) {
-        tablesContainer.style.visibility = 'hidden';
-        buttonsLine.style.visibility = 'hidden';
-    }
-    
+    // Set up admin mode
     if (adminToggle) {
         adminToggle.addEventListener('change', (e) => {
             isAdminMode = e.target.checked;
@@ -52,58 +152,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     }
-    
+
+    // Set up arrangement toggle
     if (arrangementToggle) {
-        // Load saved state
-        // Load and apply saved state immediately without transitions
+        // Load and apply saved state
+        const savedArrangement = localStorage.getItem('arrangementMode');
+        const initialArrangement = savedArrangement !== null ? JSON.parse(savedArrangement) : false;
+        
         arrangementToggle.checked = initialArrangement;
         isRelationMode = initialArrangement;
-        
-        const tableSections = document.querySelectorAll('.table-section');
-        const sortedOrder = initialArrangement && schemaData ? getSortedTableOrder() :
-            Array.from(tableSections).map(section => section.getAttribute('data-table-name')).sort();
-        
-        const tablesContainer = document.getElementById('tables-container');
-        const buttonsLine = document.querySelector('.table-buttons-line');
 
-        // Apply arrangement without animations
-        sortedOrder.forEach(tableName => {
-            // Rearrange table sections
-            const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
-            if (section) {
-                tablesContainer.appendChild(section);
-            }
-            
-            // Rearrange table pills
-            const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
-            if (pill) {
-                buttonsLine.appendChild(pill);
-            }
-        });
-
-        if (initialArrangement) {
-            // Mark related tables
-            tableSections.forEach(section => {
-                const tableName = section.getAttribute('data-table-name');
-                if (hasRelations(tableName)) {
-                    section.classList.add('relation-group');
-                }
-            });
-        }
-
-        // Show content after arrangement is complete
-        if (tablesContainer && buttonsLine) {
-            tablesContainer.style.visibility = '';
-            buttonsLine.style.visibility = '';
-        }
         // Add change event listener
         arrangementToggle.addEventListener('change', (e) => {
             isRelationMode = e.target.checked;
-            localStorage.setItem('arrangementMode', e.target.checked);
+            localStorage.setItem('arrangementMode', JSON.stringify(e.target.checked));
             const tableSections = document.querySelectorAll('.table-section');
             const tablePills = document.querySelectorAll('.table-button');
             
-            // Add transitions
+            // Add transitions for smooth reordering
             tableSections.forEach(section => {
                 section.style.transition = 'all 0.3s ease-out';
             });
@@ -112,34 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             
             if (isRelationMode) {
-                // Get sorted order from relation arrangement
-                const sortedOrder = getSortedTableOrder();
-                
-                // Rearrange table sections
-                const tablesContainer = document.getElementById('tables-container');
-                sortedOrder.forEach(tableName => {
-                    const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
-                    if (section) {
-                        tablesContainer.appendChild(section);
-                    }
-                });
-                
-                // Rearrange table pills
-                const buttonsLine = document.querySelector('.table-buttons-line');
-                sortedOrder.forEach(tableName => {
-                    const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
-                    if (pill) {
-                        buttonsLine.appendChild(pill);
-                    }
-                });
-
-                // Mark related tables
-                tableSections.forEach(section => {
-                    const tableName = section.getAttribute('data-table-name');
-                    if (hasRelations(tableName)) {
-                        section.classList.add('relation-group');
-                    }
-                });
+                arrangeByRelations();
             } else {
                 arrangeAlphabetically();
             }
@@ -155,267 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 300);
         });
     }
-
-    // Helper function to get sorted table order based on relationships
-    function getSortedTableOrder() {
-        if (!schemaData || !schemaData.relationships) {
-            return Array.from(document.querySelectorAll('.table-section'))
-                .map(section => section.getAttribute('data-table-name'));
-        }
-
-        // Build relationship graph
-        const relationGraph = new Map();
-        const connectionCounts = new Map();
-        
-        // Initialize maps with all tables
-        document.querySelectorAll('.table-section').forEach(section => {
-            const tableName = section.getAttribute('data-table-name');
-            relationGraph.set(tableName, new Set());
-            connectionCounts.set(tableName, 0);
-        });
-        
-        // Add relationships and count connections
-        schemaData.relationships.forEach(rel => {
-            relationGraph.get(rel.from.table).add(rel.to.table);
-            relationGraph.get(rel.to.table).add(rel.from.table);
-            connectionCounts.set(rel.from.table, (connectionCounts.get(rel.from.table) || 0) + 1);
-            connectionCounts.set(rel.to.table, (connectionCounts.get(rel.to.table) || 0) + 1);
-        });
-
-        // Sort tables by connection count and then group related tables
-        const visited = new Set();
-        const sortedTables = [];
-        
-        // Sort by connection count first
-        const tablesByConnections = Array.from(connectionCounts.entries())
-            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-            .map(([table]) => table);
-
-        // Helper function to add related tables
-        function addRelatedTables(tableName) {
-            if (visited.has(tableName)) return;
-            visited.add(tableName);
-            sortedTables.push(tableName);
-            
-            // Add directly related tables
-            if (relationGraph.has(tableName)) {
-                Array.from(relationGraph.get(tableName))
-                    .sort((a, b) => {
-                        const countDiff = (connectionCounts.get(b) || 0) - (connectionCounts.get(a) || 0);
-                        return countDiff !== 0 ? countDiff : a.localeCompare(b);
-                    })
-                    .forEach(related => {
-                        if (!visited.has(related)) {
-                            addRelatedTables(related);
-                        }
-                    });
-            }
-        }
-
-        // Process all tables
-        tablesByConnections.forEach(tableName => {
-            if (!visited.has(tableName)) {
-                addRelatedTables(tableName);
-            }
-        });
-
-        return sortedTables;
-    }
-
-    // Helper function to check if a table has relations
-    function hasRelations(tableName) {
-        return schemaData?.relationships?.some(rel =>
-            rel.from.table === tableName || rel.to.table === tableName
-        ) || false;
-    }
 });
-
-// Function to arrange tables by relations
-// Function to arrange tables by relations
-function arrangeByRelations() {
-    if (!schemaData || !schemaData.relationships) {
-        console.error('Schema data not available');
-        return;
-    }
-
-    const tablesContainer = document.getElementById('tables-container');
-    const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
-    
-    // Reset all groups
-    tableSections.forEach(section => {
-        section.classList.remove('relation-group');
-        section.style.opacity = '0';
-    });
-
-    // Build relationship graph
-    const relationGraph = new Map();
-    // Count direct connections for each table
-    const connectionCounts = new Map();
-    
-    schemaData.relationships.forEach(rel => {
-        // Initialize maps
-        [rel.from.table, rel.to.table].forEach(table => {
-            if (!relationGraph.has(table)) {
-                relationGraph.set(table, new Set());
-                connectionCounts.set(table, 0);
-            }
-        });
-        
-        // Add bidirectional relationships
-        relationGraph.get(rel.from.table).add(rel.to.table);
-        relationGraph.get(rel.to.table).add(rel.from.table);
-        
-        // Increment connection counts
-        connectionCounts.set(rel.from.table, connectionCounts.get(rel.from.table) + 1);
-        connectionCounts.set(rel.to.table, connectionCounts.get(rel.to.table) + 1);
-    });
-
-    // Sort tables by connection count (most connected first)
-    const sortedTables = [...tableSections].sort((a, b) => {
-        const nameA = a.getAttribute('data-table-name');
-        const nameB = b.getAttribute('data-table-name');
-        const countA = connectionCounts.get(nameA) || 0;
-        const countB = connectionCounts.get(nameB) || 0;
-        
-        if (countA !== countB) {
-            return countB - countA;
-        }
-        return nameA.localeCompare(nameB);
-    });
-
-    // Group related tables together
-    const grouped = new Set();
-    const finalOrder = [];
-
-    sortedTables.forEach(section => {
-        const tableName = section.getAttribute('data-table-name');
-        if (grouped.has(tableName)) return;
-
-        const group = [];
-        const addToGroup = (name) => {
-            if (grouped.has(name)) return;
-            
-            const tableSection = sortedTables.find(s =>
-                s.getAttribute('data-table-name') === name
-            );
-            if (tableSection) {
-                group.push(tableSection);
-                grouped.add(name);
-                
-                // Add direct relations
-                if (relationGraph.has(name)) {
-                    relationGraph.get(name).forEach(related => {
-                        if (!grouped.has(related)) {
-                            addToGroup(related);
-                        }
-                    });
-                }
-            }
-        };
-
-        addToGroup(tableName);
-
-        // Add groups to final order with visual separation
-        if (group.length > 0) {
-            if (finalOrder.length > 0) {
-                const lastSection = finalOrder[finalOrder.length - 1];
-                lastSection.style.marginBottom = '20px';
-            }
-            
-            // Mark related tables
-            if (group.length > 1) {
-                group.forEach(section => {
-                    section.classList.add('relation-group');
-                });
-            }
-            
-            finalOrder.push(...group);
-        }
-    });
-
-    // Add any remaining tables
-    sortedTables.forEach(section => {
-        if (!grouped.has(section.getAttribute('data-table-name'))) {
-            finalOrder.push(section);
-        }
-    });
-
-    // Update DOM with animation
-    finalOrder.forEach((section, index) => {
-        section.style.transition = 'all 0.3s ease-out';
-        section.style.transitionDelay = `${index * 0.05}s`;
-        tablesContainer.appendChild(section);
-        requestAnimationFrame(() => {
-            section.style.opacity = '1';
-        });
-    });
-
-    // Clean up transitions
-    setTimeout(() => {
-        finalOrder.forEach(section => {
-            section.style.transition = '';
-            section.style.transitionDelay = '';
-        });
-    }, finalOrder.length * 50 + 300);
-}
-// Function to arrange tables alphabetically
-function arrangeAlphabetically() {
-    const tablesContainer = document.getElementById('tables-container');
-    const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
-    const buttonsLine = document.querySelector('.table-buttons-line');
-    const tablePills = Array.from(buttonsLine.querySelectorAll('.table-button'));
-    
-    // Remove relation-group class and reset margins
-    tableSections.forEach(section => {
-        section.classList.remove('relation-group');
-        section.style.marginBottom = '';
-        section.style.opacity = '0';
-    });
-    
-    // Get alphabetically sorted table names
-    const sortedNames = tableSections
-        .map(section => section.getAttribute('data-table-name'))
-        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    
-    // Reorder table sections with animation
-    sortedNames.forEach((tableName, index) => {
-        const section = tableSections.find(s =>
-            s.getAttribute('data-table-name') === tableName
-        );
-        if (section) {
-            section.style.transition = 'all 0.3s ease-out';
-            section.style.transitionDelay = `${index * 0.05}s`;
-            tablesContainer.appendChild(section);
-            requestAnimationFrame(() => {
-                section.style.opacity = '1';
-            });
-        }
-    });
-    
-    // Reorder table pills with animation
-    sortedNames.forEach((tableName, index) => {
-        const pill = tablePills.find(p =>
-            p.getAttribute('data-table') === tableName
-        );
-        if (pill) {
-            pill.style.transition = 'all 0.3s ease-out';
-            pill.style.transitionDelay = `${index * 0.05}s`;
-            buttonsLine.appendChild(pill);
-        }
-    });
-    
-    // Clean up transitions
-    setTimeout(() => {
-        tableSections.forEach(section => {
-            section.style.transition = '';
-            section.style.transitionDelay = '';
-        });
-        tablePills.forEach(pill => {
-            pill.style.transition = '';
-            pill.style.transitionDelay = '';
-        });
-    }, sortedNames.length * 50 + 300);
-}
 
 function formatJsonCell(value) {
     try {
@@ -1727,4 +1506,107 @@ export function scrollAllTablesToTop() {
     visibleTables.forEach(container => {
         scrollTableToTop(container);
     });
+}
+
+// Function to arrange tables by relations
+function arrangeByRelations() {
+    if (!schemaData || !schemaData.relationships) {
+        console.error('Schema data not available');
+        return;
+    }
+
+    const tablesContainer = document.getElementById('tables-container');
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
+    
+    // Reset all groups
+    tableSections.forEach(section => {
+        section.classList.remove('relation-group');
+        section.style.opacity = '0';
+    });
+
+    const sortedOrder = getSortedTableOrder();
+    
+    // Update DOM with animation
+    sortedOrder.forEach((tableName, index) => {
+        const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+        const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
+        
+        if (section) {
+            section.style.transition = 'all 0.3s ease-out';
+            section.style.transitionDelay = `${index * 0.05}s`;
+            tablesContainer.appendChild(section);
+            if (hasRelations(tableName)) {
+                section.classList.add('relation-group');
+            }
+            requestAnimationFrame(() => {
+                section.style.opacity = '1';
+            });
+        }
+        
+        if (pill) {
+            buttonsLine.appendChild(pill);
+        }
+    });
+
+    // Clean up transitions
+    setTimeout(() => {
+        tableSections.forEach(section => {
+            section.style.transition = '';
+            section.style.transitionDelay = '';
+        });
+    }, sortedOrder.length * 50 + 300);
+}
+
+// Function to arrange tables alphabetically
+function arrangeAlphabetically() {
+    const tablesContainer = document.getElementById('tables-container');
+    const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    const tablePills = Array.from(buttonsLine.querySelectorAll('.table-button'));
+    
+    // Remove relation-group class and reset margins
+    tableSections.forEach(section => {
+        section.classList.remove('relation-group');
+        section.style.marginBottom = '';
+        section.style.opacity = '0';
+    });
+    
+    // Get alphabetically sorted table names
+    const sortedNames = tableSections
+        .map(section => section.getAttribute('data-table-name'))
+        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    
+    // Reorder table sections with animation
+    sortedNames.forEach((tableName, index) => {
+        const section = tableSections.find(s =>
+            s.getAttribute('data-table-name') === tableName
+        );
+        if (section) {
+            section.style.transition = 'all 0.3s ease-out';
+            section.style.transitionDelay = `${index * 0.05}s`;
+            tablesContainer.appendChild(section);
+            requestAnimationFrame(() => {
+                section.style.opacity = '1';
+            });
+        }
+    });
+    
+    // Reorder table pills
+    sortedNames.forEach((tableName) => {
+        const pill = tablePills.find(p =>
+            p.getAttribute('data-table') === tableName
+        );
+        if (pill) {
+            buttonsLine.appendChild(pill);
+        }
+    });
+    
+    // Clean up transitions
+    setTimeout(() => {
+        tableSections.forEach(section => {
+            section.style.transition = '';
+            section.style.transitionDelay = '';
+        });
+    }, sortedNames.length * 50 + 300);
 }

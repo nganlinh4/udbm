@@ -541,6 +541,9 @@ tr {
     -webkit-overflow-scrolling: touch;
     max-height: none;
     align-items: flex-start;
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    will-change: opacity;
 }
 
 .table-button {
@@ -1235,4 +1238,10 @@ td:has(.json-cell) {
 
 [data-theme="dark"] .json-cell:hover {
     background: rgba(255, 255, 255, 0.04);
+}
+
+#tables-container {
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    will-change: opacity;
 }
