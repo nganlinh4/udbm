@@ -1504,11 +1504,11 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
 
 export function adjustColumnWidths(table) {
     const columns = Array.from(table.querySelectorAll('th'));
-    const PADDING = 32;
+    const PADDING = 20;
     const MIN_JSON_WIDTH = 0;
-    const MAX_JSON_WIDTH = 800;
+    const MAX_JSON_WIDTH = 400;
     const INDENT_SIZE = 2;
-    const NESTING_PADDING = 20; // Extra padding per nesting level
+    const NESTING_PADDING = 10; // Reduced padding per nesting level
 
     columns.forEach((th, index) => {
         th.style.width = '';
@@ -1516,7 +1516,6 @@ export function adjustColumnWidths(table) {
         const allCells = [th, ...cells];
         let maxWidth = 0;
         let hasJsonCells = false;
-        let maxNestingLevel = 0;
 
         allCells.forEach(cell => {
             const jsonCell = cell.querySelector('.json-cell');
@@ -1528,26 +1527,26 @@ export function adjustColumnWidths(table) {
                     const lines = formattedJson.split('\n');
                     const cellFont = window.getComputedStyle(jsonCell).font;
 
-                    // Calculate max nesting level
-                    const currentNesting = Math.max(...lines.map(line => 
-                        (line.match(/^\s+/)?.[0].length || 0) / INDENT_SIZE
-                    ));
-                    maxNestingLevel = Math.max(maxNestingLevel, currentNesting);
-
+                    // Calculate optimal width based on longest meaningful content
+                    let contentMaxWidth = 0;
                     lines.forEach(line => {
-                        const indentLevel = line.search(/\S/);
-                        const indentWidth = getTextWidth(' '.repeat(indentLevel), cellFont);
+                        // Only consider content length, not full indentation
                         const content = line.trim();
-                        const contentWidth = getTextWidth(content, cellFont);
-                        maxWidth = Math.max(maxWidth, indentWidth + contentWidth);
+                        // Ignore braces and brackets alone
+                        if (content && !['[', ']', '{', '}', ','].includes(content)) {
+                            contentMaxWidth = Math.max(contentMaxWidth, getTextWidth(content, cellFont));
+                        }
                     });
+                    maxWidth = Math.max(maxWidth, contentMaxWidth);
+ 
                 } catch (e) {
                     maxWidth = Math.max(maxWidth, getTextWidth(jsonCell.textContent, window.getComputedStyle(jsonCell).font));
                 }
             } else {
                 const cellText = cell.textContent;
                 const cellFont = window.getComputedStyle(cell).font;
-                const cellWidth = getTextWidth(cellText, cellFont);
+                // For normal cells, consider word breaks for long content
+                const cellWidth = Math.min(getTextWidth(cellText, cellFont), 300);
                 maxWidth = Math.max(maxWidth, cellWidth);
             }
         });
@@ -1555,8 +1554,8 @@ export function adjustColumnWidths(table) {
         // Add padding and handle special cases
         let finalWidth = maxWidth + PADDING;
         if (hasJsonCells) {
-            // Add extra padding based on maximum nesting level
-            finalWidth += maxNestingLevel * NESTING_PADDING;
+            // Add fixed padding for JSON formatting
+            finalWidth += NESTING_PADDING;
             finalWidth = Math.max(finalWidth, MIN_JSON_WIDTH);
             finalWidth = Math.min(finalWidth, MAX_JSON_WIDTH);
         }
