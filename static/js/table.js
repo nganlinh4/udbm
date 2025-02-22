@@ -1006,7 +1006,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             input.style.width = '100%';
             try {
                 // Format JSON for editing
-                const parsed = JSON.parse(originalValue);
+                const parsed = typeof originalValue === 'object' ? originalValue : JSON.parse(originalValue);
                 input.value = JSON.stringify(parsed, null, 2);
             } catch (e) {
                 input.value = originalValue;
@@ -1017,8 +1017,11 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
 
         // Adjust height on content change
         const adjustHeight = () => {
+            const minHeight = jsonCell ? 100 : 24; // Use larger min height for JSON
             input.style.height = 'auto';
-            input.style.height = input.scrollHeight + 'px';
+            const newHeight = Math.max(minHeight, input.scrollHeight);
+            input.style.height = `${newHeight}px`;
+            input.style.minHeight = `${minHeight}px`;
         };
 
         // Store editing state for monitoring updates
@@ -1077,23 +1080,23 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                     }, 2000);
                 } catch (error) {
                     console.error('Error updating cell:', error);
-                    if (jsonCell) {
-                        const errorMessage = error instanceof SyntaxError ? 'Invalid JSON format' : 'Failed to update value';
-                        const koreanMessage = error instanceof SyntaxError ? 'JSON 형식이 잘못되었습니다' : '값 업데이트에 실패했습니다';
-                        
-                        const deletePopup = document.getElementById('deletePopup');
-                        const icon = deletePopup.querySelector('.warning-icon');
-                        icon.textContent = '⚠';
-                        deletePopup.querySelector('.lang-en').textContent = errorMessage;
-                        deletePopup.querySelector('.lang-ko').textContent = koreanMessage;
-                        deletePopup.classList.add('show');
-                        setTimeout(() => {
-                            icon.textContent = '✓';
-                            deletePopup.classList.remove('show');
-                        }, 2000);
-                        return;
-                    }
+                    // Show error message for all update failures
+                    const errorMessage = error instanceof SyntaxError ? 'Invalid JSON format' : 'Failed to update value';
+                    const koreanMessage = error instanceof SyntaxError ? 'JSON 형식이 잘못되었습니다' : '값 업데이트에 실패했습니다';
+                    
+                    const deletePopup = document.getElementById('deletePopup');
+                    const icon = deletePopup.querySelector('.warning-icon');
+                    icon.textContent = '⚠';
+                    deletePopup.querySelector('.lang-en').textContent = errorMessage;
+                    deletePopup.querySelector('.lang-ko').textContent = koreanMessage;
+                    deletePopup.classList.add('show');
+                    setTimeout(() => {
+                        icon.textContent = '✓';
+                        deletePopup.classList.remove('show');
+                    }, 2000);
+                    // Restore cell to original value
                     restoreCell(cell);
+                    return;
                 }
             } else {
                 restoreCell(cell);
@@ -1106,7 +1109,9 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
 
         // Handle input height adjustments
         input.addEventListener('input', adjustHeight);
-        setTimeout(adjustHeight, 0);
+        // Initial height adjustment after a brief delay to ensure content is rendered
+        requestAnimationFrame(adjustHeight);
+        input.style.overflowY = input.scrollHeight > input.clientHeight ? 'auto' : 'hidden';
 
         // Handle Enter, Tab, and Escape events
         input.addEventListener('keydown', async (e) => {

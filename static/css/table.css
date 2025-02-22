@@ -152,7 +152,7 @@ td {
 
 .table-scroll-wrapper td {
     max-width: none !important;  /* Override previous max-width constraints */
-    vertical-align: top;  /* Align content to top for better readability */
+    vertical-align: middle;  /* Center align content vertically */
     padding: 8px;  /* Reduce base padding to better handle JSON cells */
     box-sizing: border-box;
     position: relative;
@@ -253,8 +253,7 @@ td.editing input {
     font-family: inherit;
 }
 
-td.editing textarea {
-    min-height: 200px;  /* Increased from 100px */
+td.editing textarea { /* Increased from 100px */
     width: 100%;
     font-size: 0.9em;
     line-height: 1.2;
