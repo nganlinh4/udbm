@@ -999,6 +999,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         const input = document.createElement('textarea');
         input.style.overflow = 'hidden';
         input.style.resize = 'none';
+        input.style.fontSize = jsonCell ? '0.9rem' : '1em';  // Match font size based on cell type
         input.style.boxSizing = 'border-box';
 
         input.value = jsonCell ? JSON.stringify(JSON.parse(originalValue), null, 2) : originalValue;

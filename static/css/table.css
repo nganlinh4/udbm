@@ -260,13 +260,13 @@ td.editing textarea {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Match display mode line height and font size */
-td:not(:has(.json-cell)) textarea {
+td textarea {
     font-size: 1em;
     line-height: inherit;
     min-height: 24px;
 }
 
+/* Override font size specifically for JSON cells */
 td:has(.json-cell) textarea {
     font-size: 0.9rem; /* Match JSON display size */
     line-height: 1.2;
