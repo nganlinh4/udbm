@@ -950,7 +950,18 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     // Function to restore cell to non-editing state
     const restoreCell = (cell) => {
         if (!cell) return;
-        cell.textContent = originalValue;
+        
+        // Check if it's a JSON cell
+        try {
+            const parsedJson = JSON.parse(originalValue);
+            const jsonView = formatJsonCell(parsedJson);
+            cell.textContent = '';
+            cell.appendChild(jsonView);
+        } catch (e) {
+            // Not JSON, restore as plain text
+            cell.textContent = originalValue;
+        }
+        
         cell.classList.remove('editing');
         isEditing = false;
         currentEditCell = null;
@@ -984,8 +995,12 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         currentEditCell = cell;
         isEditing = true;
         cell.classList.add('editing');
-        
+
         const input = document.createElement('textarea');
+        input.style.overflow = 'hidden';
+        input.style.resize = 'none';
+        input.style.boxSizing = 'border-box';
+
         if (jsonCell) {
             input.style.minHeight = '100px';
             input.style.width = '100%';
@@ -999,6 +1014,12 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         } else {
             input.value = originalValue;
         }
+
+        // Adjust height on content change
+        const adjustHeight = () => {
+            input.style.height = 'auto';
+            input.style.height = input.scrollHeight + 'px';
+        };
 
         // Store editing state for monitoring updates
         const row = cell.closest('tr');
@@ -1083,16 +1104,56 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             currentEditCell = null;
         };
 
-        // Handle both Enter (with ctrl/cmd) and blur events
+        // Handle input height adjustments
+        input.addEventListener('input', adjustHeight);
+        setTimeout(adjustHeight, 0);
+
+        // Handle Enter, Tab, and Escape events
         input.addEventListener('keydown', async (e) => {
-            if ((e.key === 'Enter' && (e.ctrlKey || e.metaKey)) || e.key === 'Escape') {
+            if (e.key === 'Tab' || e.key === 'Enter' || e.key === 'Escape') {
                 e.preventDefault();
-                handleEditComplete(input.value, e.key !== 'Escape');
+                const shouldSave = e.key !== 'Escape';
+
+                if (e.key === 'Tab') {
+                    // Save current cell
+                    await handleEditComplete(input.value, true);
+                    
+                    // Find the next cell to edit
+                    const currentRow = cell.closest('tr');
+                    const cells = Array.from(currentRow.cells);
+                    const currentIndex = cells.indexOf(cell);
+                    
+                    if (!e.shiftKey && currentIndex < cells.length - 1) {
+                        // Move to next cell in the same row
+                        startEditing(cells[currentIndex + 1]);
+                    } else if (e.shiftKey && currentIndex > 0) {
+                        // Move to previous cell in the same row
+                        startEditing(cells[currentIndex - 1]);
+                    } else if (!e.shiftKey) {
+                        // Move to first cell of next row
+                        const nextRow = currentRow.nextElementSibling;
+                        if (nextRow) {
+                            startEditing(nextRow.cells[0]);
+                        }
+                    } else {
+                        // Move to last cell of previous row
+                        const prevRow = currentRow.previousElementSibling;
+                        if (prevRow) {
+                            startEditing(prevRow.cells[prevRow.cells.length - 1]);
+                        }
+                    }
+                } else {
+                    handleEditComplete(input.value, shouldSave);
+                }
             }
         });
 
-        input.addEventListener('blur', () => {
-            handleEditComplete(originalValue, false);
+        input.addEventListener('blur', (e) => {
+            // Don't restore original value on blur if we're switching to another cell
+            const relatedTarget = e.relatedTarget;
+            if (!relatedTarget || !relatedTarget.closest('td')) {
+                handleEditComplete(originalValue, false);
+            }
         });
         
         cell.textContent = '';

@@ -240,7 +240,7 @@ td:has(.json-cell) {
 }
 
 td.editing {
-    padding: 12px;
+    padding: 6px;
 }
 
 td.editing input {
@@ -257,14 +257,16 @@ td.editing textarea {
     min-height: 200px;  /* Increased from 100px */
     width: 100%;
     font-size: 0.9em;
-    line-height: 1.4;
+    line-height: 1.2;
     padding: 8px;
-    border: 1px solid var(--md-sys-color-outline);
+    border: 0px;
     border-radius: 4px;
     resize: vertical;
     background: var(--md-sys-color-surface);
     box-sizing: border-box;
     margin: 0;
+    font-family: inherit;
+    outline: none;
 }
 
 [data-theme="dark"] td.editing input {
