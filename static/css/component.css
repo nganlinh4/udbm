@@ -1376,6 +1376,8 @@ input:checked ~ .switch-label.language-active {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    position: relative;
+    z-index: 1;
 }
 
 .favicon-switch {
@@ -1509,6 +1511,8 @@ input:checked ~ .switch-label.language-active {
     flex-direction: column;
     gap: 12px;
     width: 100%;
+    position: relative;
+    z-index: 2;
 }
 
 .form-group {
@@ -2540,4 +2544,34 @@ html[data-lang="en"] .swipe-guide::after {
 [data-theme="dark"] #queryInput:focus {
     border-color: var(--md-sys-color-primary);
     box-shadow: 0 0 0 2px rgba(var(--md-sys-color-primary-rgb), 0.2);
+}
+
+.db-form ~ .favicon-controls {
+    display: none;
+}
+
+.db-menu.show .db-form ~ .favicon-controls,
+.db-menu .db-form ~ .favicon-controls {
+    display: none;
+}
+
+/* Hide favicon controls when db-form is present */
+.db-list:has(.db-form) ~ .favicon-controls {
+    display: none !important;
+}
+
+.db-menu.show .db-form + .favicon-controls,
+#dbMenu:has(.db-form) .favicon-controls {
+    display: none !important;
+}
+
+.db-menu.show[style*="display: block"] .favicon-controls {
+    display: none !important;
+}
+
+/* When form is present, ensure favicon controls are hidden */
+.db-menu:has(.db-form) .favicon-controls {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
 }

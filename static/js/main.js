@@ -551,19 +551,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize favicon controls
     const faviconToggle = document.getElementById('faviconToggle');
     const faviconUpload = document.getElementById('faviconUpload');
+    const faviconUploadButton = document.querySelector('.favicon-upload');
     const defaultFaviconPath = '/static/monitor_icon.png';
     
     // Load saved favicon preferences
     const savedFavicon = localStorage.getItem('customFavicon');
-    const useDefaultFavicon = localStorage.getItem('useDefaultFavicon') === 'true';
+    const useCustomFavicon = localStorage.getItem('useCustomFavicon') === 'true';
     
-    // Initialize toggle state
-    faviconToggle.checked = useDefaultFavicon;
+    // Initialize toggle state and visibility
+    faviconToggle.checked = useCustomFavicon;
+    faviconUploadButton.style.display = useCustomFavicon ? 'block' : 'none';
     updateFavicon();
 
     // Handle favicon toggle
     faviconToggle.addEventListener('change', () => {
-        localStorage.setItem('useDefaultFavicon', faviconToggle.checked);
+        localStorage.setItem('useCustomFavicon', faviconToggle.checked);
+        faviconUploadButton.style.display = faviconToggle.checked ? 'block' : 'none';
         updateFavicon();
     });
 
@@ -582,12 +585,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateFavicon() {
         const favicon = document.querySelector('link[rel="icon"]');
-        if (faviconToggle.checked) {
+        if (!faviconToggle.checked) {
             favicon.href = defaultFaviconPath;
         } else {
             const customFavicon = localStorage.getItem('customFavicon');
             if (customFavicon) {
                 favicon.href = customFavicon;
+            } else {
+                favicon.href = defaultFaviconPath;
             }
         }
     }
@@ -783,43 +788,55 @@ document.addEventListener('DOMContentLoaded', () => {
         function showAddDatabaseForm() {
             isFormOpen = true;
             updateAddButtonState(true);
+            
+            // Remove favicon controls temporarily
+            const faviconControls = dbMenu.querySelector('.favicon-controls');
+            if (faviconControls) {
+                faviconControls.remove();
+            }
+            
             dbList.innerHTML = `
-            <form class="db-form material-form">
-                <div class="form-group db-type-group">
-                    <div class="db-type-switch-container">
-                        <span class="switch-label mysql active">MySQL</span>
-                        <label class="switch">
-                            <input type="checkbox" name="type" value="postgresql">
-                            <span class="switch-slider material"></span>
-                        </label>
-                        <span class="switch-label postgresql">PostgreSQL</span>
+                <form class="db-form material-form">
+                    <div class="form-group db-type-group">
+                        <div class="db-type-switch-container">
+                            <span class="switch-label mysql active">MySQL</span>
+                            <label class="switch">
+                                <input type="checkbox" name="type" value="postgresql">
+                                <span class="switch-slider material"></span>
+                            </label>
+                            <span class="switch-label postgresql">PostgreSQL</span>
+                        </div>
+                        <div class="db-type-help">
+                            <small>Choose your database type</small>
+                        </div>
                     </div>
-                    <div class="db-type-help">
-                        <small>Choose your database type</small>
+                    <div class="form-group">
+                        <input type="text" name="host" id="host" required placeholder=" ">
+                        <label for="host">Host</label>
                     </div>
-                </div>
-                <div class="form-group">
-                    <input type="text" name="host" id="host" required placeholder=" ">
-                    <label for="host">Host</label>
-                </div>
-                <div class="form-group">
-                    <input type="text" name="user" id="user" required placeholder=" ">
-                    <label for="user">User</label>
-                </div>
-                <div class="form-group">
-                    <input type="password" name="password" id="password" required placeholder=" ">
-                    <label for="password">Password</label>
-                </div>
-                <div class="form-group">
-                    <input type="text" name="database" id="database" required placeholder=" ">
-                    <label for="database">Database</label>
-                </div>
-                    <button type="submit" class="add-db-button">
-                        <span class="lang-ko">추가</span>
-                        <span class="lang-en">Add</span>
-                    </button>
-                </form>
+                    <div class="form-group">
+                        <input type="text" name="user" id="user" required placeholder=" ">
+                        <label for="user">User</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" name="password" id="password" required placeholder=" ">
+                        <label for="password">Password</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="database" id="database" required placeholder=" ">
+                        <label for="database">Database</label>
+                    </div>
+                        <button type="submit" class="add-db-button">
+                            <span class="lang-ko">추가</span>
+                            <span class="lang-en">Add</span>
+                        </button>
+                    </form>
             `;
+            
+            // Store the removed controls in a data attribute for later
+            if (faviconControls) {
+                dbMenu.dataset.storedControls = faviconControls.outerHTML;
+            }
             
             const form = dbList.querySelector('form');
             // Handle type switch click events
@@ -874,6 +891,12 @@ document.addEventListener('DOMContentLoaded', () => {
         function updateDbList() {
             dbList.innerHTML = '';
             const entries = Object.entries(savedConfigs);
+            
+            // Show favicon controls when showing the database list
+            const faviconControls = dbMenu.querySelector('.favicon-controls');
+            if (faviconControls) {
+                faviconControls.style.display = 'flex';
+            }
             
             if (entries.length === 0) {
                 showAddDatabaseForm();
@@ -991,6 +1014,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add new database
         addDbButton.addEventListener('click', () => {
             if (isFormOpen) {
+                // When clicking back, show the favicon controls
+                const faviconControls = dbMenu.querySelector('.favicon-controls');
+                if (faviconControls) {
+                    faviconControls.style.display = 'flex';
+                }
                 updateDbList();
                 isFormOpen = false;
                 updateAddButtonState(false);
@@ -999,6 +1027,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             isFormOpen = true;
             updateAddButtonState(true);
+            // Hide favicon controls when showing the form
+            const faviconControls = dbMenu.querySelector('.favicon-controls');
+            if (faviconControls) {
+                faviconControls.style.display = 'none';
+            }
             dbList.innerHTML = `
                 <form class="db-form">
                     <div class="form-group">
