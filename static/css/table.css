@@ -260,6 +260,11 @@ td.editing textarea {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* darkmode text color */
+[data-theme="dark"] td.editing textarea {
+    color: white;
+}
+
 td textarea {
     font-size: 1em;
     line-height: inherit;
@@ -1169,6 +1174,8 @@ td.focused {
     position: relative;
     outline: 2px solid var(--md-sys-color-primary);
     outline-offset: -2px;
+    /*outline border radius */
+    border-radius: 6px;
 }
 
 tr.deleting {
@@ -1218,26 +1225,8 @@ td:has(.json-cell) {
     padding: 0;
     background: linear-gradient(
         90deg,
-        transparent calc(100% - 1px),
         rgba(0, 0, 0, 0.03) calc(100% - 1px)
     );
-}
-
-/* Dark theme improvements */
-[data-theme="dark"] td:has(.json-cell) {
-    background: linear-gradient(
-        90deg,
-        transparent calc(100% - 1px),
-        rgba(255, 255, 255, 0.03) calc(100% - 1px)
-    );
-}
-
-[data-theme="dark"] .json-cell {
-    background: rgba(255, 255, 255, 0.02);
-}
-
-[data-theme="dark"] .json-cell:hover {
-    background: rgba(255, 255, 255, 0.04);
 }
 
 #tables-container {
