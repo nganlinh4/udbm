@@ -758,7 +758,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     let editingState = null;
 
     // Handler for starting cell edit
-    const startEditing = (cell) => {
+    const startEditing = (cell, clickEvent) => {
         if (isEditing) {
             restoreCell(currentEditCell);
         }
@@ -798,7 +798,48 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         cell.appendChild(input);
         requestAnimationFrame(() => {
             adjustHeight();
-            input.focus();
+
+            // Focus the input and set cursor position if click event exists
+            if (clickEvent) {
+                input.focus();
+
+                const cellRect = cell.getBoundingClientRect();
+                const clickX = clickEvent.clientX - cellRect.left;
+                const clickY = clickEvent.clientY - cellRect.top;
+                const style = window.getComputedStyle(input);
+                const lineHeight = parseFloat(style.lineHeight);
+                const paddingLeft = parseFloat(style.paddingLeft);
+
+                if (jsonCell) {
+                    // Calculate line number from click position
+                    const lines = input.value.split('\n');
+                    let clickedLineIndex = Math.floor((clickY - parseFloat(style.paddingTop)) / lineHeight);
+                    clickedLineIndex = Math.max(0, Math.min(clickedLineIndex, lines.length - 1));
+
+                    // Get position within the line
+                    const charWidth = getTextWidth('m', style.font); // Use 'm' as average character width
+                    let position = 0;
+
+                    // Add length of all previous lines
+                    for (let i = 0; i < clickedLineIndex; i++) {
+                        position += lines[i].length + 1; // +1 for newline
+                    }
+
+                    // Calculate position within the clicked line
+                    const clickedLine = lines[clickedLineIndex];
+                    const adjustedClickX = clickX - paddingLeft;
+                    const charPosition = Math.floor(adjustedClickX / charWidth);
+                    position += Math.max(0, Math.min(charPosition, clickedLine.length));
+
+                    input.setSelectionRange(position, position);
+                } else {
+                    const charWidth = getTextWidth('a', style.font);
+                    const estimatedPosition = Math.round(clickX / charWidth);
+                    input.setSelectionRange(estimatedPosition, estimatedPosition);
+                }
+            } else {
+                input.focus();
+            }
         });
 
         // Store editing state for monitoring updates
@@ -947,7 +988,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         }
 
         if (cell.classList.contains('focused') && !isEditing) {
-            startEditing(cell);
+            startEditing(cell, e);
         } else if (!isEditing) {
             // Remove focus from any previously focused cell
             table.querySelectorAll('td').forEach(td => td.classList.remove('focused'));
@@ -960,7 +1001,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     table.addEventListener('dblclick', (e) => {
         const cell = e.target.closest('td');
         if (cell && !isEditing && isAdminMode) {
-            startEditing(cell);
+            startEditing(cell, e);
         }
     });
 
