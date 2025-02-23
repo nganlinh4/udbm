@@ -221,13 +221,18 @@ th .resizer::after {
 }
 
 td {
-    cursor: pointer;
+    cursor: text;
     border: none;
     border-bottom: 1px solid #ddd;
     font-size: 1em;
     padding: 12px 16px;
     transition: all 0.2s;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Show hand pointer cursor in admin mode */
+[data-admin-mode="true"] td {
+    cursor: pointer;
 }
 
 td:has(.json-cell) {
