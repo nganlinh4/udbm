@@ -356,6 +356,7 @@ function toggleMonitoring() {
     const pauseIcon = pauseButton.querySelector('.pause-icon');
     const playIcon = pauseButton.querySelector('.play-icon');
     const clockHand = document.querySelector('.clock-hand');
+    const tempTooltip = pauseButton.querySelector('.temp-tooltip');
     
     window.isMonitoringPaused = !window.isMonitoringPaused;
     
@@ -377,23 +378,7 @@ function toggleMonitoring() {
         if (clockHand) {
             clockHand.style.animationPlayState = 'running';
         }
-
-        // Get all tables with historical data
-        const hasOldData = Object.keys(tableChunks).some(tn => tableChunks[tn].end > 50);
-        if (hasOldData) {
-            // Scroll all tables to top when resuming with historical data
-            const visibleTables = document.querySelectorAll('.table-container:not(.hidden-table)');
-            visibleTables.forEach(container => {
-                const wrapper = container.querySelector('.table-scroll-wrapper');
-                if (wrapper) {
-                    wrapper.scrollTo({
-                        top: 0,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        }
-        
+        if (tempTooltip) tempTooltip.style.display = 'none';
         startMonitoring();
     }
 }
@@ -1255,6 +1240,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Add selection monitoring
+    document.addEventListener('selectionchange', handleTextSelection);
+    document.addEventListener('mouseup', handleTextSelection);
+
 });
 
 export { toggleTable, updateDropdownOptions, updateStaticLanguageElements, updateDynamicElements, updateConnectionStatus };
@@ -1324,4 +1313,51 @@ function getCurrentDatabaseKey() {
         }
     }
     return null;
+}
+
+// Add text selection state
+let isSelectionPaused = false;
+let selectionCheckInterval = null;
+
+// Add handleTextSelection function
+function handleTextSelection() {
+    const selection = window.getSelection();
+    const hasSelection = selection.toString().length > 0;
+    const pauseButton = document.getElementById('pauseButton');
+    const tempTooltip = pauseButton.querySelector('.temp-tooltip');
+    
+    // Clear any existing check interval
+    if (selectionCheckInterval) {
+        clearInterval(selectionCheckInterval);
+        selectionCheckInterval = null;
+    }
+    
+    if (hasSelection && !isSelectionPaused) {
+        isSelectionPaused = true;
+        if (!window.isMonitoringPaused) {
+            toggleMonitoring();
+            if (tempTooltip) tempTooltip.style.display = 'block';
+        }
+        
+        // Start checking selection continuously
+        selectionCheckInterval = setInterval(() => {
+            const currentSelection = window.getSelection();
+            if (currentSelection.toString().length === 0) {
+                // Selection is gone, resume monitoring
+                clearInterval(selectionCheckInterval);
+                selectionCheckInterval = null;
+                isSelectionPaused = false;
+                if (window.isMonitoringPaused) {
+                    toggleMonitoring();
+                    if (tempTooltip) tempTooltip.style.display = 'none';
+                }
+            }
+        }, 100); // Check every 100ms
+    } else if (!hasSelection && isSelectionPaused && !selectionCheckInterval) {
+        isSelectionPaused = false;
+        if (window.isMonitoringPaused) {
+            toggleMonitoring();
+            if (tempTooltip) tempTooltip.style.display = 'none';
+        }
+    }
 }
