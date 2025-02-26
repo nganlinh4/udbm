@@ -346,16 +346,7 @@
         <div class="schema-content">
             <div id="schemaLoading" class="schema-loading">Loading schema...</div>
             <div id="schemaError" class="schema-error" style="display: none;"></div>
-            <div class="schema-controls">
-                <div class="schema-switch">
-                    <span class="switch-label">Mermaid</span>
-                    <label class="switch schema-type-switch">
-                        <input type="checkbox" id="schemaTypeToggle">
-                        <span class="switch-slider"></span>
-                    </label>
-                    <span class="switch-label">GraphViz</span>
-                </div>
-            </div>
+
             <div class="schema-container">
                 <div class="mermaid" id="schemaContent">
                     Loading schema diagram...
@@ -364,6 +355,14 @@
                 <div class="zoom-controls">
                     <button class="zoom-button zoom-out" title="Zoom out">−</button>
                     <button class="zoom-button zoom-in" title="Zoom in">+</button>
+                </div>
+                <div class="schema-switch">
+                    <span class="switch-label">Mermaid</span>
+                    <label class="switch schema-type-switch">
+                        <input type="checkbox" id="schemaTypeToggle">
+                        <span class="switch-slider"></span>
+                    </label>
+                    <span class="switch-label">GraphViz</span>
                 </div>
             </div>
             <button class="schema-close" title="Close schema view">×</button>

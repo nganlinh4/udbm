@@ -1,6 +1,8 @@
 let currentData = null;
 let schemaData = null; // Persistent cache for schema data
 let useGraphviz = false; // Track which visualization to use
+let lastGraphvizTheme = null; // Track last theme used for GraphViz
+let lastGraphvizResult = null; // Store last GraphViz response
 
 export function initializeSchema(schemaButton, modal, loading, error, container) {
     console.log('Initializing schema functionality...');
@@ -21,6 +23,8 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
             if (useGraphviz) {
                 document.querySelector('.mermaid').style.display = 'none';
                 document.getElementById('graphvizContent').style.display = 'block';
+                // Reset theme cache to force reload
+                lastGraphvizTheme = null;
                 renderGraphvizSchema(container, currentData);
             } else {
                 document.querySelector('.mermaid').style.display = 'block';
@@ -54,9 +58,23 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
             setTimeout(() => modal.classList.add('visible'), 10);
             
             const showSchema = () => {
+                const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                // Reset GraphViz theme cache if theme has changed
+                if (useGraphviz && lastGraphvizTheme !== currentTheme) {
+                    lastGraphvizTheme = null;
+                    lastGraphvizResult = null;
+                }
                 loading.style.display = 'none';
                 currentData = schemaData;
-                renderMermaidSchema(container, currentData);
+                if (useGraphviz) {
+                    document.querySelector('.mermaid').style.display = 'none';
+                    document.getElementById('graphvizContent').style.display = 'block';
+                    renderGraphvizSchema(container, currentData);
+                } else {
+                    document.querySelector('.mermaid').style.display = 'block';
+                    document.getElementById('graphvizContent').style.display = 'none';
+                    renderMermaidSchema(container, currentData);
+                }
             };
 
             if (schemaData) {
@@ -118,62 +136,6 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         }
     });
 
-    // Add click handler for schema button
-    console.log('Adding schema button click handler...');
-    schemaButton.onclick = async () => {
-        console.log('Schema button clicked');
-        try {
-            // Wait for mermaid to be loaded
-            console.log('Waiting for mermaid to load...');
-            await window.mermaidPromise;
-            console.log('Mermaid loaded successfully');
-
-            modal.style.display = 'block';
-            setTimeout(() => modal.classList.add('visible'), 10);
-
-            try {
-                // Only fetch schema if we don't have cached data
-                if (!schemaData) {
-                    console.log('No cached schema data, fetching from server...');
-                    loading.style.display = 'block';
-                    error.style.display = 'none';
-
-                    console.log('Fetching schema...');
-                    const response = await fetch('/schema');
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const data = await response.json();
-                    console.log('Raw schema data:', data);
-
-                    if (data.relationships && data.relationships.length > 0) {
-                        console.log('Found relationships:', data.relationships);
-                        schemaData = data;
-                        currentData = data;
-                        renderMermaidSchema(container, data);
-                    } else {
-                        console.warn('No relationships found in schema data');
-                        error.textContent = 'No relationships found in schema';
-                        error.style.display = 'block';
-                    }
-                } else {
-                    console.log('Using cached schema data');
-                    renderMermaidSchema(container, schemaData);
-                }
-            } catch (err) {
-                console.error('Error fetching schema:', err);
-                error.textContent = err.message;
-                error.style.display = 'block';
-            } finally {
-                loading.style.display = 'none';
-            }
-        } catch (err) {
-            console.error('Failed to initialize mermaid:', err);
-            error.textContent = 'Failed to initialize diagram renderer';
-            error.style.display = 'block';
-        }
-    };
-
     // Handle modal close
     console.log('Adding modal close handler...');
     modal.querySelector('.schema-close').addEventListener('click', () => {
@@ -183,15 +145,20 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         }, 300);
     });
 
-    // Update Mermaid theme when system theme changes
+    // Update theme observer to handle both Mermaid and GraphViz
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.attributeName === 'data-theme') {
-                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                mermaid.initialize({
-                    theme: isDark ? 'dark' : 'default'
-                });
-                if (currentData) {
+                if (useGraphviz && currentData) {
+                    // Reset GraphViz theme cache on theme change
+                    lastGraphvizTheme = null;
+                    lastGraphvizResult = null;
+                    renderGraphvizSchema(container, currentData);
+                } else if (!useGraphviz && currentData) {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    mermaid.initialize({
+                        theme: isDark ? 'dark' : 'default'
+                    });
                     renderMermaidSchema(container, currentData);
                 }
             }
@@ -264,15 +231,8 @@ function generateMermaidDefinition(data) {
     });
 
     // Then define relationships
-    console.log('Processing relationships for Mermaid:', data.relationships);
-    console.log('Generating Mermaid relationships from:', data.relationships);
     const relationshipDefs = data.relationships.map(rel => {
-        // Log each relationship being processed
-        console.log('Processing relationship:', JSON.stringify(rel));
-        // Format: [Entity1] [Relationship] [Entity2] : [Label]
-        // Relationship types: ||--o|, }|--|{, ||--||, ||--o{
         const def = `    ${rel.from.table} }|--|| ${rel.to.table} : "${rel.from.column} > ${rel.to.column}"`;
-        console.log('Generated relationship definition:', def);
         return def;
     });
 
@@ -283,32 +243,41 @@ function generateMermaidDefinition(data) {
         relationshipDefs.join('\n')
     ].join('\n\n');
 
-    console.log('Final Mermaid definition:', definition);
-
     console.log('Generated Mermaid Definition:', definition);
     return definition;
 }
-
 
 async function renderGraphvizSchema(container, data) {
     const img = container.querySelector('#graphvizContent');
     img.style.opacity = '0';
     img.style.transition = 'opacity 0.3s ease';
+    const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    console.log('Rendering GraphViz schema with theme:', currentTheme);
 
     try {
-        const response = await fetch('/schema?type=graphviz');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        // Only fetch new schema if theme has changed or no previous result
+        if (lastGraphvizTheme !== currentTheme || !lastGraphvizResult) {
+            console.log('Getting new GraphViz schema for theme:', currentTheme);
+            const response = await fetch(`/schema?type=graphviz&theme=${currentTheme}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            lastGraphvizResult = await response.json();
+            lastGraphvizTheme = currentTheme;
+            console.log('New GraphViz schema received');
+        } else {
+            console.log('Using cached GraphViz schema');
         }
-        const result = await response.json();
         
-        if (result.schema_url) {
-            img.src = result.schema_url;
+        if (lastGraphvizResult && lastGraphvizResult.schema_url) {
+            img.src = `${lastGraphvizResult.schema_url}?t=${new Date().getTime()}`; // Add cache buster
             img.onload = () => {
                 img.style.opacity = '1';
             };
         } else {
-            throw new Error('No schema URL in response');
+            console.error('No valid GraphViz schema URL');
+            lastGraphvizResult = null; // Clear invalid result
+            throw new Error('No valid schema URL available');
         }
     } catch (error) {
         console.error('Error rendering GraphViz schema:', error);

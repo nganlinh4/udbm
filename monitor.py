@@ -803,41 +803,6 @@ def update_cell(table_name, row_id, column):
     finally:
         if 'connection' in locals():
             connection.close()
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor()
-
-        if current_db_config.get('db_type') == 'postgresql':
-            try:
-                # Disable foreign key checks
-                cursor.execute("SET session_replication_role = 'replica';")
-                # Delete the row
-                cursor.execute(f'DELETE FROM "{table_name}" WHERE id = %s', (row_id,))
-                # Re-enable foreign key checks
-                cursor.execute("SET session_replication_role = 'origin';")
-            except psycopg2.Error as e:
-                return jsonify({'error': str(e)}), 500
-        else:
-            # MySQL
-            try:
-                # Disable foreign key checks
-                cursor.execute("SET FOREIGN_KEY_CHECKS=0")
-                # Delete the row
-                cursor.execute(f"DELETE FROM {table_name} WHERE id = %s", (row_id,))
-                # Re-enable foreign key checks
-                cursor.execute("SET FOREIGN_KEY_CHECKS=1")
-            except mysql.connector.Error as e:
-                return jsonify({'error': str(e)}), 500
-
-        connection.commit()
-        return jsonify({'success': True})
-
-    except Exception as e:
-        logger.error(f"Error deleting row from {table_name}: {e}")
-        return jsonify({'error': str(e)}), 500
-    finally:
-        if 'connection' in locals():
-            connection.close()
 
 # Update schema endpoint without referrer check
 @app.route('/schema')
@@ -1017,18 +982,50 @@ def get_schema():
         ]
         if schema_type == 'graphviz':
             # Create graphviz diagram
+            theme = request.args.get('theme', 'light')
+            is_dark = theme == 'dark'
+            
+            # Define theme colors
+            if is_dark:
+                text_color = '#ffffff'
+                edge_color = '#cccccc'
+                # Darker theme colors with better contrast
+                theme_colors = [
+                    '#4B6BBF',  # Dark Indigo
+                    '#3B8C84',  # Dark Teal
+                    '#C75B79',  # Dark Pink
+                    '#D4823B',  # Dark Orange
+                    '#4B9B4F',  # Dark Green
+                    '#9B67A0',  # Dark Purple
+                    '#4B91BF',  # Dark Light Blue
+                    '#BFB04B',  # Dark Yellow
+                    '#8B7355',  # Dark Brown
+                    '#546E7A',  # Dark Blue Grey
+                ]
+            else:
+                text_color = '#000000'
+                edge_color = '#666666'
+                # Keep original light theme colors
+
             dot = graphviz.Digraph(comment='Database Schema')
             dot.attr(rankdir='TB')
-            dot.attr('node', shape='record', fontsize='10')
+            dot.attr('node', shape='record', fontsize='10', color=edge_color, fontcolor=text_color)
+            dot.attr(bgcolor='transparent')  # Set transparent background through graph attribute
             dot.attr(splines='ortho')
+            
             # Update edge attributes for better label positioning
-            dot.attr('edge', arrowhead='normal', fontsize='8', 
-                    labeldistance='1.0', labelangle='0', labelloc='c')
+            dot.attr('edge', 
+                    arrowhead='normal', 
+                    fontsize='8',
+                    color=edge_color,
+                    fontcolor=text_color,
+                    labeldistance='1.0', 
+                    labelangle='0', 
+                    labelloc='c')
             
             # Graph-level attributes
             dot.attr(nodesep='0.4')
             dot.attr(ranksep='0.8')
-            dot.attr(concentrate='false')  # Turn off concentrate for better label placement
             
             # Add tables with colored headers
             for idx, (table_name, columns) in enumerate(tables.items()):
@@ -1047,7 +1044,7 @@ def get_schema():
                     # Create HTML-like label
                     label = f'''<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
                         <TR><TD BGCOLOR="{color}">{table_name}</TD></TR>
-                        <TR><TD BGCOLOR="white" ALIGN="LEFT">{('<BR/>' + '  ').join(column_strs)}</TD></TR>
+                        <TR><TD ALIGN="LEFT">{('<BR/>' + '  ').join(column_strs)}</TD></TR>
                     </TABLE>>'''
                     
                     dot.node(table_name, label, shape='none')

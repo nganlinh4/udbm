@@ -1078,6 +1078,7 @@ input:checked ~ .switch-label.language-active {
 }
 
 .schema-switch {
+    position: fixed;
     display: flex;
     align-items: center;
     gap: 12px;
