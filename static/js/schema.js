@@ -1,5 +1,6 @@
 let currentData = null;
 let schemaData = null; // Persistent cache for schema data
+let useGraphviz = false; // Track which visualization to use
 
 export function initializeSchema(schemaButton, modal, loading, error, container) {
     console.log('Initializing schema functionality...');
@@ -12,6 +13,23 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
     console.log('Schema initialized');
 
     // Ensure mermaid is loaded
+    
+    // Add schema type toggle handler
+    document.getElementById('schemaTypeToggle').addEventListener('change', function(e) {
+        useGraphviz = e.target.checked;
+        if (currentData) {
+            if (useGraphviz) {
+                document.querySelector('.mermaid').style.display = 'none';
+                document.getElementById('graphvizContent').style.display = 'block';
+                renderGraphvizSchema(container, currentData);
+            } else {
+                document.querySelector('.mermaid').style.display = 'block';
+                document.getElementById('graphvizContent').style.display = 'none';
+                renderMermaidSchema(container, currentData);
+            }
+        }
+    });
+
     if (typeof mermaid === 'undefined') {
         console.error('Mermaid library not loaded!');
         return;
@@ -269,6 +287,36 @@ function generateMermaidDefinition(data) {
 
     console.log('Generated Mermaid Definition:', definition);
     return definition;
+}
+
+
+async function renderGraphvizSchema(container, data) {
+    const img = container.querySelector('#graphvizContent');
+    img.style.opacity = '0';
+    img.style.transition = 'opacity 0.3s ease';
+
+    try {
+        const response = await fetch('/schema?type=graphviz');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        
+        if (result.schema_url) {
+            img.src = result.schema_url;
+            img.onload = () => {
+                img.style.opacity = '1';
+            };
+        } else {
+            throw new Error('No schema URL in response');
+        }
+    } catch (error) {
+        console.error('Error rendering GraphViz schema:', error);
+        img.style.display = 'none';
+        const errorMsg = container.querySelector('.schema-error');
+        errorMsg.textContent = `Failed to render GraphViz diagram: ${error.message}`;
+        errorMsg.style.display = 'block';
+    }
 }
 
 async function renderMermaidSchema(container, data) {

@@ -1068,6 +1068,42 @@ input:checked ~ .switch-label.language-active {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Schema mode switch */
+.schema-controls {
+    padding: 16px;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.schema-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--md-sys-color-surface-variant);
+    padding: 8px 16px;
+    border-radius: 24px;
+}
+
+.schema-type-switch {
+    margin: 0;
+}
+
+.schema-switch .switch-label {
+    color: var(--md-sys-color-on-surface);
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+/* Graphviz content styling */
+#graphvizContent {
+    padding: 20px;
+    max-width: 90%;
+    height: auto;
+    margin: 0 auto;
+}
+
 [data-theme="dark"] .download-button {
     background: var(--md-sys-color-primary);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);

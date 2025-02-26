@@ -1,7 +1,8 @@
-from flask import Flask, render_template, jsonify, request, make_response
+from flask import Flask, render_template, jsonify, request, make_response, url_for
 from flask_cors import CORS
 import mysql.connector
 import psycopg2
+import graphviz
 import psycopg2.extras
 import time
 import logging
@@ -842,6 +843,7 @@ def update_cell(table_name, row_id, column):
 @app.route('/schema')
 def get_schema():
     try:
+        schema_type = request.args.get('type', 'mermaid')
         global current_db_config
         
         if not current_db_config:
@@ -1013,8 +1015,60 @@ def get_schema():
             '#D7CCC8',  # theme-8 (Brown)
             '#CFD8DC',  # theme-9 (Blue Grey)
         ]
+        if schema_type == 'graphviz':
+            # Create graphviz diagram
+            dot = graphviz.Digraph(comment='Database Schema')
+            dot.attr(rankdir='TB')
+            dot.attr('node', shape='record', fontsize='10')
+            dot.attr(splines='ortho')
+            # Update edge attributes for better label positioning
+            dot.attr('edge', arrowhead='normal', fontsize='8', 
+                    labeldistance='0.3', labelangle='45', labelloc='c')
+            
+            # Graph-level attributes
+            dot.attr(nodesep='0.4')
+            dot.attr(ranksep='0.8')
+            dot.attr(concentrate='true')
+            
+            # Add tables with colored headers
+            for idx, (table_name, columns) in enumerate(tables.items()):
+                if table_name not in IGNORED_TABLES:
+                    color = theme_colors[idx % len(theme_colors)]
+                    
+                    # Format columns without COLLATE info
+                    column_strs = []
+                    for col in columns:
+                        type_str = str(col['type']).split('COLLATE')[0].strip()
+                        col_str = f"{col['name']} ({type_str})"
+                        if col['is_primary']:
+                            col_str = f"<b>{col_str}</b>"
+                        column_strs.append(col_str)
+                    
+                    # Create HTML-like label
+                    label = f'''<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+                        <TR><TD BGCOLOR="{color}">{table_name}</TD></TR>
+                        <TR><TD BGCOLOR="white" ALIGN="LEFT">{('<BR/>' + '  ').join(column_strs)}</TD></TR>
+                    </TABLE>>'''
+                    
+                    dot.node(table_name, label, shape='none')
+            
+            # Add relationships
+            for rel in relationships:
+                from_table = rel['from']['table']
+                to_table = rel['to']['table']
+                if from_table not in IGNORED_TABLES and to_table not in IGNORED_TABLES:
+                    label = f"{rel['from']['column']} → {rel['to']['column']}"
+                    dot.edge(from_table, to_table, label)
+            
+            # Save and return image path
+            schema_path = os.path.join(app.static_folder, 'schema.png')
+            dot.format = 'png'
+            dot.render(schema_path[:-4], format='png', cleanup=True)
+            dot.attr(layout='dot')
+            
+            return jsonify({'schema_url': url_for('static', filename='schema.png')})
 
-        # Return the schema data for mermaid.js
+        # Default: Return mermaid.js format
         return jsonify({
             'tables': tables,
             'relationships': relationships,
