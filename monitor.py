@@ -1023,12 +1023,12 @@ def get_schema():
             dot.attr(splines='ortho')
             # Update edge attributes for better label positioning
             dot.attr('edge', arrowhead='normal', fontsize='8', 
-                    labeldistance='0.3', labelangle='45', labelloc='c')
+                    labeldistance='1.0', labelangle='0', labelloc='c')
             
             # Graph-level attributes
             dot.attr(nodesep='0.4')
             dot.attr(ranksep='0.8')
-            dot.attr(concentrate='true')
+            dot.attr(concentrate='false')  # Turn off concentrate for better label placement
             
             # Add tables with colored headers
             for idx, (table_name, columns) in enumerate(tables.items()):
@@ -1052,13 +1052,23 @@ def get_schema():
                     
                     dot.node(table_name, label, shape='none')
             
-            # Add relationships
+            # Add relationships with improved label positioning
             for rel in relationships:
                 from_table = rel['from']['table']
                 to_table = rel['to']['table']
                 if from_table not in IGNORED_TABLES and to_table not in IGNORED_TABLES:
                     label = f"{rel['from']['column']} → {rel['to']['column']}"
-                    dot.edge(from_table, to_table, label)
+                    # Use headlabel/taillabel instead of edge label for better positioning
+                    if len(label) > 20:  # Long labels might drift more
+                        # For longer labels, use separate head/tail labels
+                        dot.edge(from_table, to_table, 
+                               headlabel=rel['to']['column'], 
+                               taillabel=rel['from']['column'],
+                               labeldistance='2.0',
+                               labelangle='25')
+                    else:
+                        # For shorter labels, keep them centered
+                        dot.edge(from_table, to_table, label=label)
             
             # Save and return image path
             schema_path = os.path.join(app.static_folder, 'schema.png')
