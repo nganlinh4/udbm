@@ -728,6 +728,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeTheme();
 
+    // Fix admin toggle initialization to maintain state across page loads
+    const adminToggle = document.getElementById('adminToggle');
+    if (adminToggle) {
+        // Load saved state from localStorage
+        const savedAdminState = localStorage.getItem('adminToggleState');
+        adminToggle.checked = savedAdminState === 'true';
+        
+        // Update UI to reflect the loaded state
+        document.body.classList.toggle('admin-mode', adminToggle.checked);
+        
+        adminToggle.addEventListener('change', () => {
+            // Save state to localStorage when changed
+            localStorage.setItem('adminToggleState', adminToggle.checked);
+            // Update UI based on new state
+            document.body.classList.toggle('admin-mode', adminToggle.checked);
+        });
+    }
+
     // Expose toggleTable to global scope
     window.toggleTable = toggleTable;
     window.baseUrl = baseUrl;

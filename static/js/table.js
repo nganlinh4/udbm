@@ -5,7 +5,7 @@ const ROWS_PER_LOAD = 50;
 let tableChunks = {};
 let isLoading = {};
 let autoScrolling = false;
-let isAdminMode = false;
+let isAdminMode = localStorage.getItem('adminToggleState') === 'true';
 let isRelationMode = false;
 let schemaData = null;
 
@@ -146,7 +146,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set up admin mode
     if (adminToggle) {
         adminToggle.addEventListener('change', (e) => {
-            isAdminMode = e.target.checked;
+            const checked = e.target.checked;
+            isAdminMode = checked;
             document.querySelectorAll('td.focused').forEach(cell => {
                 cell.classList.remove('focused');
             });
@@ -1465,7 +1466,7 @@ export function handleTableScroll(wrapper, tableName) {
     
     // Exit early if this is a horizontal scroll
     if (isHorizontalScroll) return;
-
+    
     // Handle vertical scroll events
     const bottomOffset = 50;
     const topOffset = 50;
@@ -1473,43 +1474,57 @@ export function handleTableScroll(wrapper, tableName) {
     const atTop = wrapper.scrollTop < topOffset;
     const tableDiv = document.getElementById(tableName);
     const isHidden = tableDiv.classList.contains('hidden-table');
-
+    
     if (atBottom && !isLoading[tableName] && !isHorizontalScroll) {
         // Show temporary pause message
         const pauseButton = document.getElementById('pauseButton');
-        const defaultTooltip = pauseButton.querySelector('.default-tooltip');
-        const tempTooltip = pauseButton.querySelector('.temp-tooltip');
-        const currentLang = getCurrentLanguage();  // Get current language
+        const defaultTooltip = pauseButton?.querySelector('.default-tooltip');
+        const tempTooltip = pauseButton?.querySelector('.temp-tooltip');
+        
+        // Safely get currentLang, default to 'ko' if it's undefined
+        let currentLang = 'ko';
+        try {
+            currentLang = getCurrentLanguage() || 'ko';
+        } catch (e) {
+            console.warn('Error getting current language, defaulting to Korean', e);
+        }
         
         // Only trigger pause on first historical data load
         const hasOldData = Object.keys(tableChunks).some(tn => tableChunks[tn].end > ROWS_PER_LOAD);
         const noOldDataYet = !hasOldData;
         
         if (!window.isMonitoringPaused && !isHidden && noOldDataYet) {
-            defaultTooltip.style.display = 'none';
-            tempTooltip.style.display = 'block';
-            window.toggleMonitoring();
+            if (defaultTooltip && tempTooltip) {
+                defaultTooltip.style.display = 'none';
+                tempTooltip.style.display = 'block';
+            }
+            
+            if (window.toggleMonitoring) {
+                window.toggleMonitoring();
+            }
     
             const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
-            if (limitedInfoSpan) {
+            if (limitedInfoSpan && translations) {
                 limitedInfoSpan.innerHTML = `
-                    <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.scrollMore}</span>
-                    <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.scrollMore}</span>
+                    <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko?.scrollMore || '스크롤하여 더 많은 데이터 불러오기!'}</span>
+                    <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en?.scrollMore || 'Scroll to load more data!'}</span>
                 `;
                 limitedInfoSpan.classList.add('visible');
             }
     
             // Hide temp tooltip after 3 seconds
-            setTimeout(() => {
-                tempTooltip.style.display = 'none';
-                defaultTooltip.style.display = '';
-            }, 3000);
+            if (tempTooltip && defaultTooltip) {
+                setTimeout(() => {
+                    tempTooltip.style.display = 'none';
+                    defaultTooltip.style.display = '';
+                }, 3000);
+            }
         }
     
         // Always fetch more data when scrolling to bottom, regardless of monitoring state
-        fetchTableData(tableName, true, baseUrl, translations, getCurrentLanguage(), updateSingleTable);
+        fetchTableData(tableName, true, baseUrl, translations, currentLang, updateSingleTable);
     }
-
+    
     // Resume monitoring if table is hidden or at top
     if ((atTop || isHidden) && window.isMonitoringPaused) {
         autoScrolling = true;
@@ -1521,7 +1536,9 @@ export function handleTableScroll(wrapper, tableName) {
         }
         
         setTimeout(() => {
-            window.toggleMonitoring();
+            if (window.toggleMonitoring) {
+                window.toggleMonitoring();
+            }
             autoScrolling = false;
         }, 300);
     }

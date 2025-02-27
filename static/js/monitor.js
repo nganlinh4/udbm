@@ -781,6 +781,27 @@ document.addEventListener('DOMContentLoaded', () => {
         setCookie('preferred_theme', isDarkMode ? 'dark' : 'light', 365);
     });
 
+    // Initialize admin toggle state
+    const adminToggle = document.getElementById('adminToggle');
+    if (adminToggle) {
+        // Load saved state from localStorage
+        const savedAdminState = localStorage.getItem('adminToggleState');
+        
+        // Set the checkbox state based on saved value
+        adminToggle.checked = savedAdminState === 'true';
+        
+        // Update body class to match the toggle state
+        document.body.classList.toggle('admin-mode', adminToggle.checked);
+
+        adminToggle.addEventListener('change', () => {
+            // Save the current state to localStorage
+            localStorage.setItem('adminToggleState', adminToggle.checked.toString());
+            
+            // Update body class when toggle changes
+            document.body.classList.toggle('admin-mode', adminToggle.checked);
+        });
+    }
+
     startMonitoring();
     updateClockAnimation();
 });
@@ -1242,6 +1263,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Always set both the dropdown value and the actual interval to 10000ms
     dropdown.value = '10000';
     monitorInterval = 10000;
+
+    // Initialize admin toggle state
+    const adminToggle = document.getElementById('adminToggle');
+    if (adminToggle) {
+        // Load saved state and apply it immediately
+        const initialState = localStorage.getItem('adminToggleState');
+        if (initialState === 'true') {
+            // Trigger a change event to properly initialize admin mode
+            adminToggle.checked = true;
+            adminToggle.dispatchEvent(new Event('change'));
+        }
+
+        adminToggle.addEventListener('change', () => {
+            const isChecked = adminToggle.checked;
+            document.body.classList.toggle('admin-mode', isChecked);
+            localStorage.setItem('adminToggleState', isChecked);
+        });
+    }
     
     // Initialize danger class based on current value
     updateDropdownDangerState(monitorInterval);
