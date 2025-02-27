@@ -1012,6 +1012,7 @@ def get_schema():
             dot.attr('node', shape='record', fontsize='10', color=edge_color, fontcolor=text_color)
             dot.attr(bgcolor='transparent')  # Set transparent background through graph attribute
             dot.attr(splines='ortho')
+            dot.attr(dpi='300')
             
             # Update edge attributes for better label positioning
             dot.attr('edge', 

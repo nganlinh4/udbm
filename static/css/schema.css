@@ -82,8 +82,8 @@
 
 .zoom-controls {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 37px;
+    right: 33px;
     display: inline-flex;
     gap: 8px;
     z-index: 1002;
@@ -149,12 +149,23 @@
     height: 80vh;
     min-width: 800px;
     min-height: 600px;
+    max-width: 115vw;
+    max-height: 110vh;
     transition: transform 0.3s ease;
     display: flex;
     flex-direction: column;
-    resize: both;
+    resize: both; /* Keep resize functionality */
     overflow: hidden; /* Changed from auto to hidden */
     position: relative;
+}
+
+/* Hide default resize handle */
+.schema-content::-webkit-resizer {
+    display: none;
+}
+
+.schema-content {
+    -moz-appearance: none; /* Firefox */
 }
 
 /* Fancy resize handle */
@@ -163,12 +174,14 @@
     position: absolute;
     bottom: 0;
     right: 0;
-    width: 24px;
-    height: 24px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 16 22 16 22 22'%3E%3C/polyline%3E%3Cpolyline points='8 16 2 16 2 22'%3E%3C/polyline%3E%3Cpolyline points='16 8 22 8 22 2'%3E%3C/polyline%3E%3Cpolyline points='8 8 2 8 2 2'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: center;
-    opacity: 0.6;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(
+        135deg,
+        transparent 50%,
+        var(--md-sys-color-outline) 50%
+    );
+    opacity: 0.4;
     cursor: nwse-resize;
     border-bottom-right-radius: 24px;
     transition: opacity 0.2s ease;
@@ -179,18 +192,31 @@
     opacity: 1;
 }
 
+.schema-content:active::after {
+    opacity: 0.7;
+    background: linear-gradient(
+        135deg,
+        transparent 50%,
+        var(--md-sys-color-primary) 50%
+    );
+}
+
 [data-theme="dark"] .schema-content {
     background: var(--md-sys-color-surface-container);
 }
 
 [data-theme="dark"] .schema-content::after {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 16 22 16 22 22'%3E%3C/polyline%3E%3Cpolyline points='8 16 2 16 2 22'%3E%3C/polyline%3E%3Cpolyline points='16 8 22 8 22 2'%3E%3C/polyline%3E%3Cpolyline points='8 8 2 8 2 2'%3E%3C/polyline%3E%3C/svg%3E");
+    background: linear-gradient(
+        135deg,
+        transparent 50%,
+        var(--md-sys-color-outline) 50%
+    );
 }
 
 .schema-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 30px;
+    right: 30px;
     background: none;
     border: none;
     font-size: 28px;

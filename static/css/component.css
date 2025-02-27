@@ -1052,14 +1052,12 @@ input:checked ~ .switch-label.language-active {
 /* Schema mode switch */
 .schema-controls {
     padding: 16px;
-    border-bottom: 1px solid var(--md-sys-color-outline);
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 .schema-switch {
-    position: fixed;
     display: flex;
     align-items: center;
     gap: 12px;
