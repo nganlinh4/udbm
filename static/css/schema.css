@@ -2,22 +2,20 @@
 .schema-button {
     padding: 8px 16px;
     border-radius: 24px;
-    font-size: 0.9em;
-    font-weight: 500;
+    font-size: 0.875rem;
+    font-weight: 600;
     font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     transition: all 0.2s ease;
-    background: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary);
     border: none;
     cursor: pointer;
-    box-shadow: var(--md-elevation-level1);
+    box-shadow: var(--md-elevation-level2);
     position: relative;
     z-index: 100;
 }
 
 .schema-button:hover {
     transform: translateY(-1px);
-    box-shadow: var(--md-elevation-level2);
+    box-shadow: var(--md-elevation-level3);
 }
 
 .schema-controls {
@@ -31,19 +29,20 @@
 }
 
 .schema-switch {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--md-sys-color-surface-container);
     padding: 4px 12px;
     border-radius: 24px;
     display: flex;
     align-items: center;
     gap: 8px;
     border: 1px solid var(--md-sys-color-outline);
+    box-shadow: var(--md-elevation-level2);
 }
 
 
 .schema-switch .switch-label {
     color: var(--md-sys-color-on-surface);
-    font-size: 0.9em;
+    font-size: 0.875rem;
     opacity: 0.7;
     user-select: none;
 }
@@ -55,24 +54,23 @@
 
 /* Control button styles */
 .download-button, .copy-button {
-    background: var(--md-sys-color-surface-variant);
-    color: white;
+    color: var(--md-sys-color-on-surface-variant);
     width: 38px;
     height: 38px;
     border: none;
-    border-radius: 12px;
+    border-radius: 24px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--md-elevation-level2);
 }
 
 .download-button:hover, .copy-button:hover {
-    opacity: 0.9;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--md-elevation-level3);
+    background: var(--md-sys-color-surface-container-highest);
 }
 
 .download-button:active, .copy-button:active {
@@ -87,31 +85,32 @@
     display: inline-flex;
     gap: 8px;
     z-index: 1002;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--md-sys-color-surface-container-high);
     padding: 6px;
-    border-radius: 12px;
+    border-radius: 24px;
     border: 1px solid var(--md-sys-color-outline);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--md-elevation-level2);
 }
 
 .zoom-button {
     width: 36px;
     height: 36px;
     border: none;
-    border-radius: 8px;
-    background: var(--md-sys-color-surface-variant);
-    color: white;
+    border-radius: 24px;
+    color: var(--md-sys-color-on-surface-variant);
     font-size: 20px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center; 
     transition: all 0.2s ease;
+    box-shadow: var(--md-elevation-level2);
 }
 
 .zoom-button:hover {
-    opacity: 0.9;
     transform: translateY(-1px);
+    box-shadow: var(--md-elevation-level3);
+    background: var(--md-sys-color-surface-container-highest);
 }
 
 .zoom-button:active {
@@ -154,7 +153,8 @@
     background: var(--md-sys-color-surface);
     padding: 20px;
     border-radius: 24px;
-    box-shadow: var(--md-elevation-level3);
+    box-shadow: var(--md-elevation-level4);
+    border: 1px solid var(--md-sys-color-outline-variant);
     width: 90vw;
     height: 80vh;
     min-width: 800px;
@@ -197,19 +197,13 @@
         transparent 50%,
         var(--md-sys-color-outline) 50%
     );
-    opacity: 0.4;
     cursor: nwse-resize;
     border-bottom-right-radius: 24px;
     transition: opacity 0.2s ease;
     z-index: 10;
 }
 
-.schema-content:hover::after {
-    opacity: 1;
-}
-
 .schema-content:active::after {
-    opacity: 0.7;
     background: linear-gradient(
         135deg,
         transparent 50%,
@@ -218,7 +212,8 @@
 }
 
 [data-theme="dark"] .schema-content {
-    background: var(--md-sys-color-surface-container);
+    background: var(--md-sys-color-surface-container-low);
+    border-color: var(--md-sys-color-outline-variant);
 }
 
 [data-theme="dark"] .schema-content::after {
@@ -237,9 +232,9 @@
     border: none;
     font-size: 28px;
     cursor: pointer;
-    color: #666;
+    color: var(--md-sys-color-on-surface-variant);
     padding: 4px;
-    border-radius: 50%;
+    border-radius: 24px;
     width: 40px;
     height: 40px;
     display: flex;
@@ -247,12 +242,13 @@
     justify-content: center;
     transition: background-color 0.2s;
     z-index: 10;
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: var(--md-sys-color-surface-container);
+    box-shadow: var(--md-elevation-level1);
 }
-
+ 
 .schema-close:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: var(--md-sys-color-surface-variant);
+    box-shadow: var(--md-elevation-level2);
 }
 
 .schema-loading {
@@ -270,7 +266,7 @@
     width: 24px;
     height: 24px;
     margin-left: 12px;
-    border: 3px solid rgba(0, 0, 0, 0.1);
+    border: 3px solid var(--md-sys-color-outline);
     border-radius: 50%;
     border-top-color: var(--md-sys-color-primary);
     animation: rotate 1s ease-in-out infinite;
@@ -286,11 +282,11 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: #d32f2f;
+    color: var(--md-sys-color-error);
     padding: 20px;
     text-align: center;
-    background: rgba(211, 47, 47, 0.1);
-    border-radius: 12px;
+    background: var(--md-sys-color-error-container);
+    border-radius: 24px;
 }
 
 /* Content handling */
@@ -359,8 +355,7 @@
 
 /* Dark theme adaptations */
 [data-theme="dark"] .schema-switch {
-    background: var(--md-sys-color-surface-container);
-    border-color: var(--md-sys-color-outline);
+    border-color: var(--md-sys-color-outline-variant);
 }
 
 [data-theme="dark"] .schema-switch .switch-label {
@@ -369,13 +364,13 @@
 
 [data-theme="dark"] .download-button,
 [data-theme="dark"] .copy-button {
-    background: var(--md-sys-color-primary-container);
-    color: var(--md-sys-color-on-primary-container);
+    color: var(--md-sys-color-on-surface);
+    background: #4d4d4dbd;
 }
 
 [data-theme="dark"] .zoom-controls {
-    background: var(--md-sys-color-surface-container);
-    border-color: var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface-container-high);
+    border-color: var(--md-sys-color-outline-variant);
 }
 
 [data-theme="dark"] .schema-content {
@@ -394,8 +389,8 @@
 }
 
 [data-theme="dark"] .schema-error {
-    background: rgba(211, 47, 47, 0.15);
-    color: #ff8a80;
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
 }
 
 [data-theme="dark"] .schema-container .entityBox {
