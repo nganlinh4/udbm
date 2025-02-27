@@ -130,6 +130,15 @@
     z-index: 1001;
     opacity: 0;
     transition: opacity 0.3s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.schema-modal img {
+    -webkit-user-drag: none;
+    pointer-events: none;
 }
 
 .schema-modal.visible {
@@ -313,11 +322,15 @@
     opacity: 1;
 }
 
-.schema-container .mermaid svg {
-    max-width: none !important;
+.schema-container .mermaid img {
+    max-width: 100%;
     height: auto;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    transform-origin: center;
+    pointer-events: none;
 }
-
 /* Mermaid entity styles */
 .schema-container .entityBox {
     fill: var(--md-sys-color-surface);
