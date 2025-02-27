@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/table.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/schema.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <script>
         // Get saved language preference
@@ -49,9 +50,22 @@
         // Wait for mermaid to be loaded
         window.mermaidPromise = new Promise((resolve) => {
             if (typeof mermaid !== 'undefined') {
+                mermaid.initialize({
+                    startOnLoad: true,
+                    theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+                    securityLevel: 'loose',
+                    er: { useMaxWidth: true }
+                });
                 resolve(mermaid);
             } else {
-                document.querySelector('script[src*="mermaid"]').onload = () => resolve(mermaid);
+                document.querySelector('script[src*="mermaid"]').onload = () => {
+                    mermaid.initialize({
+                        startOnLoad: true,
+                        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+                        securityLevel: 'loose'
+                    });
+                    resolve(mermaid);
+                };
             }
         });
     </script>
@@ -344,25 +358,35 @@
     <!-- Schema modal structure -->
     <div id="schemaModal" class="schema-modal">
         <div class="schema-content">
-            <div id="schemaLoading" class="schema-loading">Loading schema...</div>
-            <div id="schemaError" class="schema-error" style="display: none;"></div>
-
             <div class="schema-container">
-                <div class="mermaid" id="schemaContent">
-                    Loading schema diagram...
+                <div class="schema-loading">Loading schema...</div>
+                <div class="schema-error" style="display: none;"></div>
+
+                <div class="mermaid"></div>
+                <img id="graphvizContent" style="display: none;">
+                
+                <!-- Schema controls -->
+                <div class="schema-controls">
+                    <div class="schema-switch">
+                        <span class="switch-label">Mermaid</span>
+                        <label class="switch schema-type-switch">
+                            <input type="checkbox" id="schemaTypeToggle">
+                            <span class="switch-slider"></span>
+                        </label>
+                        <span class="switch-label">GraphViz</span>
+                    </div>
+                    <button class="copy-button" title="Copy schema to clipboard">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.242a2 2 0 0 0-.602-1.43L16.083 2.57A2 2 0 0 0 14.685 2H10a2 2 0 0 0-2 2z"></path><path d="M16 18v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2"></path></svg>
+                    </button>
+                    <button class="download-button" title="Download schema as image">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
                 </div>
-                <img id="graphvizContent" style="display: none; max-width: 100%; height: auto;" />
+
+                <!-- Zoom controls -->
                 <div class="zoom-controls">
-                    <button class="zoom-button zoom-out" title="Zoom out">−</button>
                     <button class="zoom-button zoom-in" title="Zoom in">+</button>
-                </div>
-                <div class="schema-switch">
-                    <span class="switch-label">Mermaid</span>
-                    <label class="switch schema-type-switch">
-                        <input type="checkbox" id="schemaTypeToggle">
-                        <span class="switch-slider"></span>
-                    </label>
-                    <span class="switch-label">GraphViz</span>
+                    <button class="zoom-button zoom-out" title="Zoom out">−</button>
                 </div>
             </div>
             <button class="schema-close" title="Close schema view">×</button>
@@ -378,8 +402,8 @@
         // Initialize schema visualization
         const schemaButton = document.getElementById('schemaButton');
         const schemaModal = document.getElementById('schemaModal');
-        const loading = document.getElementById('schemaLoading');
-        const error = document.getElementById('schemaError');
+        const loading = document.querySelector('.schema-loading');
+        const error = document.querySelector('.schema-error');
         const container = document.querySelector('.schema-container');
 
         initializeSchema(schemaButton, schemaModal, loading, error, container);

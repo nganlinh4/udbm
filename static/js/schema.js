@@ -14,23 +14,111 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
     schemaButton.dataset.initialized = 'true';
     console.log('Schema initialized');
 
-    // Ensure mermaid is loaded
+    // Load saved schema type preference and set initial state
+    const savedSchemaType = localStorage.getItem('preferredSchemaType');
+    if (savedSchemaType === 'graphviz' || savedSchemaType === null) { // Default to GraphViz
+        useGraphviz = true;
+        const toggle = document.getElementById('schemaTypeToggle');
+        if (toggle) toggle.checked = true;
+    }
+
     
+    // Initialize copy button
+    const copyButton = container.querySelector('.copy-button');
+    if (copyButton) {
+        copyButton.innerHTML = `
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.242a2 2 0 0 0-.602-1.43L16.083 2.57A2 2 0 0 0 14.685 2H10a2 2 0 0 0-2 2z"></path>
+                <path d="M16 18v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2"></path>
+            </svg>
+        `;
+        copyButton.addEventListener('click', async () => {
+            try {
+                if (useGraphviz) {
+                    const img = container.querySelector('#graphvizContent');
+                    const response = await fetch(img.src);
+                    const blob = await response.blob();
+                    const item = new ClipboardItem({ 'image/png': blob });
+                    await navigator.clipboard.write([item]);
+                } else {
+                    const svg = container.querySelector('svg');
+                    if (svg) {
+                        const svgData = new XMLSerializer().serializeToString(svg);
+                        const blob = new Blob([svgData], { type: 'image/svg+xml' });
+                        const item = new ClipboardItem({ 'image/svg+xml': blob });
+                        await navigator.clipboard.write([item]);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to copy schema:', error);
+            }
+        });
+    }
+
+    // Initialize download button
+    const downloadButton = container.querySelector('.download-button');
+    if (downloadButton) {
+        downloadButton.innerHTML = `
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+        `;
+        downloadButton.addEventListener('click', async () => {
+            try {
+                if (useGraphviz) {
+                    const img = container.querySelector('#graphvizContent');
+                    const response = await fetch(img.src);
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'schema.png';
+                    link.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    // Handle Mermaid download
+                    const svg = container.querySelector('svg');
+                    if (svg) {
+                        const svgData = new XMLSerializer().serializeToString(svg);
+                        const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
+                        const url = URL.createObjectURL(svgBlob);
+                        const link = document.createElement('a');
+                        link.download = 'schema.svg';
+                        link.href = url;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to download schema:', error);
+            }
+        });
+    }
+
     // Add schema type toggle handler
     document.getElementById('schemaTypeToggle').addEventListener('change', function(e) {
         useGraphviz = e.target.checked;
-        if (currentData) {
+        localStorage.setItem('preferredSchemaType', useGraphviz ? 'graphviz' : 'mermaid');
+        if (currentData) { 
+            // Reset GraphViz cache when switching
+            lastGraphvizTheme = null;
+            lastGraphvizResult = null;
+            
             if (useGraphviz) {
                 document.querySelector('.mermaid').style.display = 'none';
                 document.getElementById('graphvizContent').style.display = 'block';
-                // Reset theme cache to force reload
-                lastGraphvizTheme = null;
                 renderGraphvizSchema(container, currentData);
             } else {
                 document.querySelector('.mermaid').style.display = 'block';
                 document.getElementById('graphvizContent').style.display = 'none';
                 renderMermaidSchema(container, currentData);
             }
+            
+            // Initialize appropriate zoom/pan
+            const targetElement = useGraphviz ? container.querySelector('#graphvizContent') : container.querySelector('.mermaid');
+            initializeZoomPan(container, targetElement);
         }
     });
 
@@ -185,30 +273,28 @@ function generateMermaidDefinition(data) {
         const tableLines = [];
         // Start entity block
         tableLines.push(`    ${tableName} {`);
-        
+
         // Process each column
         columns.forEach(column => {
             // Sanitize type names to be Mermaid-compatible (no spaces allowed)
-            let type = (column.type || 'unknown').toLowerCase()
-                .replace(/varchar\(\d+\)/i, 'varchar')
-                .replace(/character varying/i, 'varchar')
-                .replace(/int(\(\d+\))?/i, 'int')
-                .replace(/datetime/i, 'datetime')
-                .replace(/timestamp with(?:out)? time zone/i, 'timestamp')
-                .replace(/timestamp\(\d+\)/i, 'timestamp')
-                .replace(/boolean/i, 'bool')
-                .replace(/decimal\(\d+,\d+\)/i, 'decimal')
-                .replace(/numeric(\(\d+,\d+\))?/i, 'decimal')
-                .replace(/text/i, 'text')
-                .replace(/bigint/i, 'bigint')
-                .replace(/double precision/i, 'double')
-                .replace(/double/i, 'double')
-                .replace(/float/i, 'float')
-                .replace(/char\(\d+\)/i, 'char')
-                .replace(/user-defined/i, 'enum')
-                .replace(/jsonb?/i, 'json')
-                .replace(/uuid/i, 'uuid');
-
+            let type = column.type || 'unknown';
+            // Extract base type without size/precision
+            type = type.split('(')[0].toLowerCase();
+            
+            // Map common types
+            const typeMap = {
+                'character varying': 'varchar',
+                'timestamp with time zone': 'timestamp',
+                'timestamp without time zone': 'timestamp',
+                'double precision': 'double',
+                'numeric': 'decimal',
+                'boolean': 'bool',
+                'jsonb': 'json',
+                'user-defined': 'enum'
+            };
+            
+            type = typeMap[type] || type;
+            
             // Add column definition
             const flags = [];
             if (column.primaryKey) flags.push('PK');
@@ -219,10 +305,10 @@ function generateMermaidDefinition(data) {
                 flags.push('FK');
             }
 
-            // Format: name type "PK,FK" with proper spacing
+            // Format: name type "flags" with proper quotes
             tableLines.push(flags.length > 0
-                ? `        ${column.name} ${type} "${flags.join(',')}"`
-                : `        ${column.name} ${type}`);
+                ? `        ${column.name} "${type}" "${flags.join(',')}"`
+                : `        ${column.name} "${type}" ""`);
         });
 
         // Close entity block
@@ -232,7 +318,8 @@ function generateMermaidDefinition(data) {
 
     // Then define relationships
     const relationshipDefs = data.relationships.map(rel => {
-        const def = `    ${rel.from.table} }|--|| ${rel.to.table} : "${rel.from.column} > ${rel.to.column}"`;
+        // Format: TableA ||--o{ TableB : "Column A to Column B"
+        const def = `    ${rel.to.table} ||--o{ ${rel.from.table} : "${rel.to.column}"`;
         return def;
     });
 
@@ -240,17 +327,99 @@ function generateMermaidDefinition(data) {
     const definition = [
         'erDiagram',
         tableDefs.join('\n'),
-        relationshipDefs.join('\n')
+        relationshipDefs.join('\n    ')
     ].join('\n\n');
 
     console.log('Generated Mermaid Definition:', definition);
     return definition;
 }
 
+function initializeZoomPan(container, targetElement) {
+    if (!targetElement || targetElement.dataset.zoomInitialized === 'true') return;
+
+    if (!targetElement.dataset.scale) {
+        targetElement.dataset.scale = '1';
+    }
+
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    
+    const minZoom = 0.5;
+    const maxZoom = 20;
+    const zoomStep = 0.05;
+
+    const getScale = () => parseFloat(targetElement.dataset.scale);
+
+    const updateTransform = () => {
+        targetElement.style.transform = `translate(${panX}px, ${panY}px) scale(${getScale()})`;
+    };
+
+    const updateScale = (newScale) => {
+        const limitedScale = Math.min(Math.max(newScale, minZoom), maxZoom);
+        targetElement.dataset.scale = limitedScale.toString();
+        updateTransform();
+    };
+
+    // Mouse wheel zoom
+    container.addEventListener('wheel', (e) => {
+        if (e.target === targetElement || targetElement.contains(e.target)) {
+            e.preventDefault();
+            const delta = e.deltaY;
+            const currentScale = getScale();
+            const scaleChange = 1 + (delta > 0 ? -zoomStep : zoomStep);
+            updateScale(currentScale * scaleChange);
+        }
+    });
+
+    // Zoom buttons
+    const zoomIn = container.closest('.schema-modal').querySelector('.zoom-in');
+    const zoomOut = container.closest('.schema-modal').querySelector('.zoom-out');
+    const buttonZoomStep = 0.1;
+
+    zoomIn.addEventListener('click', () => {
+        const currentScale = getScale();
+        updateScale(currentScale * (1 + buttonZoomStep));
+    });
+
+    zoomOut.addEventListener('click', () => {
+        const currentScale = getScale();
+        updateScale(currentScale * (1 - buttonZoomStep));
+    });
+
+    // Pan handlers
+    targetElement.addEventListener('mousedown', (e) => {
+        if (e.button === 0) {
+            isDragging = true;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+            targetElement.style.cursor = 'grabbing';
+        }
+    });
+
+    container.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            panX = e.clientX - startX;
+            panY = e.clientY - startY;
+            updateTransform();
+        }
+    });
+
+    const stopDragging = () => {
+        isDragging = false;
+        targetElement.style.cursor = 'grab';
+    };
+
+    targetElement.addEventListener('mouseup', stopDragging);
+    targetElement.addEventListener('mouseleave', stopDragging);
+    targetElement.dataset.zoomInitialized = 'true';
+}
 async function renderGraphvizSchema(container, data) {
     const img = container.querySelector('#graphvizContent');
     img.style.opacity = '0';
-    img.style.transition = 'opacity 0.3s ease';
+    img.style.cssText = 'opacity: 0; transition: opacity 0.3s ease; cursor: grab;';
     const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     console.log('Rendering GraphViz schema with theme:', currentTheme);
 
@@ -273,6 +442,10 @@ async function renderGraphvizSchema(container, data) {
             img.src = `${lastGraphvizResult.schema_url}?t=${new Date().getTime()}`; // Add cache buster
             img.onload = () => {
                 img.style.opacity = '1';
+                if (!img.dataset.zoomInitialized) {
+                    initializeZoomPan(container, img);
+                    img.dataset.zoomInitialized = 'true';
+                }
             };
         } else {
             console.error('No valid GraphViz schema URL');
@@ -289,229 +462,76 @@ async function renderGraphvizSchema(container, data) {
 }
 
 async function renderMermaidSchema(container, data) {
-    const mermaidDiv = container.querySelector('.mermaid');
-    
-    // Add opacity transition
+    try {
+        const mermaidDiv = container.querySelector('.mermaid');
     mermaidDiv.style.transition = 'opacity 0.3s ease';
     mermaidDiv.style.opacity = '0';
-    
-    // Show loading message with smooth fade
-    mermaidDiv.innerHTML = '<div style="padding: 20px; text-align: center; transition: opacity 0.3s ease;">Preparing diagram...</div>';
-    await new Promise(resolve => setTimeout(resolve, 50)); // Tiny delay for transition
-    mermaidDiv.style.opacity = '1';
-    
-    // Generate and verify definition
-    const definition = generateMermaidDefinition(data);
-    if (!definition.includes('{')) {
-        console.error('Invalid diagram definition - no entities found');
-        mermaidDiv.innerHTML = '<div style="color: red; padding: 20px;">Failed to generate schema diagram: No valid entities found</div>';
-        return;
-    }
-    
-    try {
-        // Wait for mermaid to be loaded
-        const mermaid = await window.mermaidPromise;
-        
-        // Hide the content while processing
-        mermaidDiv.style.opacity = '0';
-        await new Promise(resolve => setTimeout(resolve, 300)); // Wait for fade out
-        
-        // Configure mermaid with optimized settings for PostgreSQL schema
-        mermaid.initialize({
-            startOnLoad: false,
-            theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
-            themeVariables: {
-                'line-length': 50
-            },
-            er: {
-                diagramPadding: 20,
-                layoutDirection: 'TB',
-                minEntityWidth: 200,
-                minEntityHeight: 50,
-                entityPadding: 20,
-                stroke: 'gray',
-                fill: 'white',
-                fontSize: 40,
-                useMaxWidth: true,
-                attributeBackground: '#fafafa',
-                wrap: true,
-                titleTopMargin: 30,
-                entitySpacing: 80,
-                relativeEdges: true
-            },
-            flowchart: {
-                curve: 'basis',
-                padding: 20,
-                useMaxWidth: true
-            },
-            securityLevel: 'loose'
-        });
-        console.log('Generated Definition:', definition);
-
-        // Create diagram element
-        const id = 'mermaid-' + Date.now();
-        const pre = document.createElement('pre');
-        pre.className = 'mermaid';
-        pre.id = id;
-        pre.textContent = definition;
-        mermaidDiv.innerHTML = '';
-        mermaidDiv.appendChild(pre);
-    
-        // Add download button if it doesn't exist
-        let downloadButton = container.querySelector('.download-button');
-        if (!downloadButton) {
-            downloadButton = document.createElement('button');
-            downloadButton.className = 'download-button';
-            downloadButton.innerHTML = `
-                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-            `;
-            downloadButton.title = "Download schema as image";
-            container.appendChild(downloadButton);
-    
-            downloadButton.addEventListener('click', () => {
-                // Create a temporary SVG element with the current transform
-                const svg = container.querySelector('svg').cloneNode(true);
-                const originalTransform = mermaidDiv.style.transform;
-                const scale = parseFloat(mermaidDiv.dataset.scale) || 1;
-                
-                // Reset transform for accurate sizing
-                mermaidDiv.style.transform = 'none';
-                
-                // Set SVG size
-                const width = svg.viewBox.baseVal.width * scale;
-                const height = svg.viewBox.baseVal.height * scale;
-                svg.setAttribute('width', width);
-                svg.setAttribute('height', height);
-                
-                // Set background color in SVG
-                const bgColor = document.documentElement.getAttribute('data-theme') === 'dark' ? '#191c1e' : '#ffffff';
-                svg.style.backgroundColor = bgColor;
-                
-                // Convert SVG to string with proper background
-                const svgData = new XMLSerializer().serializeToString(svg);
-                const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
-                const url = URL.createObjectURL(svgBlob);
-                
-                // Download
-                const link = document.createElement('a');
-                link.download = 'schema.svg';
-                link.href = url;
-                link.click();
-                
-                // Cleanup
-                URL.revokeObjectURL(url);
-                mermaidDiv.style.transform = originalTransform;
-            });
+        if (!mermaidDiv) {
+            throw new Error('Mermaid container not found');
         }
 
-        // Parse and render
-        await mermaid.parse(definition);
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for DOM
-        await mermaid.init(undefined, `#${id}`);
-        
-        // Fade in the rendered diagram
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to ensure rendering is complete
-        mermaidDiv.style.opacity = '1';
+        const definition = generateMermaidDefinition(data);
+        if (!definition.includes('{')) {
+            throw new Error('No valid entities found in schema');
+        }
 
-        // Initialize zoom and pan functionality
-        initializeZoomPan(container, mermaidDiv);
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        console.log('Rendering schema with theme:', isDark ? 'dark' : 'default');
+        const graphDefinition = definition;
+
+        // Create a fresh container
+        const newContainer = document.createElement('div');
+        newContainer.className = 'mermaid';
+        newContainer.innerHTML = graphDefinition;
+
+        // Replace old content
+       mermaidDiv.appendChild(newContainer);
+        
+        // Render diagram
+        const mermaid = await window.mermaidPromise;
+        console.log('Generated definition:', graphDefinition);
+
+        // Reset mermaid instance with fresh config
+        mermaid.contentLoaded();
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            securityLevel: 'loose',
+            flowchart: { curve: 'basis' },
+            themeVariables: isDark ? {
+                primaryColor: '#1f6feb',
+                lineColor: '#666',
+                textColor: '#adbac7',
+                mainBkg: '#22272e',
+                nodeBorder: '#444c56',
+                fontSize: '14px'
+            } : {
+                primaryColor: '#0969da',
+                lineColor: '#333',
+                textColor: '#24292f',
+                mainBkg: '#ffffff',
+                nodeBorder: '#d0d7de',
+                fontSize: '14px'
+            },
+            fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+            maxTextSize: 5000
+        });
+
+        try {
+            // Wait for container to be ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Force synchronous rendering
+            await mermaid.init(undefined, newContainer);
+            console.log('Mermaid rendering completed');
+        } catch (renderError) {
+            console.error('Mermaid render error:', renderError);
+            throw renderError;
+        }
+        initializeZoomPan(container, newContainer);
     } catch (error) {
         console.error('Error rendering mermaid diagram:', error);
-        mermaidDiv.innerHTML = `
-            <div style="color: red; padding: 20px;">
-                Failed to render schema diagram.
-                <br>
-                Error: ${error.message}
-            </div>
-        `;
+        container.querySelector('.mermaid').innerHTML = `<div style="color: red; padding: 20px;">Failed to render schema diagram: ${error.message}</div>`;
     }
 }
 
-function initializeZoomPan(container, mermaidDiv) {
-    // Store scale in the element's dataset to persist it
-    if (!mermaidDiv.dataset.scale) {
-        mermaidDiv.dataset.scale = '1';
-    }
-
-    let panX = 0;
-    let panY = 0;
-    let isDragging = false;
-    let startX = 0;
-    let startY = 0;
-    
-    // Configure zoom settings
-    const minZoom = 0.5;     // Minimum zoom level (50%)
-    const maxZoom = 20;      // Maximum zoom level (2000%)
-    const zoomStep = 0.05;   // 5% change per wheel tick for finer control
-
-    // Helper function to get current scale
-    const getScale = () => parseFloat(mermaidDiv.dataset.scale);
-
-    // Helper function to update transform
-    const updateTransform = () => {
-        mermaidDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${getScale()})`;
-    };
-
-    // Helper function to update scale with new limits
-    const updateScale = (newScale) => {
-        const limitedScale = Math.min(Math.max(newScale, minZoom), maxZoom);
-        mermaidDiv.dataset.scale = limitedScale.toString();
-        updateTransform();
-    };
-
-    // Zoom with mouse wheel - finer control
-    container.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        const delta = e.deltaY;
-        const currentScale = getScale();
-        const scaleChange = 1 + (delta > 0 ? -zoomStep : zoomStep);
-        updateScale(currentScale * scaleChange);
-    });
-
-    // Zoom with buttons - using consistent zoom steps
-    const zoomIn = container.closest('.schema-modal').querySelector('.zoom-in');
-    const zoomOut = container.closest('.schema-modal').querySelector('.zoom-out');
-
-    // Use larger steps for button clicks (20% change)
-    const buttonZoomStep = 0.1;
-
-    zoomIn.addEventListener('click', () => {
-        const currentScale = getScale();
-        updateScale(currentScale * (1 + buttonZoomStep));
-    });
-
-    zoomOut.addEventListener('click', () => {
-        const currentScale = getScale();
-        updateScale(currentScale * (1 - buttonZoomStep));
-    });
-
-    // Pan with mouse drag
-    container.addEventListener('mousedown', (e) => {
-        if (e.button === 0) { // Left click only
-            isDragging = true;
-            startX = e.clientX - panX;
-            startY = e.clientY - panY;
-            container.style.cursor = 'grabbing';
-        }
-    });
-
-    container.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-            panX = e.clientX - startX;
-            panY = e.clientY - startY;
-            updateTransform();
-        }
-    });
-
-    const stopDragging = () => {
-        isDragging = false;
-        container.style.cursor = 'grab';
-    };
-
-    container.addEventListener('mouseup', stopDragging);
-    container.addEventListener('mouseleave', stopDragging);
-}
