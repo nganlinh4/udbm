@@ -1,6 +1,6 @@
 let currentData = null;
 let schemaData = null;
-let useGraphviz = false;
+let useGraphviz = true;
 let lastGraphvizTheme = null;
 let lastGraphvizResult = null;
 let isResizing = false;
@@ -404,10 +404,10 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
 
     // Load saved schema type preference and set initial state
     const savedSchemaType = localStorage.getItem('preferredSchemaType');
-    if (savedSchemaType === 'graphviz' || savedSchemaType === null) { // Default to GraphViz
+    if (savedSchemaType === null || savedSchemaType === 'graphviz') { // Default to GraphViz unless Mermaid is explicitly saved
         useGraphviz = true;
         const toggle = document.getElementById('schemaTypeToggle');
-        if (toggle) toggle.checked = true;
+        if (toggle) toggle.checked = false;
     }
 
     // Setup the resize observer for responsive content
@@ -415,28 +415,6 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
     
     // Initialize resize functionality for schema modal
     const schemaContent = modal.querySelector('.schema-content');
-    
-    // Store initial dimensions when loading schema
-    schemaButton.addEventListener('click', () => {
-        // Get computed dimensions after modal is visible
-        setTimeout(() => {
-            const computed = window.getComputedStyle(schemaContent);
-            originalWidth = parseInt(computed.width, 10);
-            originalHeight = parseInt(computed.height, 10);
-            
-            // Load saved dimensions if available
-            const savedDimensions = localStorage.getItem('schemaDimensions');
-            if (savedDimensions) {
-                try {
-                    const { width, height } = JSON.parse(savedDimensions);
-                    schemaContent.style.width = `${width}px`;
-                    schemaContent.style.height = `${height}px`;
-                } catch (e) {
-                    console.error('Error loading saved schema dimensions:', e);
-                }
-            }
-        }, 100);
-    });
     
     // Save dimensions when closing schema
     modal.querySelector('.schema-close').addEventListener('click', () => {
@@ -463,12 +441,13 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                     const item = new ClipboardItem({ 'image/png': blob });
                     await navigator.clipboard.write([item]);
                 } else {
-                    const svg = container.querySelector('svg');
-                    if (svg) {
-                        const svgData = new XMLSerializer().serializeToString(svg);
-                        const blob = new Blob([svgData], { type: 'image/svg+xml' });
-                        const item = new ClipboardItem({ 'image/svg+xml': blob });
+                    const img = container.querySelector('.mermaid img');
+                    if (img) {
+                        const response = await fetch(img.src);
+                        const blob = await response.blob();
+                        const item = new ClipboardItem({ 'image/png': blob });
                         await navigator.clipboard.write([item]);
+                        console.log('Copied Mermaid PNG to clipboard');
                     }
                 }
             } catch (error) {
@@ -517,7 +496,7 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
 
     // Add schema type toggle handler
     document.getElementById('schemaTypeToggle').addEventListener('change', function(e) {
-        useGraphviz = e.target.checked;
+        useGraphviz = !e.target.checked;
         localStorage.setItem('preferredSchemaType', useGraphviz ? 'graphviz' : 'mermaid');
 
         // Reset zoom initialization flags
@@ -566,9 +545,32 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
             await window.mermaidPromise;
             console.log('Mermaid loaded successfully');
 
-            modal.style.display = 'block';
-            setTimeout(() => modal.classList.add('visible'), 10);
+            const schemaContent = modal.querySelector('.schema-content');
             
+            // Store initial computed dimensions
+            const computed = window.getComputedStyle(schemaContent);
+            originalWidth = parseInt(computed.width, 10);
+            originalHeight = parseInt(computed.height, 10);
+            
+            // Set display before loading dimensions so computed styles work correctly
+            modal.style.display = 'block';
+            
+            // Small delay to ensure modal is rendered before we modify dimensions
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // Load saved dimensions immediately when modal opens
+            const savedDimensions = localStorage.getItem('schemaDimensions');
+            if (savedDimensions) {
+                try {
+                    const { width, height } = JSON.parse(savedDimensions);
+                    schemaContent.style.width = `${width}px`;
+                    schemaContent.style.height = `${height}px`;
+                } catch (e) {
+                    console.error('Error loading saved schema dimensions:', e);
+                }
+            }
+            
+            setTimeout(() => modal.classList.add('visible'), 10);
             const showSchema = () => {
                 const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
                 // Reset GraphViz theme cache if theme has changed
@@ -650,11 +652,22 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
 
     // Handle modal close
     console.log('Adding modal close handler...');
-    modal.querySelector('.schema-close').addEventListener('click', () => {
+    const closeModal = () => {
         modal.classList.remove('visible');
         setTimeout(() => {
             modal.style.display = 'none';
         }, 300);
+    };
+
+    // Add ESC key handler
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'block') {
+            closeModal();
+        }
+    });
+    
+    modal.querySelector('.schema-close').addEventListener('click', () => {
+        closeModal();
     });
 
     // Update theme observer to handle both Mermaid and GraphViz
