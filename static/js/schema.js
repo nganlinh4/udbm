@@ -4,6 +4,48 @@ let useGraphviz = false; // Track which visualization to use
 let lastGraphvizTheme = null; // Track last theme used for GraphViz
 let lastGraphvizResult = null; // Store last GraphViz response
 
+// Add schema resize functionality
+let isResizing = false;
+let originalWidth, originalHeight;
+let originalMouseX, originalMouseY;
+
+// Add resize observer to handle content adjustment when schema modal is resized
+function setupResizeObserver(modal) {
+    const schemaContent = modal.querySelector('.schema-content');
+    const schemaContainer = modal.querySelector('.schema-container');
+    
+    // Use ResizeObserver to detect changes in schema-content dimensions
+    if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                // When schema-content size changes, trigger re-rendering of the schema
+                if (currentData && schemaContainer) {
+                    if (useGraphviz) {
+                        const img = schemaContainer.querySelector('#graphvizContent');
+                        if (img && img.dataset.zoomInitialized) {
+                            // Adjust image size based on new container size
+                            img.style.maxWidth = `${entry.contentRect.width - 40}px`;
+                            img.style.maxHeight = `${entry.contentRect.height - 40}px`;
+                        }
+                    } else {
+                        const mermaidDiv = schemaContainer.querySelector('.mermaid');
+                        if (mermaidDiv && mermaidDiv.dataset.zoomInitialized) {
+                            // Let the pan/zoom handler know the container size changed
+                            mermaidDiv.dispatchEvent(new CustomEvent('containerResized'));
+                        }
+                    }
+                }
+                
+                // Update the container size to fill the modal content area
+                schemaContainer.style.width = `${entry.contentRect.width - 40}px`;
+                schemaContainer.style.height = `${entry.contentRect.height - 40}px`;
+            }
+        });
+        
+        resizeObserver.observe(schemaContent);
+    }
+}
+
 export function initializeSchema(schemaButton, modal, loading, error, container) {
     console.log('Initializing schema functionality...');
     
@@ -22,6 +64,40 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         if (toggle) toggle.checked = true;
     }
 
+    // Setup the resize observer for responsive content
+    setupResizeObserver(modal);
+    
+    // Initialize resize functionality for schema modal
+    const schemaContent = modal.querySelector('.schema-content');
+    
+    // Store initial dimensions when loading schema
+    schemaButton.addEventListener('click', () => {
+        // Get computed dimensions after modal is visible
+        setTimeout(() => {
+            const computed = window.getComputedStyle(schemaContent);
+            originalWidth = parseInt(computed.width, 10);
+            originalHeight = parseInt(computed.height, 10);
+            
+            // Load saved dimensions if available
+            const savedDimensions = localStorage.getItem('schemaDimensions');
+            if (savedDimensions) {
+                try {
+                    const { width, height } = JSON.parse(savedDimensions);
+                    schemaContent.style.width = `${width}px`;
+                    schemaContent.style.height = `${height}px`;
+                } catch (e) {
+                    console.error('Error loading saved schema dimensions:', e);
+                }
+            }
+        }, 100);
+    });
+    
+    // Save dimensions when closing schema
+    modal.querySelector('.schema-close').addEventListener('click', () => {
+        const width = parseInt(window.getComputedStyle(schemaContent).width, 10);
+        const height = parseInt(window.getComputedStyle(schemaContent).height, 10);
+        localStorage.setItem('schemaDimensions', JSON.stringify({ width, height }));
+    });
     
     // Initialize copy button
     const copyButton = container.querySelector('.copy-button');
