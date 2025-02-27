@@ -270,9 +270,12 @@ function generateMermaidDefinition(data) {
     Object.entries(data.tables).forEach(([tableName, columns]) => {
         if (!Array.isArray(columns) || columns.length === 0) return;
 
+        // Sanitize table name for Mermaid 10.6.1
+        const safeTableName = tableName.replace(/[^a-zA-Z0-9_]/g, '_');
+        
         const tableLines = [];
         // Start entity block
-        tableLines.push(`    ${tableName} {`);
+        tableLines.push(`    ${safeTableName} {`);
 
         // Process each column
         columns.forEach(column => {
@@ -295,6 +298,9 @@ function generateMermaidDefinition(data) {
             
             type = typeMap[type] || type;
             
+            // Sanitize column name for Mermaid 10.6.1
+            const safeColumnName = column.name.replace(/[^a-zA-Z0-9_]/g, '_');
+            
             // Add column definition
             const flags = [];
             if (column.primaryKey) flags.push('PK');
@@ -305,10 +311,10 @@ function generateMermaidDefinition(data) {
                 flags.push('FK');
             }
 
-            // Format: name type "flags" with proper quotes
+            // Format: name type "flags" with proper quotes for Mermaid 10.6.1
             tableLines.push(flags.length > 0
-                ? `        ${column.name} "${type}" "${flags.join(',')}"`
-                : `        ${column.name} "${type}" ""`);
+                ? `        ${safeColumnName} ${type} "${flags.join(',')}"`
+                : `        ${safeColumnName} ${type}`);
         });
 
         // Close entity block
@@ -316,21 +322,26 @@ function generateMermaidDefinition(data) {
         tableDefs.push(tableLines.join('\n'));
     });
 
-    // Then define relationships
+    // Then define relationships - Updated for Mermaid 10.6.1 compatibility
     const relationshipDefs = data.relationships.map(rel => {
-        // Format: TableA ||--o{ TableB : "Column A to Column B"
-        const def = `    ${rel.to.table} ||--o{ ${rel.from.table} : "${rel.to.column}"`;
-        return def;
+        // Sanitize table names for Mermaid 10.6.1
+        const safeFromTable = rel.from.table.replace(/[^a-zA-Z0-9_]/g, '_');
+        const safeToTable = rel.to.table.replace(/[^a-zA-Z0-9_]/g, '_');
+        
+        // For Mermaid 10.6.1, simplify the relationship description
+        // Format: TableA ||--o{ TableB : "relates to"
+        return `    ${safeToTable} ||--o{ ${safeFromTable} : "relates to"`;
     });
 
     // Combine everything with careful spacing to avoid Mermaid parsing issues
+    // Mermaid 10.6.1 requires proper spacing between sections
     const definition = [
         'erDiagram',
         tableDefs.join('\n'),
-        relationshipDefs.join('\n    ')
+        relationshipDefs.join('\n')
     ].join('\n\n');
 
-    console.log('Generated Mermaid Definition:', definition);
+    console.log('Generated Mermaid Definition for 10.6.1:', definition);
     return definition;
 }
 
@@ -464,8 +475,10 @@ async function renderGraphvizSchema(container, data) {
 async function renderMermaidSchema(container, data) {
     try {
         const mermaidDiv = container.querySelector('.mermaid');
-    mermaidDiv.style.transition = 'opacity 0.3s ease';
-    mermaidDiv.style.opacity = '0';
+        mermaidDiv.style.transition = 'opacity 0.3s ease';
+        mermaidDiv.style.opacity = '0';
+        mermaidDiv.innerHTML = ''; // Clear previous content
+        
         if (!mermaidDiv) {
             throw new Error('Mermaid container not found');
         }
@@ -477,27 +490,35 @@ async function renderMermaidSchema(container, data) {
 
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         console.log('Rendering schema with theme:', isDark ? 'dark' : 'default');
-        const graphDefinition = definition;
 
-        // Create a fresh container
+        // Create a fresh container with proper textContent instead of innerHTML
         const newContainer = document.createElement('div');
         newContainer.className = 'mermaid';
-        newContainer.innerHTML = graphDefinition;
-
-        // Replace old content
-       mermaidDiv.appendChild(newContainer);
+        newContainer.textContent = definition; // Use textContent for proper escaping in Mermaid 10.6.1
         
-        // Render diagram
+        // Append to container
+        mermaidDiv.appendChild(newContainer);
+        
+        // Render diagram with Mermaid 10.6.1 compatible configuration
         const mermaid = await window.mermaidPromise;
-        console.log('Generated definition:', graphDefinition);
-
-        // Reset mermaid instance with fresh config
-        mermaid.contentLoaded();
+        console.log('Using Mermaid version:', mermaid.version ? mermaid.version() : 'unknown');
+        
+        // Reset mermaid instance with configuration optimized for 10.6.1
         mermaid.initialize({
-            startOnLoad: true,
+            startOnLoad: false, // Important: set to false for explicit rendering
             theme: isDark ? 'dark' : 'default',
             securityLevel: 'loose',
             flowchart: { curve: 'basis' },
+            er: {
+                diagramPadding: 20,
+                layoutDirection: 'TB',
+                minEntityWidth: 100,
+                minEntityHeight: 75,
+                entityPadding: 15,
+                stroke: 'gray',
+                fill: 'honeydew',
+                fontSize: 12
+            },
             themeVariables: isDark ? {
                 primaryColor: '#1f6feb',
                 lineColor: '#666',
@@ -513,8 +534,7 @@ async function renderMermaidSchema(container, data) {
                 nodeBorder: '#d0d7de',
                 fontSize: '14px'
             },
-            fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-            maxTextSize: 5000
+            fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
         });
 
         try {
@@ -523,11 +543,19 @@ async function renderMermaidSchema(container, data) {
             
             // Force synchronous rendering
             await mermaid.init(undefined, newContainer);
+            mermaidDiv.style.opacity = '1';
             console.log('Mermaid rendering completed');
+            
+            // Make the diagram visible
+            setTimeout(() => {
+                mermaidDiv.style.opacity = '1';
+                container.closest('.schema-modal').classList.add('loaded');
+            }, 100);
         } catch (renderError) {
             console.error('Mermaid render error:', renderError);
             throw renderError;
         }
+        
         initializeZoomPan(container, newContainer);
     } catch (error) {
         console.error('Error rendering mermaid diagram:', error);
