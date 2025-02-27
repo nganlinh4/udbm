@@ -1,3 +1,12 @@
+let currentData = null;
+let schemaData = null;
+let useGraphviz = false;
+let lastGraphvizTheme = null;
+let lastGraphvizResult = null;
+let isResizing = false;
+let originalWidth, originalHeight;
+let originalMouseX, originalMouseY;
+
 function initializeZoomPan(container, targetElement) {
     if (!targetElement || targetElement.dataset.zoomInitialized === 'true') return;
 
@@ -13,7 +22,7 @@ function initializeZoomPan(container, targetElement) {
     // Re-enable pointer events for the actual image/container
     targetElement.style.pointerEvents = 'auto';
     targetElement.style.cursor = 'grab';
-    targetElement.style.transformOrigin = 'center';
+    targetElement.style.transformOrigin = '0 0';
 
     const minZoom = 0.1;
     const maxZoom = 5;
@@ -22,38 +31,6 @@ function initializeZoomPan(container, targetElement) {
     const updateTransform = () => {
         targetElement.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`;
     };
-
-    const updateScale = (newScale) => {
-        const oldScale = state.scale;
-        state.scale = Math.min(Math.max(newScale, minZoom), maxZoom);
-        // Adjust pan to maintain pointer position during zoom
-        state.panX = (state.panX * state.scale) / oldScale;
-        state.panY = (state.panY * state.scale) / oldScale;
-        updateTransform();
-    };
-
-    // Mouse wheel zoom
-    container.addEventListener('wheel', (e) => {
-        if (e.target === targetElement || targetElement.contains(e.target)) {
-            e.preventDefault();
-            const delta = e.deltaY;
-            const scaleChange = 1 + (delta > 0 ? -zoomStep : zoomStep);
-            updateScale(state.scale * scaleChange);
-        }
-    });
-
-    // Zoom buttons
-    const zoomIn = container.closest('.schema-modal').querySelector('.zoom-in');
-    const zoomOut = container.closest('.schema-modal').querySelector('.zoom-out');
-    const buttonZoomStep = 0.25;
-
-    zoomIn.addEventListener('click', () => {
-        updateScale(state.scale * (1 + buttonZoomStep));
-    });
-
-    zoomOut.addEventListener('click', () => {
-        updateScale(state.scale * (1 - buttonZoomStep));
-    });
 
     // Pan handlers
     targetElement.addEventListener('mousedown', (e) => {
@@ -70,8 +47,8 @@ function initializeZoomPan(container, targetElement) {
         if (state.isDragging) {
             state.panX = e.clientX - state.startX;
             state.panY = e.clientY - state.startY;
-            updateTransform();
             e.preventDefault();
+            updateTransform();
         }
     });
 
@@ -80,6 +57,71 @@ function initializeZoomPan(container, targetElement) {
         state.isDragging = false;
         targetElement.style.cursor = 'grab';
     };
+
+    // Mouse wheel zoom
+    container.addEventListener('wheel', (e) => {
+        if (e.target === targetElement || targetElement.contains(e.target)) {
+            e.preventDefault();
+            
+            const rect = targetElement.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Get mouse position relative to the target with current pan
+            const x = mouseX - state.panX;
+            const y = mouseY - state.panY;
+
+            const oldScale = state.scale;
+            const delta = e.deltaY;
+            const scaleChange = 1 + (delta > 0 ? -zoomStep : zoomStep);
+            const newScale = Math.min(Math.max(oldScale * scaleChange, minZoom), maxZoom);
+            
+            // Adjust pan to zoom at mouse position
+            state.scale = newScale;
+            state.panX = mouseX - (x * newScale / oldScale);
+            state.panY = mouseY - (y * newScale / oldScale);
+            
+            updateTransform();
+        }
+    });
+
+    // Zoom buttons
+    const zoomIn = container.closest('.schema-modal').querySelector('.zoom-in');
+    const zoomOut = container.closest('.schema-modal').querySelector('.zoom-out');
+    const buttonZoomStep = 0.25;
+
+    const zoomFromPoint = (zoomIn, point) => {
+        const rect = targetElement.getBoundingClientRect();
+        const x = point.x - rect.left - state.panX;
+        const y = point.y - rect.top - state.panY;
+        
+        const oldScale = state.scale;
+        const newScale = oldScale * (1 + (zoomIn ? buttonZoomStep : -buttonZoomStep));
+        const limitedScale = Math.min(Math.max(newScale, minZoom), maxZoom);
+        
+        state.scale = limitedScale;
+        state.panX = state.panX + (x * (1 - limitedScale/oldScale));
+        state.panY = state.panY + (y * (1 - limitedScale/oldScale));
+        
+        updateTransform();
+    };
+
+    zoomIn.addEventListener('click', (e) => {
+        // Zoom from center if no specific point
+        const rect = targetElement.getBoundingClientRect();
+        zoomFromPoint(true, {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        });
+    });
+
+    zoomOut.addEventListener('click', (e) => {
+        const rect = targetElement.getBoundingClientRect();
+        zoomFromPoint(false, {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        });
+    });
 
     container.addEventListener('mouseup', stopDragging);
     targetElement.addEventListener('mouseup', stopDragging);
@@ -497,7 +539,6 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                 document.getElementById('graphvizContent').style.display = 'none';
                 renderMermaidSchema(container, currentData);
             }
-
             
             // Initialize appropriate zoom/pan
             const targetElement = useGraphviz ? container.querySelector('#graphvizContent') : container.querySelector('.mermaid img, .mermaid svg');
@@ -641,15 +682,6 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         attributeFilter: ['data-theme']
     });
 }
-
-let currentData = null;
-let schemaData = null;
-let useGraphviz = false;
-let lastGraphvizTheme = null;
-let lastGraphvizResult = null;
-let isResizing = false;
-let originalWidth, originalHeight;
-let originalMouseX, originalMouseY;
 
 function setupResizeObserver(modal) {
     const schemaContent = modal.querySelector('.schema-content');
