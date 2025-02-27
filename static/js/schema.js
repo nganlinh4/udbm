@@ -7,6 +7,25 @@ let isResizing = false;
 let originalWidth, originalHeight;
 let originalMouseX, originalMouseY;
 
+function showSuccessPopup(message) {
+    const popup = document.createElement('div');
+    popup.className = 'warning-popup';
+    popup.style.fontFamily = 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif';
+    popup.innerHTML = `
+        <span class="warning-icon" style="color: #4caf50;">✓</span>
+        ${message}
+    `;
+    document.body.appendChild(popup);
+    setTimeout(() => {
+        popup.classList.add('show');
+    }, 10);
+    setTimeout(() => {
+        popup.classList.remove('show');
+        setTimeout(() => popup.remove(), 300);
+    }, 2000);
+}
+
+
 function initializeZoomPan(container, targetElement) {
     if (!targetElement || targetElement.dataset.zoomInitialized === 'true') return;
 
@@ -439,6 +458,8 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                     const response = await fetch(img.src);
                     const blob = await response.blob();
                     const item = new ClipboardItem({ 'image/png': blob });
+                        showSuccessPopup('Schema copied to clipboard successfully!');
+
                     await navigator.clipboard.write([item]);
                 } else {
                     const img = container.querySelector('.mermaid img');
@@ -447,6 +468,8 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                         const blob = await response.blob();
                         const item = new ClipboardItem({ 'image/png': blob });
                         await navigator.clipboard.write([item]);
+                        showSuccessPopup('Schema copied to clipboard successfully!');
+
                         console.log('Copied Mermaid PNG to clipboard');
                     }
                 }

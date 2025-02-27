@@ -594,6 +594,7 @@ input:checked ~ .switch-label.language-active {
 .warning-popup.show {
     transform: translate(-50%, 0);
     opacity: 1;
+    z-index: 10000;
 }
 
 .warning-popup .warning-icon {

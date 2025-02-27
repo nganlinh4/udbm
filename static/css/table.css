@@ -44,11 +44,6 @@
     transition: all 0.3s ease;
 }
 
-/* Dark theme support */
-[data-theme="dark"] .arrangement-mode {
-    background: rgba(255, 255, 255, 0.05);
-}
-
 .arrangement-switch .tooltip {
     top: -70px;
     left: 70px;
