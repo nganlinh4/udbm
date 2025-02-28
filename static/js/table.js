@@ -7,6 +7,268 @@ let isLoading = {};
 let autoScrolling = false;
 let isAdminMode = localStorage.getItem('adminToggleState') === 'true';
 let isRelationMode = false;
+
+// Function to set up query popup handlers
+function setupQueryPopup() {
+    const queryPopup = document.getElementById('queryPopup');
+    const executeButton = document.getElementById('executeQuery');
+    const closeButton = queryPopup.querySelector('.query-close');
+    const queryInput = document.getElementById('queryInput');
+    const resultArea = document.getElementById('queryResult');
+    
+    // Load saved query history
+    const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
+    let historyIndex = -1;
+
+    // Function to handle closing the popup
+    function handleClose() {
+        queryPopup.classList.remove('visible');
+        queryInput.value = '';
+        resultArea.textContent = '';
+    }
+
+    return { queryPopup, executeButton, queryInput, resultArea, queryHistory, historyIndex, handleClose };
+}
+
+// Set up global query handler (independent of table state)
+document.addEventListener('keydown', (e) => {
+    if (!isAdminMode) return;
+    if (!e.key || e.key.toLowerCase() !== 'q') return;
+
+    let { queryPopup, executeButton, queryInput, resultArea, queryHistory, historyIndex, handleClose } = setupQueryPopup();
+
+    const isQueryInputFocused = document.activeElement?.id === 'queryInput';
+    const isQueryPopupVisible = queryPopup?.classList.contains('visible');
+    
+    if (isQueryInputFocused || isQueryPopupVisible) return;
+    
+    e.preventDefault();
+
+    // Clear and show popup
+    queryPopup.classList.add('visible');
+    queryInput.value = '';
+    resultArea.textContent = '';
+
+    // Set up execute button text
+    executeButton.innerHTML = `
+        <span class="lang-ko">(Ctrl+Enter) 실행</span>
+        <span class="lang-en">(Ctrl+Enter) Execute</span>
+    `;
+
+    // Replace elements to clear old event listeners
+    const newInput = queryInput.cloneNode(true);
+    const newButton = executeButton.cloneNode(true);
+    queryInput.parentNode.replaceChild(newInput, queryInput);
+    executeButton.parentNode.replaceChild(newButton, executeButton);
+    queryInput = newInput;
+    queryInput.focus();
+
+    // Handle query execution
+    const handleExecute = async () => {
+        const query = queryInput.value.trim();
+        if (!query) return;
+
+        // Save to history
+        if (!queryHistory.includes(query)) {
+            queryHistory.unshift(query);
+            if (queryHistory.length > 50) queryHistory.pop();
+            localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+        }
+        historyIndex = -1;
+
+        try {
+            const response = await fetch(`${window.baseUrl}/execute_query`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+
+            const data = await response.json();
+            if (data.error) {
+                resultArea.textContent = `Error: ${data.error}`;
+                return;
+            }
+
+            if (data.results) {
+                if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                    createQueryResultTable(resultArea, data.results);
+                } else {
+                    resultArea.textContent = JSON.stringify(data.results, null, 2);
+                }
+            }
+         } catch (error) {
+             resultArea.textContent = `Error: ${error.message}`;
+         }
+    };
+
+    // Create query result table function
+    function createQueryResultTable(resultArea, results) {
+        resultArea.innerHTML = '';
+        const tableWrapper = document.createElement('div');
+        tableWrapper.className = 'table-scroll-wrapper';
+        const table = document.createElement('table');
+        
+        // Create header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        Object.keys(results[0]).forEach(key => {
+            const th = document.createElement('th');
+            th.textContent = key;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Create body
+        const tbody = document.createElement('tbody');
+        results.forEach(row => {
+            const tr = document.createElement('tr');
+            Object.values(row).forEach(value => {
+                const td = document.createElement('td');
+                td.textContent = value === null ? 'NULL' : value;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        
+        tableWrapper.appendChild(table);
+        resultArea.appendChild(tableWrapper);
+        setTimeout(() => adjustColumnWidths(table), 0);
+    }
+
+    // Event listeners
+    queryInput.addEventListener('keydown', (e) => {
+        if (e.key === 'q' && e.ctrlKey) {
+            e.stopPropagation();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (historyIndex < queryHistory.length - 1) {
+                historyIndex++;
+                queryInput.value = queryHistory[historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIndex > -1) {
+                historyIndex--;
+                queryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+            }
+        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleExecute();
+
+        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleExecute();
+        }
+    });
+
+    // Set up close handlers
+    queryPopup.querySelector('.query-close').addEventListener('click', handleClose);
+    queryPopup.addEventListener('keydown', e => e.key === 'Escape' && handleClose());
+});
+let queryHandler = null;
+
+// Initialize global query handler
+function setupQueryHandler() {
+    if (queryHandler) return; // Only set up once
+
+    queryHandler = (e) => {
+        if (!isAdminMode) return;
+        if (!e.key || e.key.toLowerCase() !== 'q') return;
+        
+        const queryPopup = document.getElementById('queryPopup');
+        const isQueryInputFocused = document.activeElement?.id === 'queryInput';
+        const isQueryPopupVisible = queryPopup?.classList.contains('visible');
+        
+        if (isQueryInputFocused || isQueryPopupVisible) return;
+        
+        e.preventDefault();
+        
+        const queryInput = document.getElementById('queryInput');
+        const executeButton = document.getElementById('executeQuery');
+        const resultArea = document.getElementById('queryResult');
+        
+        // Load saved query history
+        const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
+        let historyIndex = -1;
+        
+        queryPopup.classList.add('visible');
+        queryInput.value = '';
+        resultArea.textContent = '';
+        queryInput.focus();
+        
+        executeButton.innerHTML = `
+            <span class="lang-ko">(Ctrl+Enter) 실행</span>
+            <span class="lang-en">(Ctrl+Enter) Execute</span>
+        `;
+
+        // Clean up previous event listeners
+        const newExecuteButton = executeButton.cloneNode(true);
+        const newQueryInput = queryInput.cloneNode(true);
+        executeButton.parentNode.replaceChild(newExecuteButton, executeButton);
+        queryInput.parentNode.replaceChild(newQueryInput, queryInput);
+        
+        // Set up new event listeners
+        newQueryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'q' && e.ctrlKey) {
+                e.stopPropagation();
+            }
+            
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex < queryHistory.length - 1) {
+                    historyIndex++;
+                    newQueryInput.value = queryHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > -1) {
+                    historyIndex--;
+                    newQueryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+                }
+            } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                handleExecute();
+            }
+        });
+        
+        const handleExecute = async () => {
+            const query = newQueryInput.value.trim();
+            if (!query) return;
+            
+            // Save to history
+            if (!queryHistory.includes(query)) {
+                queryHistory.unshift(query);
+                if (queryHistory.length > 50) queryHistory.pop();
+                localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+            }
+            
+            try {
+                const response = await fetch(`${window.baseUrl}/execute_query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                const data = await response.json();
+                resultArea.textContent = data.error 
+                    ? `Error: ${data.error}` 
+                    : JSON.stringify(data.results, null, 2);
+            } catch (error) {
+                resultArea.textContent = `Error: ${error.message}`;
+            }
+        };
+        
+        newExecuteButton.addEventListener('click', handleExecute);
+    };
+
+    // Add global keydown listener
+    document.addEventListener('keydown', queryHandler);
+}
+
+// Call setup when module loads
+setupQueryHandler();
 let schemaData = null;
 
 // Helper function to get sorted table order based on relationships
@@ -124,6 +386,173 @@ loadSchemaData().then(() => {
             buttonsLine.style.opacity = '1';
         });
     }
+});
+
+// Move query popup handler to module level for global availability
+document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('keydown', async (e) => {
+        // Handle Q key for query popup
+        // Prevent query popup when typing in query input or when query popup is visible
+        const queryPopup = document.getElementById('queryPopup');
+        const isQueryInputFocused = document.activeElement && document.activeElement.id === 'queryInput';
+        const isQueryPopupVisible = queryPopup && queryPopup.classList.contains('visible');
+        
+        if (e.key && e.key.toLowerCase() === 'q' && isAdminMode && !isQueryInputFocused && !isQueryPopupVisible) {
+            e.preventDefault();
+            
+            const queryInput = document.getElementById('queryInput');
+            const executeButton = document.getElementById('executeQuery');
+            const resultArea = document.getElementById('queryResult');
+            const queryContent = document.querySelector('.query-content');
+            
+            // Load saved query history from localStorage
+            const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
+            let historyIndex = -1;
+            
+            queryPopup.classList.add('visible');
+            queryInput.focus();
+            
+            // Clear previous result
+            resultArea.textContent = '';
+            
+            // Set Execute button style with Ctrl+Enter text
+            executeButton.innerHTML = `
+                <span class="lang-ko">(Ctrl+Enter) 실행</span>
+                <span class="lang-en">(Ctrl+Enter) Execute</span>
+            `;
+
+            // Clean up previous event listeners
+            const newExecuteButton = executeButton.cloneNode(true);
+            const newQueryInput = queryInput.cloneNode(true);
+            executeButton.parentNode.replaceChild(newExecuteButton, executeButton);
+            queryInput.parentNode.replaceChild(newQueryInput, queryInput);
+            
+            newQueryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'q' && e.ctrlKey) {
+                    e.stopPropagation(); // Prevent triggering the global Q handler
+                }
+            });
+
+            // Handle query history navigation
+            newQueryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (historyIndex < queryHistory.length - 1) {
+                        historyIndex++;
+                        newQueryInput.value = queryHistory[historyIndex];
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (historyIndex > -1) {
+                        historyIndex--;
+                        newQueryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+                    }
+                }
+            });
+            
+            // Handle execute button click
+            const handleExecute = async () => {
+                const query = newQueryInput.value.trim();
+                if (!query) return;
+                
+                // Save to history (if not already the most recent)
+                if (!queryHistory.includes(query)) {
+                    queryHistory.unshift(query);
+                    if (queryHistory.length > 50) queryHistory.pop(); // Keep last 50 queries
+                    localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+                }
+                historyIndex = -1;
+
+                try {
+                    const response = await fetch(`${window.baseUrl}/execute_query`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: newQueryInput.value })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.error) {
+                        resultArea.textContent = `Error: ${data.error}`;
+                        return;
+                    }
+                    
+                    if (data.results) {
+                        if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                            resultArea.innerHTML = '';
+                            const tableWrapper = document.createElement('div');
+                            tableWrapper.className = 'table-scroll-wrapper';
+                            const table = document.createElement('table');
+                            
+                            // Create header
+                            const thead = document.createElement('thead');
+                            const headerRow = document.createElement('tr');
+                            Object.keys(data.results[0]).forEach(key => {
+                                const th = document.createElement('th');
+                                th.textContent = key;
+                                headerRow.appendChild(th);
+                            });
+                            thead.appendChild(headerRow);
+                            table.appendChild(thead);
+                            
+                            // Create body
+                            const tbody = document.createElement('tbody');
+                            data.results.forEach(row => {
+                                const tr = document.createElement('tr');
+                                Object.values(row).forEach(value => {
+                                    const td = document.createElement('td');
+                                    td.textContent = value === null ? 'NULL' : value;
+                                    tr.appendChild(td);
+                                });
+                                tbody.appendChild(tr);
+                            });
+                            table.appendChild(tbody);
+                            
+                            tableWrapper.appendChild(table);
+                            resultArea.appendChild(tableWrapper);
+                            setTimeout(() => adjustColumnWidths(table), 0);
+                        } else {
+                            resultArea.textContent = JSON.stringify(data.results, null, 2);
+                        }
+                    } else {
+                        resultArea.textContent = data.message;
+                    }
+                } catch (error) {
+                    resultArea.textContent = `Error: ${error.message}`;
+                }
+            };
+            
+            newExecuteButton.addEventListener('click', handleExecute);
+            
+            // Handle Ctrl+Enter for execution
+            let isExecuting = false;
+            newQueryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !isExecuting) {
+                    e.preventDefault();
+                    isExecuting = true;
+                    handleExecute().finally(() => {
+                        isExecuting = false;
+                    });
+                }
+            });
+            
+            // Handle close button
+            const closeButton = queryPopup.querySelector('.query-close');
+            const handleClose = () => {
+                queryPopup.classList.remove('visible');
+            };
+            
+            closeButton.addEventListener('click', handleClose);
+            
+            // Handle Escape key
+            queryPopup.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    handleClose();
+                }
+            });
+        }
+    });
 });
 
 // Initialize visibility control
@@ -726,7 +1155,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     let isEditing = false;
     let currentEditCell = null;
     let originalValue = null;
-
+    
     // Function to restore cell to non-editing state
     const restoreCell = (cell) => {
         if (!cell) return;
@@ -1013,174 +1442,9 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         const queryPopup = document.getElementById('queryPopup');
         const isQueryInputFocused = document.activeElement && document.activeElement.id === 'queryInput';
         const isQueryPopupVisible = queryPopup && queryPopup.classList.contains('visible');
+        // Removed query popup handler since it's now handled globally
         
-        if (e.key.toLowerCase() === 'q' && isAdminMode && !isQueryInputFocused && !isQueryPopupVisible) {
-          e.preventDefault();
-            
-            const queryInput = document.getElementById('queryInput');
-            const executeButton = document.getElementById('executeQuery');
-            const resultArea = document.getElementById('queryResult');
-            const queryContent = document.querySelector('.query-content');
-            
-            // Load saved query history from localStorage
-            const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
-            let historyIndex = -1;
-            
-            queryPopup.classList.add('visible');
-            queryInput.focus();
-            
-            // Clear previous result
-            resultArea.textContent = '';
-            
-            // Set Execute button style with Ctrl+Enter text
-            executeButton.innerHTML = `
-                <span class="lang-ko">(Ctrl+Enter) 실행</span>
-                <span class="lang-en">(Ctrl+Enter) Execute</span>
-            `;
-            queryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'q' && e.ctrlKey) {
-                    e.stopPropagation(); // Prevent triggering the global Q handler
-                }
-            });
-            // Handle query history navigation
-            queryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    if (historyIndex < queryHistory.length - 1) {
-                        historyIndex++;
-                        queryInput.value = queryHistory[historyIndex];
-                    }
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (historyIndex > -1) {
-                        historyIndex--;
-                        queryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
-                    }
-                }
-            });
-            
-            // Handle execute button click
-            const handleExecute = async () => {
-                const query = queryInput.value.trim();
-                if (!query) return;
-                
-                // Save to history (if not already the most recent)
-                if (!queryHistory.includes(query)) {
-                    queryHistory.unshift(query);
-                    if (queryHistory.length > 50) queryHistory.pop(); // Keep last 50 queries
-                    localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
-                }
-                historyIndex = -1;
-                try {
-                    const response = await fetch(`${baseUrl}/execute_query`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ query: queryInput.value })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.error) {
-                        resultArea.textContent = `Error: ${data.error}`;
-                        return;
-                    }
-                    
-                    if (data.results) {
-                        // Check if results is array of objects (table format)
-                        if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
-                            // Clear previous content
-                            resultArea.innerHTML = '';
-                            
-                            // Create table wrapper with dynamic width
-                            const queryContent = document.querySelector('.query-content');
-                            queryContent.style.width = '100%';
-                            queryContent.style.overflowX = 'auto';
-
-                            const tableWrapper = document.createElement('div');
-                            tableWrapper.className = 'table-scroll-wrapper';
-                            tableWrapper.style.width = '100%';
-                            tableWrapper.style.maxWidth = '100%';
-                            
-                            const table = document.createElement('table');
-                            table.style.width = '100%';
-                            
-                            // Create header
-                            const thead = document.createElement('thead');
-                            const headerRow = document.createElement('tr');
-                            Object.keys(data.results[0]).forEach(key => {
-                                const th = document.createElement('th');
-                                th.textContent = key;
-                                headerRow.appendChild(th);
-                            });
-                            thead.appendChild(headerRow);
-                            table.appendChild(thead);
-                            
-                            // Create body
-                            const tbody = document.createElement('tbody');
-                            data.results.forEach(row => {
-                                const tr = document.createElement('tr');
-                                Object.values(row).forEach(value => {
-                                    const td = document.createElement('td');
-                                    td.textContent = value === null ? 'NULL' : value;
-                                    tr.appendChild(td);
-                                });
-                                tbody.appendChild(tr);
-                            });
-                            table.appendChild(tbody);
-                            
-                            // Append table to wrapper and wrapper to result area
-                            tableWrapper.appendChild(table);
-                            resultArea.appendChild(tableWrapper);
-
-                            // Auto-adjust column widths after data is loaded
-                            setTimeout(() => adjustColumnWidths(table), 0);
-                        } else {
-                            resultArea.textContent = JSON.stringify(data.results, null, 2);
-                        }
-                    } else {
-                        resultArea.textContent = data.message;
-                    }
-                } catch (error) {
-                    resultArea.textContent = `Error: ${error.message}`;
-                }
-            };
-            
-            // Clean up previous event listeners
-            executeButton.removeEventListener('click', handleExecute);
-            executeButton.addEventListener('click', handleExecute);
-            
-            // Handle close button
-            const closeButton = queryPopup.querySelector('.query-close');
-            const handleClose = () => {
-                queryPopup.classList.remove('visible');
-            };
-            
-            closeButton.removeEventListener('click', handleClose);
-            closeButton.addEventListener('click', handleClose);
-            
-            // Handle Escape key
-            queryPopup.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    handleClose();
-                }
-            }, { once: true });
-            
-            let isExecuting = false;
-            // Handle Enter with Ctrl/Cmd
-            queryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !isExecuting) {
-                    e.preventDefault();
-                    isExecuting = true;
-                    handleExecute().finally(() => {
-                        isExecuting = false;
-                    });
-                }
-            });
-            
-            return;
-        }
-        if ((e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'x')
+                if ((e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'x')
             && !isEditing && isAdminMode) {
             const focusedCell = table.querySelector('td.focused');
             if (!focusedCell) return;
@@ -1188,7 +1452,6 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             const row = focusedCell.closest('tr');
             if (!row) return;
 
-            // Get row ID from first cell
             if (e.key.toLowerCase() === 'x') {
                 const columnIndex = Array.from(row.cells).indexOf(focusedCell);
                 const valueToDelete = focusedCell.textContent;
