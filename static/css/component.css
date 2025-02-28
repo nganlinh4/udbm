@@ -2335,23 +2335,27 @@ html[data-lang="en"] .swipe-guide::after {
 
 /* Query popup styles */
 .query-popup {
-    display: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
     z-index: 1001;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.3s ease;
 }
 
 .query-popup.visible {
     opacity: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .query-content {
@@ -2364,11 +2368,29 @@ html[data-lang="en"] .swipe-guide::after {
     max-height: 105vh;
     display: flex;
     flex-direction: column;
+    transform: scale(0.95);
+    opacity: 0;
     resize: both;
     overflow: auto;
     position: relative;
     min-width: 400px;
     min-height: 255px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.query-content::-webkit-resizer {
+    display: none;
+}
+
+.query-content {
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.query-popup.visible .query-content {
+    transform: scale(1);
+    opacity: 1;
 }
 
 /* Add resize handle styling */
@@ -2377,10 +2399,10 @@ html[data-lang="en"] .swipe-guide::after {
     position: absolute;
     right: 0;
     bottom: 0;
-    width: 15px;
-    height: 15px;
-    cursor: se-resize;
+    width: 24px;
+    height: 24px;
     background: linear-gradient(135deg, transparent 50%, var(--md-sys-color-outline) 50%);
+    cursor: se-resize;
     border-bottom-right-radius: 16px;
 }
 
@@ -2411,7 +2433,7 @@ html[data-lang="en"] .swipe-guide::after {
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    margin: -8px -8px -8px 8px;
+    margin: -8px 0px -8px 8px;
 }
 
 .query-close:hover {
