@@ -52,6 +52,7 @@
 
 /* Control button styles */
 .download-button, .copy-button {
+    margin-left: 4px;
     background: var(--md-sys-color-surface-container-highest);
     color: var(--md-sys-color-primary);
     padding: 6px 12px;
