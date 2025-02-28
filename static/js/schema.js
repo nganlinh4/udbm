@@ -329,7 +329,7 @@ async function renderMermaidSchema(container, data) {
                 entityPadding: 15,
                 stroke: 'gray',
                 fill: 'honeydew',
-                fontSize: 12
+                fontSize: 20
             },
             themeVariables: isDark ? {
                 primaryColor: '#1f6feb',

@@ -125,7 +125,14 @@ document.addEventListener('keydown', (e) => {
             const tr = document.createElement('tr');
             Object.values(row).forEach(value => {
                 const td = document.createElement('td');
-                td.textContent = value === null ? 'NULL' : value;
+                if (value === null) {
+                    td.textContent = 'NULL';
+                } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
+                    const jsonView = formatJsonCell(value);
+                    td.appendChild(jsonView);
+                } else {
+                    td.textContent = value;
+                }
                 tr.appendChild(td);
             });
             tbody.appendChild(tr);
