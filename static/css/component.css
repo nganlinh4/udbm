@@ -1068,15 +1068,6 @@ input:checked ~ .switch-label.language-active {
     align-items: center;
 }
 
-.schema-switch {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--md-sys-color-surface-variant);
-    padding: 8px 16px;
-    border-radius: 24px;
-}
-
 .schema-type-switch {
     margin: 0;
 }

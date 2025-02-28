@@ -29,14 +29,12 @@
 }
 
 .schema-switch {
-    background: var(--md-sys-color-surface-container);
     padding: 4px 12px;
     border-radius: 24px;
     display: flex;
     align-items: center;
     gap: 8px;
-    border: 1px solid var(--md-sys-color-outline);
-    box-shadow: var(--md-elevation-level2);
+    box-shadow: var(--md-elevation-level1);
 }
 
 
@@ -58,7 +56,7 @@
     color: var(--md-sys-color-primary);
     padding: 6px 12px;
     min-width: 40px;
-    height: 36px;
+    height: 32px;
     border: none;
     border-radius: 24px; /* Make buttons round */
     cursor: pointer;
