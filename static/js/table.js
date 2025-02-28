@@ -140,8 +140,22 @@ document.addEventListener('keydown', (e) => {
         const csvContent = [
             headers.join(','),
             ...results.map(row => headers.map(header => {
-                const value = row[header];
-                return typeof value === 'object' ? JSON.stringify(value) : value;
+                let value = row[header] ?? '';
+                
+                // Convert to string and handle special cases
+                value = String(value);
+                
+                // Convert JSON objects to strings
+                if (typeof row[header] === 'object' && row[header] !== null) {
+                    value = JSON.stringify(row[header]);
+                }
+                
+                // Escape values containing commas or quotes
+                if (value.includes(',') || value.includes('"')) {
+                    value = value.replace(/"/g, '""');
+                    value = `"${value}"`;
+                }
+                return value;
             }).join(','))
         ].join('\n');
         
@@ -155,16 +169,53 @@ document.addEventListener('keydown', (e) => {
     xlsxButton.onclick = () => {
         const filename = `query_result_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`;
         if (!results || !results.length) return;
-        fetch(`${window.baseUrl}/download_xlsx`, {
+
+        const headers = Object.keys(results[0]);
+        fetch(`${window.baseUrl}/download/xlsx`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: results, filename })
+            body: JSON.stringify({ 
+                data: results.map(row => {
+                    const newRow = {};
+                    headers.forEach(header => {
+                        const value = row[header];
+                        newRow[header] = typeof value === 'object' && value !== null ? JSON.stringify(value) : value;
+                    });
+                    return newRow;
+                }), 
+                filename })
         })
-        .then(response => response.blob())
+        .then(async response => {
+            if (response.ok) {
+                return await response.blob();
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        })
         .then(blob => {
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
+            // Create a new blob with explicit type
+            const excelBlob = new Blob([blob], { 
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+            });
+            
+            // Download file
+            let link = document.createElement('a');
+            const url = URL.createObjectURL(excelBlob);
+            link.href = url;
             link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+        })
+        .catch(error => {
+            console.error('Error downloading XLSX:', error);
+            alert(
+                'Failed to download Excel file. Please ensure the server supports Excel downloads ' +
+                'or try downloading as CSV instead.'
+            );
             link.click();
         });
     };

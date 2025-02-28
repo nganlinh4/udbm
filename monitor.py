@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, make_response, url_for
+from flask import Flask, render_template, jsonify, request, make_response, url_for, send_file
 from flask_cors import CORS
 import mysql.connector
 import psycopg2
@@ -8,6 +8,8 @@ import time
 import logging
 import os
 import json
+import pandas as pd
+import io
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -1097,6 +1099,38 @@ def after_request(response):
     return response
 
 # Add custom query endpoint
+@app.route('/download/xlsx', methods=['POST'])
+def download_xlsx():
+    try:
+        data = request.json
+        if not data or not data.get('data') or not data.get('filename'):
+            return jsonify({'error': 'Invalid request data'}), 400
+
+        # Convert JSON data to pandas DataFrame
+        df = pd.DataFrame(data['data'])
+        
+        # Process DataFrame before converting to Excel
+        for column in df.columns:
+            # Convert JSON objects in cells to strings
+            df[column] = df[column].apply(lambda x: 
+                json.dumps(x, ensure_ascii=False) if isinstance(x, dict) else x
+            )
+
+        # Create a BytesIO object to store the Excel file
+        excel_file = io.BytesIO()
+        
+        # Write to Excel file
+        df.to_excel(excel_file, index=False, engine='openpyxl')
+        excel_file.seek(0)
+        
+        return send_file(
+            excel_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=data['filename']
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 @app.route('/execute_query', methods=['POST'])
 def execute_query():
     if not current_db_config:
