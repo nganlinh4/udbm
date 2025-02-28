@@ -18,14 +18,14 @@ A real-time web-based database monitoring system that focus on monitoring tables
 ## Features
 
 - Real-time monitoring for MySQL and PostgreSQL databases, at any scale
-- Interactive schema visualization with relationships using Mermaid.js
+- Interactive schema visualization with relationships using GraphViz andMermaid.js
 - Real-time data view with auto-refresh
 - Pause/Resume monitoring, configurable refresh rate
 - Light/dark mode, English/Korean language support
 - Quick swipe to toggle tables
 - Custom configs that sticks to each database
 - Secure connection management with cookie-based persistence
-- Admin mode allowing add, delete, and alter table data directly from the interface
+- Admin mode allowing add, delete, alter table data, and custom query directly from the interface
 
 ## Future Plans
 
