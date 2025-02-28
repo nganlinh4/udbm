@@ -1500,22 +1500,29 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                     const cells = Array.from(currentRow.cells);
                     const currentIndex = cells.indexOf(cell);
                     
+                    // Remove focus from current cell
+                    cell.classList.remove('focused');
+                    
                     if (!e.shiftKey && currentIndex < cells.length - 1) {
                         // Move to next cell in the same row
+                        cells[currentIndex + 1].classList.add('focused');
                         startEditing(cells[currentIndex + 1]);
                     } else if (e.shiftKey && currentIndex > 0) {
                         // Move to previous cell in the same row
+                        cells[currentIndex - 1].classList.add('focused');
                         startEditing(cells[currentIndex - 1]);
                     } else if (!e.shiftKey) {
                         // Move to first cell of next row
                         const nextRow = currentRow.nextElementSibling;
                         if (nextRow) {
+                            nextRow.cells[0].classList.add('focused');
                             startEditing(nextRow.cells[0]);
                         }
                     } else {
                         // Move to last cell of previous row
                         const prevRow = currentRow.previousElementSibling;
                         if (prevRow) {
+                            prevRow.cells[prevRow.cells.length - 1].classList.add('focused');
                             startEditing(prevRow.cells[prevRow.cells.length - 1]);
                         }
                     }
@@ -1562,6 +1569,20 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         const cell = e.target.closest('td');
         if (cell && !isEditing && isAdminMode) {
             startEditing(cell, e);
+        }
+    });
+
+    // Add document click handler for deselection
+    document.addEventListener('click', (e) => {
+        if (!isAdminMode) return;
+        
+        // Check if click was outside any table cell
+        const clickedCell = e.target.closest('td');
+        if (!clickedCell) {
+            // Remove focus from any focused cells
+            document.querySelectorAll('td.focused').forEach(td => {
+                td.classList.remove('focused');
+            });
         }
     });
 
