@@ -24,6 +24,7 @@ function setupQueryPopup() {
     function handleClose() {
         queryPopup.classList.remove('visible');
         queryInput.value = '';
+        document.querySelector('.download-buttons')?.remove();
         resultArea.textContent = '';
     }
 
@@ -47,6 +48,7 @@ document.addEventListener('keydown', (e) => {
     // Clear and show popup
     queryPopup.classList.add('visible');
     queryInput.value = '';
+    document.querySelector('.download-buttons')?.remove();
     resultArea.textContent = '';
 
     // Set up execute button text
@@ -66,6 +68,8 @@ document.addEventListener('keydown', (e) => {
     // Handle query execution
     const handleExecute = async () => {
         const query = queryInput.value.trim();
+        // Clean up previous download buttons
+        document.querySelector('.download-buttons')?.remove();
         if (!query) return;
 
         // Save to history
@@ -106,6 +110,73 @@ document.addEventListener('keydown', (e) => {
         resultArea.innerHTML = '';
         const tableWrapper = document.createElement('div');
         tableWrapper.className = 'table-scroll-wrapper';
+    
+    // Create download buttons container
+    const downloadButtons = document.createElement('div');
+    downloadButtons.className = 'download-buttons';
+    
+    const csvButton = document.createElement('button');
+    csvButton.className = 'download-button';
+    csvButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+        </svg>
+        CSV
+    `;
+    
+    const xlsxButton = document.createElement('button');
+    xlsxButton.className = 'download-button';
+    xlsxButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+        </svg>
+        XLSX
+    `;
+    
+    csvButton.onclick = () => {
+        const filename = `query_result_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`;
+        if (!results || !results.length) return;
+        const headers = Object.keys(results[0]);
+        const csvContent = [
+            headers.join(','),
+            ...results.map(row => headers.map(header => {
+                const value = row[header];
+                return typeof value === 'object' ? JSON.stringify(value) : value;
+            }).join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    };
+    
+    xlsxButton.onclick = () => {
+        const filename = `query_result_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`;
+        if (!results || !results.length) return;
+        fetch(`${window.baseUrl}/download_xlsx`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: results, filename })
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        });
+    };
+    
+    downloadButtons.appendChild(csvButton);
+    downloadButtons.appendChild(xlsxButton);
+    
+    // Add download buttons to query-buttons
+    const queryButtons = document.querySelector('.query-buttons');
+    if (queryButtons) {
+        queryButtons.insertBefore(downloadButtons, queryButtons.firstChild);
+    }
         const table = document.createElement('table');
         
         // Create header
@@ -801,6 +872,7 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'table-scroll-wrapper';
 
+    
     const table = document.createElement('table');
     const thead = document.createElement('thead');
     const tbody = document.createElement('tbody');
