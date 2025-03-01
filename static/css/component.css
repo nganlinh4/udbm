@@ -787,6 +787,7 @@ input:checked ~ .switch-label.language-active {
     white-space: nowrap;
     max-width: none;
     animation: fadeInOut 3s ease-in-out forwards;
+    left: 214px;
 }
 
 .tooltip.temp-tooltip::after {
