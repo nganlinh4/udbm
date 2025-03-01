@@ -12,7 +12,6 @@ let isRelationMode = false;
 function setupQueryPopup() {
     const queryPopup = document.getElementById('queryPopup');
     const executeButton = document.getElementById('executeQuery');
-    const closeButton = queryPopup.querySelector('.query-close');
     const queryInput = document.getElementById('queryInput');
     const resultArea = document.getElementById('queryResult');
     
@@ -25,8 +24,171 @@ function setupQueryPopup() {
         queryPopup.classList.remove('visible');
         queryInput.value = '';
         document.querySelector('.download-buttons')?.remove();
+        document.querySelector('.example-queries')?.remove();
         resultArea.textContent = '';
     }
+
+    // Create example queries container
+    const exampleContainer = document.createElement('div');
+    exampleContainer.className = 'example-queries';
+    exampleContainer.style.cssText = `
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: -4px;
+    -webkit-overflow-scrolling: touch;
+    `;
+    
+    // Example queries
+    const examples = [
+        { name: 'Select All', query: 'SELECT * FROM table_name' },
+        { name: 'Basic Select', query: 'SELECT column1, column2 FROM table_name WHERE condition' },
+        { name: 'Count Rows', query: 'SELECT COUNT(*) FROM table_name' },
+        { name: 'Simple Join', query: 'SELECT * FROM table1 JOIN table2 ON table1.id = table2.id' },
+        { name: 'Insert Row', query: 'INSERT INTO table_name (column1, column2) VALUES (value1, value2)' },
+        { name: 'Update Row', query: 'UPDATE table_name SET column1 = value1 WHERE condition' },
+        { name: 'Delete Row', query: 'DELETE FROM table_name WHERE condition' },
+        { name: 'Group By', query: 'SELECT column1, COUNT(*) FROM table_name GROUP BY column1' },
+        { name: 'Order By', query: 'SELECT * FROM table_name ORDER BY column_name DESC' },
+        
+        // Advanced SELECT queries
+        { name: 'Select Distinct', query: 'SELECT DISTINCT column_name FROM table_name' },
+        { name: 'Select Case', query: 'SELECT column1, CASE WHEN condition THEN value1 ELSE value2 END FROM table_name' },
+        { name: 'Select With', query: 'WITH cte_name AS (SELECT * FROM table_name) SELECT * FROM cte_name' },
+        { name: 'Select Into', query: 'SELECT * INTO backup_table FROM source_table' },
+        { name: 'Select Top', query: 'SELECT TOP 10 * FROM table_name' },
+        { name: 'Select Offset', query: 'SELECT * FROM table_name OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY' },
+        
+        // JOIN variations
+        { name: 'Inner Join', query: 'SELECT * FROM table1 INNER JOIN table2 ON table1.id = table2.id' },
+        { name: 'Left Join', query: 'SELECT * FROM table1 LEFT JOIN table2 ON table1.id = table2.id' },
+        { name: 'Right Join', query: 'SELECT * FROM table1 RIGHT JOIN table2 ON table1.id = table2.id' },
+        { name: 'Full Join', query: 'SELECT * FROM table1 FULL OUTER JOIN table2 ON table1.id = table2.id' },
+        { name: 'Cross Join', query: 'SELECT * FROM table1 CROSS JOIN table2' },
+        { name: 'Self Join', query: 'SELECT * FROM table1 t1 JOIN table1 t2 ON t1.id = t2.parent_id' },
+        { name: 'Multiple Joins', query: 'SELECT * FROM table1 JOIN table2 ON table1.id = table2.id JOIN table3 ON table2.id = table3.id' },
+        
+        // Aggregate functions
+        { name: 'Count Rows', query: 'SELECT COUNT(*) FROM table_name;' },
+        { name: 'Average', query: 'SELECT AVG(column_name) FROM table_name;' },
+        { name: 'Sum', query: 'SELECT SUM(column_name) FROM table_name' },
+        { name: 'Max Value', query: 'SELECT MAX(column_name) FROM table_name' },
+        { name: 'Min Value', query: 'SELECT MIN(column_name) FROM table_name' },
+        { name: 'String Agg', query: 'SELECT STRING_AGG(column_name, \',\') FROM table_name' },
+        
+        // Complex conditions
+        { name: 'Between', query: 'SELECT * FROM table_name WHERE column_name BETWEEN value1 AND value2' },
+        { name: 'In List', query: 'SELECT * FROM table_name WHERE column_name IN (value1, value2, value3)' },
+        { name: 'Like Pattern', query: 'SELECT * FROM table_name WHERE column_name LIKE \'pattern%\'' },
+        { name: 'Null Check', query: 'SELECT * FROM table_name WHERE column_name IS NULL' },
+        { name: 'Exists', query: 'SELECT * FROM table1 WHERE EXISTS (SELECT 1 FROM table2 WHERE table2.id = table1.id)' },
+        
+        // Having clauses
+        { name: 'Having Count', query: 'SELECT column1, COUNT(*) FROM table_name GROUP BY column1 HAVING COUNT(*) > 1' },
+        { name: 'Having Sum', query: 'SELECT column1, SUM(amount) FROM table_name GROUP BY column1 HAVING SUM(amount) > 1000' },
+        { name: 'Having Avg', query: 'SELECT column1, AVG(amount) FROM table_name GROUP BY column1 HAVING AVG(amount) > 100' },
+        
+        // Subqueries
+        { name: 'Subquery Where', query: 'SELECT * FROM table_name WHERE column_name IN (SELECT column_name FROM another_table)' },
+        { name: 'Subquery From', query: 'SELECT * FROM (SELECT * FROM table_name) AS subquery' },
+        { name: 'Correlated', query: 'SELECT * FROM table1 WHERE column1 > (SELECT AVG(column1) FROM table1 t2 WHERE t2.id = table1.id)' },
+        
+        // Table operations
+        { name: 'Create Table', query: 'CREATE TABLE table_name (column1 datatype, column2 datatype)' },
+        { name: 'Drop Table', query: 'DROP TABLE table_name' },
+        { name: 'Truncate', query: 'TRUNCATE TABLE table_name' },
+        { name: 'Rename Table', query: 'ALTER TABLE old_name RENAME TO new_name' },
+        { name: 'Copy Table', query: 'CREATE TABLE new_table AS SELECT * FROM existing_table' },
+        
+        // Column operations
+        { name: 'Add Column', query: 'ALTER TABLE table_name ADD COLUMN column_name datatype' },
+        { name: 'Drop Column', query: 'ALTER TABLE table_name DROP COLUMN column_name' },
+        { name: 'Modify Column', query: 'ALTER TABLE table_name ALTER COLUMN column_name TYPE new_datatype' },
+        { name: 'Rename Column', query: 'ALTER TABLE table_name RENAME COLUMN old_name TO new_name' },
+        
+        // Constraint operations
+        { name: 'Add Primary Key', query: 'ALTER TABLE table_name ADD PRIMARY KEY (column_name)' },
+        { name: 'Add Foreign Key', query: 'ALTER TABLE table_name ADD FOREIGN KEY (column_name) REFERENCES other_table(id)' },
+        { name: 'Add Unique', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name UNIQUE (column_name)' },
+        { name: 'Add Check', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name CHECK (condition)' },
+        
+        // Index operations
+        { name: 'Create Index', query: 'CREATE INDEX index_name ON table_name (column_name)' },
+        { name: 'Create Unique Index', query: 'CREATE UNIQUE INDEX index_name ON table_name (column_name)' },
+        { name: 'Drop Index', query: 'DROP INDEX index_name' },
+        { name: 'Rebuild Index', query: 'ALTER INDEX index_name REBUILD' },
+        
+        // View operations
+        { name: 'Create View', query: 'CREATE VIEW view_name AS SELECT * FROM table_name WHERE condition' },
+        { name: 'Replace View', query: 'CREATE OR REPLACE VIEW view_name AS SELECT * FROM table_name' },
+        { name: 'Drop View', query: 'DROP VIEW view_name' },
+        { name: 'Materialized View', query: 'CREATE MATERIALIZED VIEW view_name AS SELECT * FROM table_name' },
+        
+        // Transaction control
+        { name: 'Begin Transaction', query: 'BEGIN TRANSACTION' },
+        { name: 'Commit', query: 'COMMIT' },
+        { name: 'Rollback', query: 'ROLLBACK' },
+        { name: 'Savepoint', query: 'SAVEPOINT savepoint_name' },
+        
+        // User management
+        { name: 'Create User', query: 'CREATE USER username WITH PASSWORD \'password\'' },
+        { name: 'Grant Select', query: 'GRANT SELECT ON table_name TO username' },
+        { name: 'Revoke', query: 'REVOKE SELECT ON table_name FROM username' },
+        { name: 'Drop User', query: 'DROP USER username' },
+        
+        // Database operations
+        { name: 'Create Database', query: 'CREATE DATABASE database_name' },
+        { name: 'Drop Database', query: 'DROP DATABASE database_name' },
+        { name: 'Backup Database', query: 'BACKUP DATABASE database_name TO DISK = \'path\'' },
+        { name: 'Restore Database', query: 'RESTORE DATABASE database_name FROM DISK = \'path\'' }
+    ];
+    
+    examples.forEach(({name, query}) => {
+        const button = document.createElement('button');
+        button.className = 'example-query-pill';
+        button.textContent = name;
+        button.style.cssText = `
+            white-space: nowrap;
+            padding: 4px 12px;
+            border-radius: 15px;
+            border: none;
+            background: var(--button-bg);
+            color: var(--button-text);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+        `;
+        
+        button.addEventListener('mouseover', () => {
+            button.style.transform = 'scale(1.05)';
+        });
+        
+        button.addEventListener('mouseout', () => {
+            button.style.transform = 'scale(1)';
+        });
+        
+        button.addEventListener('click', () => {
+            const input = document.getElementById('queryInput');
+            if (input) {
+                input.value = query;
+                input.focus();
+            }
+        });
+        
+        exampleContainer.appendChild(button);
+    });
+    
+    // Insert container into query-header
+    const queryHeader = queryPopup.querySelector('.query-header');
+    const closeButton = queryHeader.querySelector('.query-close');
+    queryHeader.insertBefore(exampleContainer, closeButton);
+
+    // Add horizontal scroll handler for mouse wheel
+    exampleContainer.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        exampleContainer.scrollLeft += e.deltaY;
+    });
 
     return { queryPopup, executeButton, queryInput, resultArea, queryHistory, historyIndex, handleClose };
 }
@@ -270,6 +432,13 @@ document.addEventListener('keydown', (e) => {
     queryInput.addEventListener('keydown', (e) => {
         if (e.key === 'q' && e.ctrlKey) {
             e.stopPropagation();
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            if (!queryInput.value && queryInput.placeholder) {
+                queryInput.value = queryInput.placeholder;
+                queryInput.selectionStart = queryInput.value.length;
+                queryInput.selectionEnd = queryInput.value.length;
+            }
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             if (historyIndex < queryHistory.length - 1) {

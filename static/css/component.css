@@ -2458,7 +2458,7 @@ html[data-lang="en"] .swipe-guide::after {
     background: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
     transition: all 0.2s ease;
-    height: 120px;
+    height: 84px;
     box-sizing: border-box;
 }
 

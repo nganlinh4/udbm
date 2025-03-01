@@ -13,6 +13,94 @@
     z-index: 100;
 }
 
+
+
+.query-header {
+    display: flex;
+    align-items: center;
+    padding: 0px 16px;
+    border-radius: 24px 24px 0 0;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.query-title {
+    flex: none;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    white-space: nowrap;
+    margin-right: 16px;
+}
+
+.example-queries {
+    flex: 0 1 auto;
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 8px 4px;
+    user-select: none;
+    margin-right: 16px;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    position: relative;
+    mask-image: linear-gradient(to right, 
+        transparent, 
+        black 30px,
+        black calc(100% - 30px),
+        transparent
+    );
+    -webkit-mask-image: linear-gradient(to right, 
+        transparent, 
+        black 30px,
+        black calc(100% - 30px),
+        transparent
+    );
+}
+
+.example-queries::-webkit-scrollbar {
+    height: 4px;
+}
+
+.example-queries::-webkit-scrollbar-track {
+    background: var(--md-sys-color-surface-container);
+    border-radius: 3px;
+}
+
+.example-queries::-webkit-scrollbar-thumb {
+    background: var(--md-sys-color-primary);
+    border-radius: 3px;
+}
+
+.query-close {
+    padding: 8px;
+    margin-left: auto;
+    font-size: 24px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.query-close:hover {
+    color: var(--md-sys-color-on-surface);
+}
+
+.example-query-pill {
+    white-space: nowrap;
+    padding: 4px 12px;
+    border-radius: 16px;
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-primary);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.example-query-pill:hover {
+    transform: scale(1.05);
+    background: var(--md-sys-color-surface-container-highest);
+}
+
 .schema-button:hover {
     transform: translateY(-1px);
     box-shadow: var(--md-elevation-level3);
@@ -37,7 +125,6 @@
     box-shadow: var(--md-elevation-level1);
 }
 
-
 .schema-switch .switch-label {
     color: var(--md-sys-color-on-surface);
     font-size: 0.875rem;
@@ -59,7 +146,7 @@
     min-width: 40px;
     height: 32px;
     border: none;
-    border-radius: 24px; /* Make buttons round */
+    border-radius: 24px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -378,15 +465,13 @@
     color: var(--md-sys-color-on-surface-variant);
 }
 
-[data-theme="dark"] .download-button,
-[data-theme="dark"] .copy-button {
+[data-theme="dark"] .download-button, [data-theme="dark"] .copy-button {
     color: var(--md-sys-color-on-surface);
     background: var(--md-sys-color-surface-container-high);
     border-color: var(--md-sys-color-outline);
 }
 
-[data-theme="dark"] .download-button:hover,
-[data-theme="dark"] .copy-button:hover {
+[data-theme="dark"] .download-button:hover, [data-theme="dark"] .copy-button:hover {
     background: var(--md-sys-color-surface-container-highest);
 }
 
