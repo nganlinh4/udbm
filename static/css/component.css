@@ -2398,7 +2398,7 @@ html[data-lang="en"] .swipe-guide::after {
     bottom: 0;
     width: 24px;
     height: 24px;
-    background: linear-gradient(135deg, transparent 50%, var(--md-sys-color-outline) 50%);
+    background: linear-gradient(135deg, transparent 50%, #5a7fb0 50%);
     cursor: se-resize;
     border-bottom-right-radius: 16px;
 }

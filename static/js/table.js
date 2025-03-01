@@ -28,151 +28,154 @@ function setupQueryPopup() {
         resultArea.textContent = '';
     }
 
-    // Create example queries container
-    const exampleContainer = document.createElement('div');
-    exampleContainer.className = 'example-queries';
-    exampleContainer.style.cssText = `
-        display: flex;
-        overflow-x: auto;
-        gap: 8px;
-        padding: 8px;
-        margin-bottom: -4px;
-        -webkit-overflow-scrolling: touch;
-    `;
-    
-    // Example queries
-    const examples = [
-        { name: 'Select All', query: 'SELECT * FROM table_name', caution: false },
-        { name: 'Basic Select', query: 'SELECT column1, column2 FROM table_name WHERE condition' },
-        { name: 'Count Rows', query: 'SELECT COUNT(*) FROM table_name' },
-        { name: 'Simple Join', query: 'SELECT * FROM table1 JOIN table2 ON table1.id = table2.id' },
-        { name: 'Insert Row', query: 'INSERT INTO table_name (column1, column2) VALUES (value1, value2)' },
-        { name: 'Update Row', query: 'UPDATE table_name SET column1 = value1 WHERE condition', caution: true },
-        { name: 'Delete Row', query: 'DELETE FROM table_name WHERE condition', caution: true },
-        { name: 'Group By', query: 'SELECT column1, COUNT(*) FROM table_name GROUP BY column1' },
-        { name: 'Order By', query: 'SELECT * FROM table_name ORDER BY column_name DESC' },
+    // Create example queries container only if it doesn't exist
+    if (!queryPopup.querySelector('.example-queries')) {
+        const exampleContainer = document.createElement('div');
+        exampleContainer.className = 'example-queries';
+        exampleContainer.style.cssText = `
+            display: flex;
+            overflow-x: auto;
+            gap: 8px;
+            padding: 8px;
+            margin-bottom: -4px;
+            -webkit-overflow-scrolling: touch;
+        `;
         
-        // Advanced SELECT queries
-        { name: 'Select Distinct', query: 'SELECT DISTINCT column_name FROM table_name' },
-        { name: 'Select Case', query: 'SELECT column1, CASE WHEN condition THEN value1 ELSE value2 END FROM table_name' },
-        { name: 'Select With', query: 'WITH cte_name AS (SELECT * FROM table_name) SELECT * FROM cte_name' },
-        { name: 'Select Into', query: 'SELECT * INTO backup_table FROM source_table' },
-        { name: 'Select Top', query: 'SELECT TOP 10 * FROM table_name' },
-        { name: 'Select Offset', query: 'SELECT * FROM table_name OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY' },
+        // Example queries
+        const examples = [
+            { name: 'Select All', query: 'SELECT * FROM table_name', caution: false },
+            { name: 'Basic Select', query: 'SELECT column1, column2 FROM table_name WHERE condition' },
+            { name: 'Count Rows', query: 'SELECT COUNT(*) FROM table_name' },
+            { name: 'Simple Join', query: 'SELECT * FROM table1 JOIN table2 ON table1.id = table2.id' },
+            { name: 'Insert Row', query: 'INSERT INTO table_name (column1, column2) VALUES (value1, value2)' },
+            { name: 'Update Row', query: 'UPDATE table_name SET column1 = value1 WHERE condition', caution: true },
+            { name: 'Delete Row', query: 'DELETE FROM table_name WHERE condition', caution: true },
+            { name: 'Group By', query: 'SELECT column1, COUNT(*) FROM table_name GROUP BY column1' },
+            { name: 'Order By', query: 'SELECT * FROM table_name ORDER BY column_name DESC' },
+            
+            // Advanced SELECT queries
+            { name: 'Select Distinct', query: 'SELECT DISTINCT column_name FROM table_name' },
+            { name: 'Select Case', query: 'SELECT column1, CASE WHEN condition THEN value1 ELSE value2 END FROM table_name' },
+            { name: 'Select With', query: 'WITH cte_name AS (SELECT * FROM table_name) SELECT * FROM cte_name' },
+            { name: 'Select Into', query: 'SELECT * INTO backup_table FROM source_table' },
+            { name: 'Select Top', query: 'SELECT TOP 10 * FROM table_name' },
+            { name: 'Select Offset', query: 'SELECT * FROM table_name OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY' },
+            
+            // JOIN variations
+            { name: 'Inner Join', query: 'SELECT * FROM table1 INNER JOIN table2 ON table1.id = table2.id' },
+            { name: 'Left Join', query: 'SELECT * FROM table1 LEFT JOIN table2 ON table1.id = table2.id' },
+            { name: 'Right Join', query: 'SELECT * FROM table1 RIGHT JOIN table2 ON table1.id = table2.id' },
+            { name: 'Full Join', query: 'SELECT * FROM table1 FULL OUTER JOIN table2 ON table1.id = table2.id' },
+            { name: 'Cross Join', query: 'SELECT * FROM table1 CROSS JOIN table2' },
+            { name: 'Self Join', query: 'SELECT * FROM table1 t1 JOIN table1 t2 ON t1.id = t2.parent_id' },
+            { name: 'Multiple Joins', query: 'SELECT * FROM table1 JOIN table2 ON table1.id = table2.id JOIN table3 ON table2.id = table3.id' },
+            
+            // Aggregate functions
+            { name: 'Count Rows', query: 'SELECT COUNT(*) FROM table_name;' },
+            { name: 'Average', query: 'SELECT AVG(column_name) FROM table_name;' },
+            { name: 'Sum', query: 'SELECT SUM(column_name) FROM table_name' },
+            { name: 'Max Value', query: 'SELECT MAX(column_name) FROM table_name' },
+            { name: 'Min Value', query: 'SELECT MIN(column_name) FROM table_name' },
+            { name: 'String Agg', query: 'SELECT STRING_AGG(column_name, \',\') FROM table_name' },
+            
+            // Complex conditions
+            { name: 'Between', query: 'SELECT * FROM table_name WHERE column_name BETWEEN value1 AND value2' },
+            { name: 'In List', query: 'SELECT * FROM table_name WHERE column_name IN (value1, value2, value3)' },
+            { name: 'Like Pattern', query: 'SELECT * FROM table_name WHERE column_name LIKE \'pattern%\'' },
+            { name: 'Null Check', query: 'SELECT * FROM table_name WHERE column_name IS NULL' },
+            { name: 'Exists', query: 'SELECT * FROM table1 WHERE EXISTS (SELECT 1 FROM table2 WHERE table2.id = table1.id)' },
+            
+            // Having clauses
+            { name: 'Having Count', query: 'SELECT column1, COUNT(*) FROM table_name GROUP BY column1 HAVING COUNT(*) > 1' },
+            { name: 'Having Sum', query: 'SELECT column1, SUM(amount) FROM table_name GROUP BY column1 HAVING SUM(amount) > 1000' },
+            { name: 'Having Avg', query: 'SELECT column1, AVG(amount) FROM table_name GROUP BY column1 HAVING AVG(amount) > 100' },
+            
+            // Subqueries
+            { name: 'Subquery Where', query: 'SELECT * FROM table_name WHERE column_name IN (SELECT column_name FROM another_table)' },
+            { name: 'Subquery From', query: 'SELECT * FROM (SELECT * FROM table_name) AS subquery' },
+            { name: 'Correlated', query: 'SELECT * FROM table1 WHERE column1 > (SELECT AVG(column1) FROM table1 t2 WHERE t2.id = table1.id)' },
+            
+            // Table operations
+            { name: 'Create Table', query: 'CREATE TABLE table_name (column1 datatype, column2 datatype)', caution: true },
+            { name: 'Drop Table', query: 'DROP TABLE table_name', caution: true },
+            { name: 'Truncate', query: 'TRUNCATE TABLE table_name', caution: true },
+            { name: 'Rename Table', query: 'ALTER TABLE old_name RENAME TO new_name', caution: true },
+            { name: 'Copy Table', query: 'CREATE TABLE new_table AS SELECT * FROM existing_table' },
+            
+            // Column operations
+            { name: 'Add Column', query: 'ALTER TABLE table_name ADD COLUMN column_name datatype', caution: true },
+            { name: 'Drop Column', query: 'ALTER TABLE table_name DROP COLUMN column_name', caution: true },
+            { name: 'Modify Column', query: 'ALTER TABLE table_name ALTER COLUMN column_name TYPE new_datatype', caution: true },
+            { name: 'Rename Column', query: 'ALTER TABLE table_name RENAME COLUMN old_name TO new_name', caution: true },
+            
+            // Constraint operations
+            { name: 'Add Primary Key', query: 'ALTER TABLE table_name ADD PRIMARY KEY (column_name)', caution: true },
+            { name: 'Add Foreign Key', query: 'ALTER TABLE table_name ADD FOREIGN KEY (column_name) REFERENCES other_table(id)', caution: true },
+            { name: 'Add Unique', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name UNIQUE (column_name)', caution: true },
+            { name: 'Add Check', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name CHECK (condition)', caution: true },
+            
+            // Index operations
+            { name: 'Create Index', query: 'CREATE INDEX index_name ON table_name (column_name)' },
+            { name: 'Create Unique Index', query: 'CREATE UNIQUE INDEX index_name ON table_name (column_name)' },
+            { name: 'Drop Index', query: 'DROP INDEX index_name', caution: true },
+            { name: 'Rebuild Index', query: 'ALTER INDEX index_name REBUILD' },
+            
+            // View operations
+            { name: 'Create View', query: 'CREATE VIEW view_name AS SELECT * FROM table_name WHERE condition', caution: true },
+            { name: 'Replace View', query: 'CREATE OR REPLACE VIEW view_name AS SELECT * FROM table_name', caution: true },
+            { name: 'Drop View', query: 'DROP VIEW view_name', caution: true },
+            { name: 'Materialized View', query: 'CREATE MATERIALIZED VIEW view_name AS SELECT * FROM table_name' },
+            
+            // Transaction control
+            { name: 'Begin Transaction', query: 'BEGIN TRANSACTION' },
+            { name: 'Commit', query: 'COMMIT' },
+            { name: 'Rollback', query: 'ROLLBACK' },
+            { name: 'Savepoint', query: 'SAVEPOINT savepoint_name' },
+            
+            // User management
+            { name: 'Create User', query: 'CREATE USER username WITH PASSWORD \'password\'', caution: true },
+            { name: 'Grant Select', query: 'GRANT SELECT ON table_name TO username', caution: true },
+            { name: 'Revoke', query: 'REVOKE SELECT ON table_name FROM username', caution: true },
+            { name: 'Drop User', query: 'DROP USER username', caution: true },
+            
+            // Database operations
+            { name: 'Create Database', query: 'CREATE DATABASE database_name', caution: true },
+            { name: 'Drop Database', query: 'DROP DATABASE database_name', caution: true },
+            { name: 'Backup Database', query: 'BACKUP DATABASE database_name TO DISK = \'path\'', caution: true },
+            { name: 'Restore Database', query: 'RESTORE DATABASE database_name FROM DISK = \'path\'' }
+        ];
         
-        // JOIN variations
-        { name: 'Inner Join', query: 'SELECT * FROM table1 INNER JOIN table2 ON table1.id = table2.id' },
-        { name: 'Left Join', query: 'SELECT * FROM table1 LEFT JOIN table2 ON table1.id = table2.id' },
-        { name: 'Right Join', query: 'SELECT * FROM table1 RIGHT JOIN table2 ON table1.id = table2.id' },
-        { name: 'Full Join', query: 'SELECT * FROM table1 FULL OUTER JOIN table2 ON table1.id = table2.id' },
-        { name: 'Cross Join', query: 'SELECT * FROM table1 CROSS JOIN table2' },
-        { name: 'Self Join', query: 'SELECT * FROM table1 t1 JOIN table1 t2 ON t1.id = t2.parent_id' },
-        { name: 'Multiple Joins', query: 'SELECT * FROM table1 JOIN table2 ON table1.id = table2.id JOIN table3 ON table2.id = table3.id' },
-        
-        // Aggregate functions
-        { name: 'Count Rows', query: 'SELECT COUNT(*) FROM table_name;' },
-        { name: 'Average', query: 'SELECT AVG(column_name) FROM table_name;' },
-        { name: 'Sum', query: 'SELECT SUM(column_name) FROM table_name' },
-        { name: 'Max Value', query: 'SELECT MAX(column_name) FROM table_name' },
-        { name: 'Min Value', query: 'SELECT MIN(column_name) FROM table_name' },
-        { name: 'String Agg', query: 'SELECT STRING_AGG(column_name, \',\') FROM table_name' },
-        
-        // Complex conditions
-        { name: 'Between', query: 'SELECT * FROM table_name WHERE column_name BETWEEN value1 AND value2' },
-        { name: 'In List', query: 'SELECT * FROM table_name WHERE column_name IN (value1, value2, value3)' },
-        { name: 'Like Pattern', query: 'SELECT * FROM table_name WHERE column_name LIKE \'pattern%\'' },
-        { name: 'Null Check', query: 'SELECT * FROM table_name WHERE column_name IS NULL' },
-        { name: 'Exists', query: 'SELECT * FROM table1 WHERE EXISTS (SELECT 1 FROM table2 WHERE table2.id = table1.id)' },
-        
-        // Having clauses
-        { name: 'Having Count', query: 'SELECT column1, COUNT(*) FROM table_name GROUP BY column1 HAVING COUNT(*) > 1' },
-        { name: 'Having Sum', query: 'SELECT column1, SUM(amount) FROM table_name GROUP BY column1 HAVING SUM(amount) > 1000' },
-        { name: 'Having Avg', query: 'SELECT column1, AVG(amount) FROM table_name GROUP BY column1 HAVING AVG(amount) > 100' },
-        
-        // Subqueries
-        { name: 'Subquery Where', query: 'SELECT * FROM table_name WHERE column_name IN (SELECT column_name FROM another_table)' },
-        { name: 'Subquery From', query: 'SELECT * FROM (SELECT * FROM table_name) AS subquery' },
-        { name: 'Correlated', query: 'SELECT * FROM table1 WHERE column1 > (SELECT AVG(column1) FROM table1 t2 WHERE t2.id = table1.id)' },
-        
-        // Table operations
-        { name: 'Create Table', query: 'CREATE TABLE table_name (column1 datatype, column2 datatype)', caution: true },
-        { name: 'Drop Table', query: 'DROP TABLE table_name', caution: true },
-        { name: 'Truncate', query: 'TRUNCATE TABLE table_name', caution: true },
-        { name: 'Rename Table', query: 'ALTER TABLE old_name RENAME TO new_name', caution: true },
-        { name: 'Copy Table', query: 'CREATE TABLE new_table AS SELECT * FROM existing_table' },
-        
-        // Column operations
-        { name: 'Add Column', query: 'ALTER TABLE table_name ADD COLUMN column_name datatype', caution: true },
-        { name: 'Drop Column', query: 'ALTER TABLE table_name DROP COLUMN column_name', caution: true },
-        { name: 'Modify Column', query: 'ALTER TABLE table_name ALTER COLUMN column_name TYPE new_datatype', caution: true },
-        { name: 'Rename Column', query: 'ALTER TABLE table_name RENAME COLUMN old_name TO new_name', caution: true },
-        
-        // Constraint operations
-        { name: 'Add Primary Key', query: 'ALTER TABLE table_name ADD PRIMARY KEY (column_name)', caution: true },
-        { name: 'Add Foreign Key', query: 'ALTER TABLE table_name ADD FOREIGN KEY (column_name) REFERENCES other_table(id)', caution: true },
-        { name: 'Add Unique', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name UNIQUE (column_name)', caution: true },
-        { name: 'Add Check', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name CHECK (condition)', caution: true },
-        
-        // Index operations
-        { name: 'Create Index', query: 'CREATE INDEX index_name ON table_name (column_name)' },
-        { name: 'Create Unique Index', query: 'CREATE UNIQUE INDEX index_name ON table_name (column_name)' },
-        { name: 'Drop Index', query: 'DROP INDEX index_name', caution: true },
-        { name: 'Rebuild Index', query: 'ALTER INDEX index_name REBUILD' },
-        
-        // View operations
-        { name: 'Create View', query: 'CREATE VIEW view_name AS SELECT * FROM table_name WHERE condition', caution: true },
-        { name: 'Replace View', query: 'CREATE OR REPLACE VIEW view_name AS SELECT * FROM table_name', caution: true },
-        { name: 'Drop View', query: 'DROP VIEW view_name', caution: true },
-        { name: 'Materialized View', query: 'CREATE MATERIALIZED VIEW view_name AS SELECT * FROM table_name' },
-        
-        // Transaction control
-        { name: 'Begin Transaction', query: 'BEGIN TRANSACTION' },
-        { name: 'Commit', query: 'COMMIT' },
-        { name: 'Rollback', query: 'ROLLBACK' },
-        { name: 'Savepoint', query: 'SAVEPOINT savepoint_name' },
-        
-        // User management
-        { name: 'Create User', query: 'CREATE USER username WITH PASSWORD \'password\'', caution: true },
-        { name: 'Grant Select', query: 'GRANT SELECT ON table_name TO username', caution: true },
-        { name: 'Revoke', query: 'REVOKE SELECT ON table_name FROM username', caution: true },
-        { name: 'Drop User', query: 'DROP USER username', caution: true },
-        
-        // Database operations
-        { name: 'Create Database', query: 'CREATE DATABASE database_name', caution: true },
-        { name: 'Drop Database', query: 'DROP DATABASE database_name', caution: true },
-        { name: 'Backup Database', query: 'BACKUP DATABASE database_name TO DISK = \'path\'', caution: true },
-        { name: 'Restore Database', query: 'RESTORE DATABASE database_name FROM DISK = \'path\'' }
-    ];
-    
-    examples.forEach(({name, query, caution}) => {
-        const button = document.createElement('button');
-        button.className = 'example-query-pill';
-        if (caution) {
-            button.classList.add('caution');
-        }
-        button.textContent = name;
-        
-        button.addEventListener('click', () => {
-            const input = document.getElementById('queryInput');
-            if (input) {
-                input.value = query;
-                input.focus();
+        examples.forEach(({name, query, caution}) => {
+            const button = document.createElement('button');
+            button.className = 'example-query-pill';
+            if (caution) {
+                button.classList.add('caution');
             }
+            button.textContent = name;
+            
+            button.addEventListener('click', () => {
+                const input = document.getElementById('queryInput');
+                if (input) {
+                    input.value = query;
+                    input.focus();
+                }
+            });
+            
+            exampleContainer.appendChild(button);
         });
         
-        exampleContainer.appendChild(button);
-    });
-    
-    // Insert container into query-header
-    const queryHeader = queryPopup.querySelector('.query-header');
-    const closeButton = queryHeader.querySelector('.query-close');
-    queryHeader.insertBefore(exampleContainer, closeButton);
+        // Insert container into query-header
+        const queryHeader = queryPopup.querySelector('.query-header');
+        const closeButton = queryHeader.querySelector('.query-close');
+        queryHeader.insertBefore(exampleContainer, closeButton);
 
-    // Add horizontal scroll handler for mouse wheel
-    exampleContainer.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        exampleContainer.scrollLeft += e.deltaY;
-    });
+        // Add horizontal scroll handler for mouse wheel
+        exampleContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+        // Increase scroll speed with multiplier
+            exampleContainer.scrollLeft += e.deltaY * 3;
+        });
+    }
 
     return { queryPopup, executeButton, queryInput, resultArea, queryHistory, historyIndex, handleClose };
 }
@@ -784,7 +787,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const tr = document.createElement('tr');
                                 Object.values(row).forEach(value => {
                                     const td = document.createElement('td');
-                                    td.textContent = value === null ? 'NULL' : value;
+                                    if (value === null) {
+                                        td.textContent = 'NULL';
+                                    } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
+                                        const jsonView = formatJsonCell(value);
+                                        td.appendChild(jsonView);
+                                    } else {
+                                        td.textContent = value;
+                                    }
                                     tr.appendChild(td);
                                 });
                                 tbody.appendChild(tr);

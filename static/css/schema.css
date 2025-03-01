@@ -104,9 +104,6 @@
 .example-query-pill.caution {
     background: rgba(255, 0, 0, 0.1) !important;
     color: #d32f2f;
-    border: 1px solid #d32f2f;
-    font-weight: 500;
-    box-shadow: 0 0 0 1px #d32f2f;
 }
 
 .example-query-pill.caution:hover {
