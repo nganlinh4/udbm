@@ -87,10 +87,10 @@
 .example-query-pill {
     white-space: nowrap;
     padding: 4px 12px;
-    border-radius: 16px;
+    border-radius: 15px;
+    border: 1px solid var(--md-sys-color-outline-variant);
     background: var(--md-sys-color-surface-container-high);
     color: var(--md-sys-color-primary);
-    border: 1px solid var(--md-sys-color-outline-variant);
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -99,6 +99,29 @@
 .example-query-pill:hover {
     transform: scale(1.05);
     background: var(--md-sys-color-surface-container-highest);
+}
+
+.example-query-pill.caution {
+    background: rgba(255, 0, 0, 0.1) !important;
+    color: #d32f2f;
+    border: 1px solid #d32f2f;
+    font-weight: 500;
+    box-shadow: 0 0 0 1px #d32f2f;
+}
+
+.example-query-pill.caution:hover {
+    background: rgba(255, 0, 0, 0.2);
+    transform: scale(1.05);
+}
+
+[data-theme="dark"] .example-query-pill.caution {
+    background: rgba(255, 0, 0, 0.15);
+    color: #ff5252;
+    border-color: #ff5252;
+}
+
+[data-theme="dark"] .example-query-pill.caution:hover {
+    background: rgba(255, 0, 0, 0.25);
 }
 
 .schema-button:hover {

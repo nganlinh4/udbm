@@ -32,23 +32,23 @@ function setupQueryPopup() {
     const exampleContainer = document.createElement('div');
     exampleContainer.className = 'example-queries';
     exampleContainer.style.cssText = `
-    display: flex;
-    overflow-x: auto;
-    gap: 8px;
-    padding: 8px;
-    margin-bottom: -4px;
-    -webkit-overflow-scrolling: touch;
+        display: flex;
+        overflow-x: auto;
+        gap: 8px;
+        padding: 8px;
+        margin-bottom: -4px;
+        -webkit-overflow-scrolling: touch;
     `;
     
     // Example queries
     const examples = [
-        { name: 'Select All', query: 'SELECT * FROM table_name' },
+        { name: 'Select All', query: 'SELECT * FROM table_name', caution: false },
         { name: 'Basic Select', query: 'SELECT column1, column2 FROM table_name WHERE condition' },
         { name: 'Count Rows', query: 'SELECT COUNT(*) FROM table_name' },
         { name: 'Simple Join', query: 'SELECT * FROM table1 JOIN table2 ON table1.id = table2.id' },
         { name: 'Insert Row', query: 'INSERT INTO table_name (column1, column2) VALUES (value1, value2)' },
-        { name: 'Update Row', query: 'UPDATE table_name SET column1 = value1 WHERE condition' },
-        { name: 'Delete Row', query: 'DELETE FROM table_name WHERE condition' },
+        { name: 'Update Row', query: 'UPDATE table_name SET column1 = value1 WHERE condition', caution: true },
+        { name: 'Delete Row', query: 'DELETE FROM table_name WHERE condition', caution: true },
         { name: 'Group By', query: 'SELECT column1, COUNT(*) FROM table_name GROUP BY column1' },
         { name: 'Order By', query: 'SELECT * FROM table_name ORDER BY column_name DESC' },
         
@@ -95,34 +95,34 @@ function setupQueryPopup() {
         { name: 'Correlated', query: 'SELECT * FROM table1 WHERE column1 > (SELECT AVG(column1) FROM table1 t2 WHERE t2.id = table1.id)' },
         
         // Table operations
-        { name: 'Create Table', query: 'CREATE TABLE table_name (column1 datatype, column2 datatype)' },
-        { name: 'Drop Table', query: 'DROP TABLE table_name' },
-        { name: 'Truncate', query: 'TRUNCATE TABLE table_name' },
-        { name: 'Rename Table', query: 'ALTER TABLE old_name RENAME TO new_name' },
+        { name: 'Create Table', query: 'CREATE TABLE table_name (column1 datatype, column2 datatype)', caution: true },
+        { name: 'Drop Table', query: 'DROP TABLE table_name', caution: true },
+        { name: 'Truncate', query: 'TRUNCATE TABLE table_name', caution: true },
+        { name: 'Rename Table', query: 'ALTER TABLE old_name RENAME TO new_name', caution: true },
         { name: 'Copy Table', query: 'CREATE TABLE new_table AS SELECT * FROM existing_table' },
         
         // Column operations
-        { name: 'Add Column', query: 'ALTER TABLE table_name ADD COLUMN column_name datatype' },
-        { name: 'Drop Column', query: 'ALTER TABLE table_name DROP COLUMN column_name' },
-        { name: 'Modify Column', query: 'ALTER TABLE table_name ALTER COLUMN column_name TYPE new_datatype' },
-        { name: 'Rename Column', query: 'ALTER TABLE table_name RENAME COLUMN old_name TO new_name' },
+        { name: 'Add Column', query: 'ALTER TABLE table_name ADD COLUMN column_name datatype', caution: true },
+        { name: 'Drop Column', query: 'ALTER TABLE table_name DROP COLUMN column_name', caution: true },
+        { name: 'Modify Column', query: 'ALTER TABLE table_name ALTER COLUMN column_name TYPE new_datatype', caution: true },
+        { name: 'Rename Column', query: 'ALTER TABLE table_name RENAME COLUMN old_name TO new_name', caution: true },
         
         // Constraint operations
-        { name: 'Add Primary Key', query: 'ALTER TABLE table_name ADD PRIMARY KEY (column_name)' },
-        { name: 'Add Foreign Key', query: 'ALTER TABLE table_name ADD FOREIGN KEY (column_name) REFERENCES other_table(id)' },
-        { name: 'Add Unique', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name UNIQUE (column_name)' },
-        { name: 'Add Check', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name CHECK (condition)' },
+        { name: 'Add Primary Key', query: 'ALTER TABLE table_name ADD PRIMARY KEY (column_name)', caution: true },
+        { name: 'Add Foreign Key', query: 'ALTER TABLE table_name ADD FOREIGN KEY (column_name) REFERENCES other_table(id)', caution: true },
+        { name: 'Add Unique', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name UNIQUE (column_name)', caution: true },
+        { name: 'Add Check', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name CHECK (condition)', caution: true },
         
         // Index operations
         { name: 'Create Index', query: 'CREATE INDEX index_name ON table_name (column_name)' },
         { name: 'Create Unique Index', query: 'CREATE UNIQUE INDEX index_name ON table_name (column_name)' },
-        { name: 'Drop Index', query: 'DROP INDEX index_name' },
+        { name: 'Drop Index', query: 'DROP INDEX index_name', caution: true },
         { name: 'Rebuild Index', query: 'ALTER INDEX index_name REBUILD' },
         
         // View operations
-        { name: 'Create View', query: 'CREATE VIEW view_name AS SELECT * FROM table_name WHERE condition' },
-        { name: 'Replace View', query: 'CREATE OR REPLACE VIEW view_name AS SELECT * FROM table_name' },
-        { name: 'Drop View', query: 'DROP VIEW view_name' },
+        { name: 'Create View', query: 'CREATE VIEW view_name AS SELECT * FROM table_name WHERE condition', caution: true },
+        { name: 'Replace View', query: 'CREATE OR REPLACE VIEW view_name AS SELECT * FROM table_name', caution: true },
+        { name: 'Drop View', query: 'DROP VIEW view_name', caution: true },
         { name: 'Materialized View', query: 'CREATE MATERIALIZED VIEW view_name AS SELECT * FROM table_name' },
         
         // Transaction control
@@ -132,41 +132,25 @@ function setupQueryPopup() {
         { name: 'Savepoint', query: 'SAVEPOINT savepoint_name' },
         
         // User management
-        { name: 'Create User', query: 'CREATE USER username WITH PASSWORD \'password\'' },
-        { name: 'Grant Select', query: 'GRANT SELECT ON table_name TO username' },
-        { name: 'Revoke', query: 'REVOKE SELECT ON table_name FROM username' },
-        { name: 'Drop User', query: 'DROP USER username' },
+        { name: 'Create User', query: 'CREATE USER username WITH PASSWORD \'password\'', caution: true },
+        { name: 'Grant Select', query: 'GRANT SELECT ON table_name TO username', caution: true },
+        { name: 'Revoke', query: 'REVOKE SELECT ON table_name FROM username', caution: true },
+        { name: 'Drop User', query: 'DROP USER username', caution: true },
         
         // Database operations
-        { name: 'Create Database', query: 'CREATE DATABASE database_name' },
-        { name: 'Drop Database', query: 'DROP DATABASE database_name' },
-        { name: 'Backup Database', query: 'BACKUP DATABASE database_name TO DISK = \'path\'' },
+        { name: 'Create Database', query: 'CREATE DATABASE database_name', caution: true },
+        { name: 'Drop Database', query: 'DROP DATABASE database_name', caution: true },
+        { name: 'Backup Database', query: 'BACKUP DATABASE database_name TO DISK = \'path\'', caution: true },
         { name: 'Restore Database', query: 'RESTORE DATABASE database_name FROM DISK = \'path\'' }
     ];
     
-    examples.forEach(({name, query}) => {
+    examples.forEach(({name, query, caution}) => {
         const button = document.createElement('button');
         button.className = 'example-query-pill';
+        if (caution) {
+            button.classList.add('caution');
+        }
         button.textContent = name;
-        button.style.cssText = `
-            white-space: nowrap;
-            padding: 4px 12px;
-            border-radius: 15px;
-            border: none;
-            background: var(--button-bg);
-            color: var(--button-text);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 0.85rem;
-        `;
-        
-        button.addEventListener('mouseover', () => {
-            button.style.transform = 'scale(1.05)';
-        });
-        
-        button.addEventListener('mouseout', () => {
-            button.style.transform = 'scale(1)';
-        });
         
         button.addEventListener('click', () => {
             const input = document.getElementById('queryInput');
