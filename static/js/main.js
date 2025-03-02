@@ -1336,6 +1336,7 @@ function getCurrentDatabaseKey() {
 // Add text selection state
 let isSelectionPaused = false;
 let selectionCheckInterval = null;
+let monitorWasPausedBeforeSelection = false;
 
 // Add handleTextSelection function
 function handleTextSelection() {
@@ -1343,6 +1344,7 @@ function handleTextSelection() {
     const hasSelection = selection.toString().length > 0;
     const pauseButton = document.getElementById('pauseButton');
     const tempTooltip = pauseButton.querySelector('.temp-tooltip');
+    const defaultTooltip = pauseButton?.querySelector('.default-tooltip');
     
     // Clear any existing check interval
     if (selectionCheckInterval) {
@@ -1350,32 +1352,70 @@ function handleTextSelection() {
         selectionCheckInterval = null;
     }
     
+    // When text is selected, always pause monitoring
     if (hasSelection && !isSelectionPaused) {
         isSelectionPaused = true;
+        monitorWasPausedBeforeSelection = window.isMonitoringPaused; // Store previous state
         if (!window.isMonitoringPaused) {
             toggleMonitoring();
             if (tempTooltip) tempTooltip.style.display = 'block';
+            if (defaultTooltip) defaultTooltip.style.display = 'none';
         }
         
         // Start checking selection continuously
         selectionCheckInterval = setInterval(() => {
             const currentSelection = window.getSelection();
             if (currentSelection.toString().length === 0) {
-                // Selection is gone, resume monitoring
+                // Selection is gone
                 clearInterval(selectionCheckInterval);
                 selectionCheckInterval = null;
                 isSelectionPaused = false;
-                if (window.isMonitoringPaused) {
-                    toggleMonitoring();
+                
+                // Check if monitoring was already paused before selection
+                if (!monitorWasPausedBeforeSelection) {
+                    // Only check for historical data if monitoring wasn't already paused
+                    const hasHistoricalData = Object.values(tableChunks).some(chunk => 
+                        chunk && chunk.end > 50
+                    );
+                
+                    // Resume monitoring ONLY if no historical data
+                    if (!hasHistoricalData) {
+                        toggleMonitoring();
+                        if (tempTooltip) tempTooltip.style.display = 'none';
+                        if (defaultTooltip) defaultTooltip.style.display = '';
+                    }
+                    // Keep paused if has historical data
+                } else {
+                    // Hide tooltips
                     if (tempTooltip) tempTooltip.style.display = 'none';
+                    if (defaultTooltip) defaultTooltip.style.display = '';
                 }
+                
+                // Reset the stored state
+                monitorWasPausedBeforeSelection = false;
             }
         }, 100); // Check every 100ms
-    } else if (!hasSelection && isSelectionPaused && !selectionCheckInterval) {
+    } 
+    // This branch handles when we already know selection was removed (direct mouseup without selection)
+    else if (!hasSelection && isSelectionPaused && !selectionCheckInterval) {
         isSelectionPaused = false;
-        if (window.isMonitoringPaused) {
-            toggleMonitoring();
-            if (tempTooltip) tempTooltip.style.display = 'none';
+
+        // Check if monitoring was already paused before selection
+        if (!monitorWasPausedBeforeSelection) {
+            const hasHistoricalData = Object.values(tableChunks).some(chunk => 
+                chunk && chunk.end > 50
+            );
+            
+            if (!hasHistoricalData) {
+                toggleMonitoring();
+            }
         }
+        
+        // Always clean up tooltips
+        if (tempTooltip) tempTooltip.style.display = 'none';
+        if (defaultTooltip) defaultTooltip.style.display = '';
+        
+        // Reset stored state
+        monitorWasPausedBeforeSelection = false;
     }
 }
