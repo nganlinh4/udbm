@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/schema.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/logo.css') }}">
+    <script src="{{ url_for('static', filename='js/logo.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <script>
         // Get saved language preference
@@ -201,6 +203,25 @@
                             </button>
                         </div>
                     </div>
+                    <div class="logo-controls">
+                        <div class="logo-switch">
+                            <span class="switch-label">
+                                <span class="lang-ko">사용자 지정 로고 사용</span>
+                                <span class="lang-en">Use Custom Logo</span>
+                            </span>
+                            <label class="switch">
+                                <input type="checkbox" id="logoToggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="logo-upload">
+                            <input type="file" id="logoUpload" accept="image/*" style="display: none;">
+                            <button class="upload-button" onclick="document.getElementById('logoUpload').click()">
+                                <span class="lang-ko">로고 업로드</span>
+                                <span class="lang-en">Upload Logo</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="connection-status" class="connection-status connected">
@@ -211,8 +232,12 @@
                 </span>
             </div>
         </div>
-
-        <h1 id="pageTitle" contenteditable="true" data-placeholder="Edit page title" spellcheck="false"></h1>
+        <div class="title-container">
+            <div id="pageLogo" class="page-logo" style="display: none;">
+                <div class="resize-handle"></div>
+            </div>
+            <h1 id="pageTitle" contenteditable="true" data-placeholder="Edit page title" spellcheck="false"></h1>
+        </div>
         
         <div id="language-switcher" class="language-switcher">
             <button id="schemaButton" class="schema-button">
@@ -398,35 +423,36 @@
     </div>
 
 <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logo.js') }}"></script>
 <script type="module">
     import { initializeSchema } from '/static/js/schema.js';
-    const baseUrl = window.location.origin;
+    var baseUrl = window.location.origin;
 
     document.addEventListener('DOMContentLoaded', () => {
         // Initialize schema visualization
-        const schemaButton = document.getElementById('schemaButton');
-        const schemaModal = document.getElementById('schemaModal');
-        const loading = document.querySelector('.schema-loading');
-        const error = document.querySelector('.schema-error');
+        var schemaButton = document.getElementById('schemaButton');
+        var schemaModal = document.getElementById('schemaModal');
+        var loading = document.querySelector('.schema-loading');
+        var error = document.querySelector('.schema-error');
         const container = document.querySelector('.schema-container');
 
         initializeSchema(schemaButton, schemaModal, loading, error, container);
     });
 
     function getCurrentDatabaseKey() {
-            const getCookie = (name) => {
-                const value = `; ${document.cookie}`;
-                const parts = value.split(`; ${name}=`);
-                if (parts.length === 2) return parts.pop().split(';').shift();
+            var getCookie = function(name) {
+                var value = '; ' + document.cookie;
+                var parts = value.split('; ' + name + '=');
+                if (parts.length === 2) { return parts.pop().split(';').shift(); }
                 return null;
             };
             
-            const dbConfigsCookie = getCookie('db_configs');
-            const lastUsedDb = getCookie('last_used_db');
+            var dbConfigsCookie = getCookie('db_configs');
+            var lastUsedDb = getCookie('last_used_db');
             
             if (dbConfigsCookie && lastUsedDb) {
                 try {
-                    const dbConfigs = JSON.parse(decodeURIComponent(dbConfigsCookie));
+                    var dbConfigs = JSON.parse(decodeURIComponent(dbConfigsCookie));
                     return lastUsedDb;
                 } catch (e) {
                     console.error('Error parsing database configuration:', e);
@@ -436,12 +462,12 @@
         }
         
         function initializePageTitle() {
-            const pageTitle = document.getElementById('pageTitle');
-            const currentDb = getCurrentDatabaseKey();
+            var pageTitle = document.getElementById('pageTitle');
+            var currentDb = getCurrentDatabaseKey();
 
             if (currentDb) {
-                const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
-                const savedTitle = savedTitles[currentDb];
+                var savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+                var savedTitle = savedTitles[currentDb];
                 
                 if (savedTitle) {
                     requestAnimationFrame(() => {
@@ -469,12 +495,12 @@
         }
 
         function savePageTitle() {
-            const pageTitle = document.getElementById('pageTitle');
-            const currentDb = getCurrentDatabaseKey();
-            const titleText = pageTitle.textContent.trim();
+            var pageTitle = document.getElementById('pageTitle');
+            var currentDb = getCurrentDatabaseKey();
+            var titleText = pageTitle.textContent.trim();
 
             if (currentDb && titleText) {
-                const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+                var savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
                 savedTitles[currentDb] = titleText;
                 localStorage.setItem('pageTitles', JSON.stringify(savedTitles));
             }
@@ -483,17 +509,17 @@
         // Schema button click handler is now handled by the initializeSchema function
 
         document.querySelector('.schema-close').addEventListener('click', function () {
-            const modal = document.getElementById('schemaModal');
+            var modal = document.getElementById('schemaModal');
             modal.classList.remove('visible');
             setTimeout(() => modal.style.display = 'none', 300);
         });
 
         document.addEventListener('DOMContentLoaded', function () {
-            const tableButtons = document.querySelectorAll('.table-button');
-            tableButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const tableName = button.dataset.table;
-                    const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+            var tableButtons = document.querySelectorAll('.table-button');
+            tableButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var tableName = button.dataset.table;
+                    var tableSection = document.querySelector('.table-section[data-table-name="' + tableName + '"]');
 
                     if (!button.classList.contains('active')) {
                         button.classList.add('active');
@@ -518,19 +544,19 @@
             loadToggleStates();
             initializePageTitle();
 
-            const updateButtonCount = (tableName, count) => {
-                const buttonCount = document.getElementById(`${tableName}_button_count`);
+            var updateButtonCount = function(tableName, count) {
+                var buttonCount = document.getElementById(tableName + '_button_count');
                 if (buttonCount) {
-                    buttonCount.textContent = `(${count})`;
+                    buttonCount.textContent = '(' + count + ')';
                 }
             };
 
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
                     // Fix: Use endsWith instead of endswith
                     if (mutation.target.id.endsWith('_count')) {
-                        const tableName = mutation.target.id.replace('_count', '');
-                        const count = mutation.target.textContent.match(/\d+/)[0];
+                        var tableName = mutation.target.id.replace('_count', '');
+                        var count = mutation.target.textContent.match(/\d+/)[0];
                         updateButtonCount(tableName, count);
                     }
                 });
@@ -542,22 +568,22 @@
         });
 
         function saveToggleStates() {
-            const states = {};
-            document.querySelectorAll('.table-button').forEach(button => {
+            var states = {};
+            document.querySelectorAll('.table-button').forEach(function(button) {
                 states[button.dataset.table] = button.classList.contains('active');
             });
             localStorage.setItem('tableToggleStates', JSON.stringify(states));
         }
 
         function loadToggleStates() {
-            const savedStates = localStorage.getItem('tableToggleStates');
+            var savedStates = localStorage.getItem('tableToggleStates');
             if (savedStates) {
-                const states = JSON.parse(savedStates);
-                document.querySelectorAll('.table-button').forEach(button => {
-                    const tableName = button.dataset.table;
+                var states = JSON.parse(savedStates);
+                document.querySelectorAll('.table-button').forEach(function(button) {
+                    var tableName = button.dataset.table;
                     if (states[tableName]) {
                         button.classList.add('active');
-                        const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+                        var tableSection = document.querySelector('.table-section[data-table-name="' + tableName + '"]');
                         tableSection.classList.add('visible');
                         tableSection.style.display = 'block';
                     }
