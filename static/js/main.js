@@ -792,10 +792,17 @@ document.addEventListener('DOMContentLoaded', () => {
             isFormOpen = true;
             updateAddButtonState(true);
             
-            // Remove favicon controls temporarily
+            // Instead of removing favicon controls, just hide them
             const faviconControls = dbMenu.querySelector('.favicon-controls');
             if (faviconControls) {
-                faviconControls.remove();
+                // Just hide it instead of removing
+                faviconControls.style.opacity = '0';
+                faviconControls.style.visibility = 'hidden';
+                faviconControls.style.display = 'none';
+                
+                // We don't need to store it since we're no longer removing it
+                // But keep the reference in case it's needed elsewhere
+                dbMenu.dataset.hasFaviconControls = 'true';
             }
             
             dbList.innerHTML = `
@@ -835,11 +842,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         </button>
                     </form>
             `;
-            
-            // Store the removed controls in a data attribute for later
-            if (faviconControls) {
-                dbMenu.dataset.storedControls = faviconControls.outerHTML;
-            }
             
             const form = dbList.querySelector('form');
             // Handle type switch click events
@@ -895,10 +897,17 @@ document.addEventListener('DOMContentLoaded', () => {
             dbList.innerHTML = '';
             const entries = Object.entries(savedConfigs);
             
-            // Show favicon controls when showing the database list
+            // Show favicon controls when updating db list
             const faviconControls = dbMenu.querySelector('.favicon-controls');
             if (faviconControls) {
-                faviconControls.style.display = 'flex';
+                // Make visible with a smooth transition
+                requestAnimationFrame(() => {
+                    faviconControls.style.display = 'flex';
+                    // Force a reflow to ensure the display change is processed
+                    void faviconControls.offsetWidth;
+                    faviconControls.style.opacity = '1';
+                    faviconControls.style.visibility = 'visible';
+                });
             }
             
             if (entries.length === 0) {
@@ -988,15 +997,57 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Toggle menu
+        // Toggle menu with proper animation sequence
         dbSwitchButton.addEventListener('click', () => {
-            dbMenu.classList.toggle('show');
-            if (dbMenu.classList.contains('show')) {
-                updateDbList();
-                isFormOpen = false;
+            // First make the menu visible but with animation starting state
+            if (!dbMenu.classList.contains('show')) {
+                // For opening: first display the menu (still invisible due to opacity:0)
+                dbMenu.style.display = 'block';
+                
+                // Ensure favicon controls are properly initialized before animation
+                const faviconControls = dbMenu.querySelector('.favicon-controls');
+                if (faviconControls && !isFormOpen) {
+                    faviconControls.style.display = 'flex';
+                    faviconControls.style.opacity = '1';
+                    faviconControls.style.visibility = 'visible';
+                } else if (faviconControls) {
+                    faviconControls.style.display = 'none';
+                    faviconControls.style.opacity = '0';
+                    faviconControls.style.visibility = 'hidden';
+                }
+                
+                // Force a reflow to ensure the initial transform state is applied before adding show class
+                void dbMenu.offsetWidth;
+                
+                // Then add the show class to trigger the animation
+                dbMenu.classList.add('show');
+                
+                // Update the list after animation starts - this ensures clean animation
+                setTimeout(() => {
+                    if (!isFormOpen) {
+                        updateDbList();
+                    }
+                }, 50);
+            } else {
+                // For closing: first start the animation by removing show class
+                dbMenu.classList.remove('show');
+                
+                // Wait for animation to complete before hiding
+                dbMenu.addEventListener('transitionend', function hideMenu(e) {
+                    if (e.propertyName === 'opacity') {
+                        dbMenu.style.display = '';
+                        dbMenu.removeEventListener('transitionend', hideMenu);
+                    }
+                });
+                
+                if (isFormOpen) {
+                    updateDbList();
+                    isFormOpen = false;
+                    updateAddButtonState(false);
+                }
             }
         });
-        
+
         // Add new button state management
         function updateAddButtonState(isFormOpen) {
             const addBtn = document.getElementById('addDbButton');
@@ -1017,10 +1068,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add new database
         addDbButton.addEventListener('click', () => {
             if (isFormOpen) {
-                // When clicking back, show the favicon controls
+                // When clicking back, show the favicon controls and update the list
                 const faviconControls = dbMenu.querySelector('.favicon-controls');
                 if (faviconControls) {
                     faviconControls.style.display = 'flex';
+                    // Force a reflow
+                    void faviconControls.offsetWidth;
+                    faviconControls.style.opacity = '1';
+                    faviconControls.style.visibility = 'visible';
                 }
                 updateDbList();
                 isFormOpen = false;
@@ -1030,11 +1085,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             isFormOpen = true;
             updateAddButtonState(true);
-            // Hide favicon controls when showing the form
+            
+            // Just hide the favicon controls instead of removing them
             const faviconControls = dbMenu.querySelector('.favicon-controls');
             if (faviconControls) {
+                faviconControls.style.opacity = '0';
+                faviconControls.style.visibility = 'hidden';
                 faviconControls.style.display = 'none';
             }
+            
             dbList.innerHTML = `
                 <form class="db-form">
                     <div class="form-group">
@@ -1091,10 +1150,20 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // Close menu when clicking outside
+        // Close menu when clicking outside with proper animation
         document.addEventListener('click', (e) => {
-            if (!dbMenu.contains(e.target) && !dbSwitchButton.contains(e.target)) {
+            if (!dbMenu.contains(e.target) && !dbSwitchButton.contains(e.target) && dbMenu.classList.contains('show')) {
+                // For closing: first start the animation by removing show class
                 dbMenu.classList.remove('show');
+                
+                // Wait for animation to complete before hiding
+                dbMenu.addEventListener('transitionend', function hideMenu(e) {
+                    if (e.propertyName === 'opacity') {
+                        dbMenu.style.display = '';
+                        dbMenu.removeEventListener('transitionend', hideMenu);
+                    }
+                });
+                
                 if (isFormOpen) {
                     updateDbList();
                     isFormOpen = false;

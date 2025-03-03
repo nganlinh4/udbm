@@ -1209,7 +1209,6 @@ input:checked ~ .switch-label.language-active {
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(0, 0, 0, 0.1);
     padding: 12px;
     display: none;
     width: 280px;
@@ -1324,6 +1323,18 @@ input:checked ~ .switch-label.language-active {
     z-index: 1000;
     border: 1px solid rgba(0, 0, 0, 0.1);
     box-sizing: border-box; /* Add this to include padding in width calculation */
+    transform-origin: top right;
+    transform: scale(0.8);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+}
+
+.db-menu.show {
+    display: block;
+    transform: scale(1);
+    opacity: 1;
 }
 
 .db-type-badge {
@@ -1385,7 +1396,6 @@ input:checked ~ .switch-label.language-active {
 /* Favicon controls styles */
 .favicon-controls {
     padding: 12px;
-    border-top: 1px solid var(--md-sys-color-outline);
     margin-top: 12px;
     display: flex;
     flex-direction: column;
@@ -2027,7 +2037,7 @@ html[data-lang="en"] .swipe-guide::after {
 .db-type-select:focus {
     border-color: var(--md-sys-color-primary);
     outline: none;
-    box-shadow: 0 0 0 1px var(--md-sys-color-primary);
+    box-shadow: 0 0 0 1px var (--md-sys-color-primary);
 }
 
 /* Dropdown arrow styling */
@@ -2679,9 +2689,6 @@ html[data-lang="en"] .swipe-guide::after {
     display: none !important;
 }
 
-.db-menu.show[style*="display: block"] .favicon-controls {
-    display: none !important;
-}
 
 /* When form is present, ensure favicon controls are hidden */
 .db-menu:has(.db-form) .favicon-controls {
@@ -2689,3 +2696,100 @@ html[data-lang="en"] .swipe-guide::after {
     visibility: hidden;
     pointer-events: none;
 }
+
+/* Dark theme adjustments for the animation */
+[data-theme="dark"] .db-menu {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+/* ...existing code... */
+
+/* Updated material design reveal animation for db-menu */
+.db-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 12px;
+    display: none;
+    width: 280px; /* Fixed width */
+    z-index: 1000;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    transform-origin: top center;
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: height, opacity, transform;
+}
+
+.db-menu.show {
+    display: block;
+    opacity: 1;
+    height: auto;
+    max-height: 500px; /* Set a reasonable max height */
+    animation: materialReveal 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes materialReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+        box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
+    }
+    40% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+}
+
+/* Add ripple effect for material design feeling */
+.db-menu::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    transform: scale(0);
+    opacity: 0;
+}
+
+.db-menu.show::after {
+    animation: rippleEffect 0.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+@keyframes rippleEffect {
+    0% {
+        transform: scale(0);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(15);
+        opacity: 0;
+    }
+}
+
+/* Dark theme adjustments for the animation */
+[data-theme="dark"] .db-menu {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+[data-theme="dark"] .db-menu::after {
+    background: rgba(30, 30, 30, 0.5);
+}
+
+/* ...existing code... */
