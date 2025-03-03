@@ -498,18 +498,169 @@ input:checked ~ .switch-label.language-active {
     font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     font-size: 0.95em;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy transition */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 8px center;
     background-size: 16px;
-    padding-right: 32px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e0e0e0;
-    height: 34px;
-    line-height: 34px;
-    padding: 0 26px 0 12px;
-    margin-top: -0.5px;
+    box-shadow: var(--md-elevation-level1);
+    transform-origin: top;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ripple effect on hover */
+.monitor-dropdown:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(26, 115, 232, 0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+    z-index: -1;
+}
+
+.monitor-dropdown:hover:before {
+    width: 150px;
+    height: 150px;
+}
+
+.monitor-dropdown:hover {
+    box-shadow: var(--md-elevation-level2);
+    transform: translateY(-2px) scale(1.03);
+}
+
+.monitor-dropdown:focus {
+    outline: none;
+    border: none;
+    box-shadow: var(--md-elevation-level3);
+}
+
+/* Arrow rotation animation */
+.monitor-dropdown:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 15l6-6 6 6'/%3E%3C/svg%3E");
+    animation: dropdownPulse 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Styling for dropdown options with material design feel */
+.monitor-dropdown option {
+    background-color: white;
+    color: #1f1f1f;
+    padding: 12px;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+/* Animation for dropdown options container */
+select.monitor-dropdown[size]:not([size="1"]) {
+    animation: optionsReveal 0.9s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+}
+
+/* Pulse animation with slight glow effect */
+@keyframes dropdownPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: var(--md-elevation-level1);
+    }
+    10% {
+        transform: scale(1.05);
+    }
+    20% {
+        transform: scale(0.97);
+        box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+    }
+    30% {
+        transform: scale(1.03);
+    }
+    40% {
+        transform: scale(0.99);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+}
+
+/* Options reveal with staggered effect */
+@keyframes optionsReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scaleY(0.7);
+        transform-origin: top;
+        clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+    }
+    30% {
+        opacity: 0.8;
+        transform: translateY(-5px) scaleY(0.85);
+        clip-path: polygon(0 0, 100% 0, 100% 30%, 0 30%);
+    }
+    60% {
+        transform: translateY(-3px) scaleY(0.95);
+        clip-path: polygon(0 0, 100% 0, 100% 60%, 0 60%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scaleY(1);
+        transform-origin: top;
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    }
+}
+
+/* Closing animation - add this class with JavaScript when closing */
+.monitor-dropdown-closing {
+    animation: dropdownClose 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes dropdownClose {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    30% {
+        transform: scale(1.03);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+}
+
+/* Individual option reveal animation - requires JS to add classes to options */
+.monitor-dropdown option.reveal {
+    animation: optionFadeIn 0.4s ease forwards;
+    opacity: 0;
+}
+
+@keyframes optionFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Optional: Adding glowing border effect when focused */
+.monitor-dropdown:focus {
+    animation: glowingBorder 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes glowingBorder {
+    0% {
+        box-shadow: 0 0 5px rgba(26, 115, 232, 0.5), 0 0 10px rgba(26, 115, 232, 0.2);
+    }
+    100% {
+        box-shadow: 0 0 8px rgba(26, 115, 232, 0.7), 0 0 15px rgba(26, 115, 232, 0.3);
+    }
 }
 
 .monitor-dropdown option {
@@ -534,7 +685,6 @@ input:checked ~ .switch-label.language-active {
 
 .monitor-dropdown.danger {
     color: #d32f2f;
-    background-color: white;
     border-color: #d32f2f;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d32f2f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     box-shadow: 0 0 0 1px #d32f2f;
