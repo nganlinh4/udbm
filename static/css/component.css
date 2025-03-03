@@ -2892,9 +2892,51 @@ html[data-lang="en"] .swipe-guide::after {
     transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
                 max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: transform, opacity;
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Added height transition */
+    will-change: transform, opacity, height; /* Added height to will-change */
     pointer-events: none;
+}
+
+/* Add animation for list-to-form and form-to-list transitions */
+.db-list {
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    transform-origin: top center;
+    will-change: opacity, transform, height;
+}
+
+.db-list.animating-out {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+}
+
+.db-list.animating-in {
+    animation: contentFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.db-form {
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    will-change: opacity, transform;
+}
+
+.db-form.animating-out {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+}
+
+.db-form.animating-in {
+    animation: contentFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes contentFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .db-menu.show {
@@ -2996,3 +3038,148 @@ html[data-lang="en"] .swipe-guide::after {
 }
 
 /* ...existing code... */
+
+/* Material form db-type-group specific fixes */
+.material-form .db-type-group {
+    margin-bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.material-form .db-type-group .db-type-switch-container {
+    width: 100%;
+    margin: 0 0 8px;
+    padding: 0;
+    gap: 0;
+    height: 40px;
+    position: relative;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 24px;
+}
+
+.material-form .db-type-group .switch {
+    width: 100%;
+    height: 40px;
+    margin: 0;
+    position: relative;
+}
+
+.material-form .db-type-group .switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #f5f5f5;
+    transition: .3s ease-in-out;
+    border-radius: 20px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+}
+
+.material-form .db-type-group .switch-slider:hover {
+    border-color: var(--md-sys-color-primary);
+}
+
+/* MySQL indicator on left side */
+.material-form .db-type-group .switch-slider:before {
+    position: absolute;
+    content: "MySQL";
+    height: 34px;
+    width: 48%;
+    left: 3px;
+    bottom: 2px;
+    background-color: white;
+    transition: .3s ease-in-out;
+    border-radius: 17px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: #007bff;
+}
+
+/* PostgreSQL text on the right side */
+.material-form .db-type-group .switch-slider:after {
+    position: absolute;
+    content: "PostgreSQL";
+    height: 34px;
+    width: 48%;
+    right: 3px;
+    bottom: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    transition: .3s ease-in-out;
+}
+
+/* Move the indicator to right when checked */
+.material-form .db-type-group input:checked + .switch-slider:before {
+    transform: translateX(97%);
+    content: "PostgreSQL";
+    color: #dc3545;
+}
+
+.material-form .db-type-group input:checked + .switch-slider:after {
+    content: "MySQL";
+    transform: translateX(-97%);
+    color: #666;
+}
+
+/* Dark theme support */
+[data-theme="dark"] .material-form .db-type-group .switch-slider {
+    background: #1e1e1e;
+    border-color: #444c56;
+}
+
+[data-theme="dark"] .material-form .db-type-group .switch-slider:before {
+    background-color: #2d333b;
+    color: #58a6ff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .material-form .db-type-group input:checked + .switch-slider:before {
+    color: #f85149;
+}
+
+[data-theme="dark"] .material-form .db-type-group .switch-slider:after {
+    color: #8b949e;
+}
+
+/* Improve the help text */
+.material-form .db-type-help {
+    text-align: center;
+    margin: 8px 0 0;
+    color: #666;
+    font-size: 0.85em;
+    font-weight: 400;
+    transition: opacity 0.3s ease;
+    width: 100%;
+}
+
+.material-form .db-type-help small {
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.material-form .db-type-group:hover .db-type-help small {
+    opacity: 1;
+}
+
+[data-theme="dark"] .material-form .db-type-help {
+    color: #8b949e;
+}
+
+/* Hide default switch labels since text is now in the slider */
+.material-form .db-type-group .switch-label {
+    display: none;
+}

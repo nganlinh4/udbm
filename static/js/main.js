@@ -784,112 +784,184 @@ document.addEventListener('DOMContentLoaded', () => {
         }, true);  // Use capture phase to handle click before other listeners
         
         function showAddDatabaseForm() {
-            isFormOpen = true;
-            updateAddButtonState(true);
+            // Save the current height of the menu before changing content
+            const currentHeight = dbMenu.scrollHeight;
+            dbMenu.style.height = currentHeight + 'px';
             
-            // Instead of removing favicon controls, just hide them
-            const faviconControls = dbMenu.querySelector('.favicon-controls');
-            if (faviconControls) {
-                // Just hide it instead of removing
-                faviconControls.style.opacity = '0';
-                faviconControls.style.visibility = 'hidden';
-                faviconControls.style.display = 'none';
+            // Begin animation: fade out the current list
+            dbList.classList.add('animating-out');
+            
+            // After a short delay to allow fade out animation
+            setTimeout(() => {
+                isFormOpen = true;
+                updateAddButtonState(true);
                 
-                // We don't need to store it since we're no longer removing it
-                // But keep the reference in case it's needed elsewhere
-                dbMenu.dataset.hasFaviconControls = 'true';
-            }
-            
-            dbList.innerHTML = `
-                <form class="db-form material-form">
-                    <div class="form-group db-type-group">
-                        <div class="db-type-switch-container">
-                            <span class="switch-label mysql active">MySQL</span>
-                            <label class="switch">
-                                <input type="checkbox" name="type" value="postgresql">
-                                <span class="switch-slider material"></span>
-                            </label>
-                            <span class="switch-label postgresql">PostgreSQL</span>
+                // Instead of removing favicon controls, just hide them
+                const faviconControls = dbMenu.querySelector('.favicon-controls');
+                if (faviconControls) {
+                    // Just hide it instead of removing
+                    faviconControls.style.opacity = '0';
+                    faviconControls.style.visibility = 'hidden';
+                    faviconControls.style.display = 'none';
+                    
+                    // We don't need to store it since we're no longer removing it
+                    // But keep the reference in case it's needed elsewhere
+                    dbMenu.dataset.hasFaviconControls = 'true';
+                }
+                
+                dbList.innerHTML = `
+                    <form class="db-form material-form">
+                        <div class="form-group db-type-group">
+                            <div class="db-type-switch-container">
+                                <span class="switch-label mysql active">MySQL</span>
+                                <label class="switch">
+                                    <input type="checkbox" name="type" value="postgresql">
+                                    <span class="switch-slider material"></span>
+                                </label>
+                                <span class="switch-label postgresql">PostgreSQL</span>
+                            </div>
+                            <div class="db-type-help">
+                                <small>Choose your database type</small>
+                            </div>
                         </div>
-                        <div class="db-type-help">
-                            <small>Choose your database type</small>
+                        <div class="form-group">
+                            <input type="text" name="host" id="host" required placeholder=" ">
+                            <label for="host">Host</label>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <input type="text" name="host" id="host" required placeholder=" ">
-                        <label for="host">Host</label>
-                    </div>
-                    <div class="form-group">
-                        <input type="text" name="user" id="user" required placeholder=" ">
-                        <label for="user">User</label>
-                    </div>
-                    <div class="form-group">
-                        <input type="password" name="password" id="password" required placeholder=" ">
-                        <label for="password">Password</label>
-                    </div>
-                    <div class="form-group">
-                        <input type="text" name="database" id="database" required placeholder=" ">
-                        <label for="database">Database</label>
-                    </div>
-                        <button type="submit" class="add-db-button">
-                            <span class="lang-ko">추가</span>
-                            <span class="lang-en">Add</span>
-                        </button>
-                    </form>
-            `;
-            
-            const form = dbList.querySelector('form');
-            // Handle type switch click events
-            const typeSwitch = form.querySelector('input[name="type"]');
-            const switchSlider = form.querySelector('.switch-slider');
-            const switchContainer = form.querySelector('.db-type-switch-container');
+                        <div class="form-group">
+                            <input type="text" name="user" id="user" required placeholder=" ">
+                            <label for="user">User</label>
+                        </div>
+                        <div class="form-group">
+                            <input type="password" name="password" id="password" required placeholder=" ">
+                            <label for="password">Password</label>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" name="database" id="database" required placeholder=" ">
+                            <label for="database">Database</label>
+                        </div>
+                            <button type="submit" class="add-db-button">
+                                <span class="lang-ko">추가</span>
+                                <span class="lang-en">Add</span>
+                            </button>
+                        </form>
+                `;
+                
+                // Show the form with fade-in animation
+                const form = dbList.querySelector('.db-form');
+                form.classList.add('animating-in');
+                
+                // Update the height of the menu to match new content
+                setTimeout(() => {
+                    const newHeight = form.scrollHeight;
+                    dbMenu.style.height = newHeight + 'px';
+                    
+                    // Remove animation classes after transition
+                    setTimeout(() => {
+                        dbList.classList.remove('animating-out');
+                        form.classList.remove('animating-in');
+                    }, 300);
+                }, 10);
+                
+                const typeSwitch = form.querySelector('input[name="type"]');
+                const switchSlider = form.querySelector('.switch-slider');
+                const switchContainer = form.querySelector('.db-type-switch-container');
 
-            // Only add event listeners if elements exist
-            if (switchContainer && typeSwitch) {
-                // Add click handler for the entire switch container
-                switchContainer.addEventListener('click', (e) => {
-                    // Toggle switch regardless of where it was clicked within the container
-                    typeSwitch.checked = !typeSwitch.checked;
-                    // Trigger change event to update styles
-                    typeSwitch.dispatchEvent(new Event('change'));
+                // Only add event listeners if elements exist
+                if (switchContainer && typeSwitch) {
+                    // Add click handler for the entire switch container
+                    switchContainer.addEventListener('click', (e) => {
+                        // Toggle switch regardless of where it was clicked within the container
+                        typeSwitch.checked = !typeSwitch.checked;
+                        // Trigger change event to update styles
+                        typeSwitch.dispatchEvent(new Event('change'));
+                    });
+                }
+
+                // Prevent double-triggering when clicking the actual checkbox
+                typeSwitch.addEventListener('click', (e) => {
+                    e.stopPropagation();
                 });
-            }
 
-            // Prevent double-triggering when clicking the actual checkbox
-            typeSwitch.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-
-            // Handle form submission
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(form);
-                const config = Object.fromEntries(formData);
-                
-                // Set the type based on switch state
-                const type = typeSwitch.checked ? 'postgresql' : 'mysql';
-                
-                // Add the type to the config and save
-                const fullConfig = {
-                    ...config,
-                    type // Explicitly set the type field
-                };
-                const configKey = `${fullConfig.host}/${fullConfig.database}`;
-                savedConfigs[configKey] = fullConfig;
-                setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
-                
-                // Show the updated list before switching
-                updateDbList();
-                isFormOpen = false;
-                updateAddButtonState(false);
-                
-                // Switch to the new database
-                switchDatabase(config);
-            });
+                // Handle form submission
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    const config = Object.fromEntries(formData);
+                    
+                    // Set the type based on switch state
+                    const type = typeSwitch.checked ? 'postgresql' : 'mysql';
+                    
+                    // Add the type to the config and save
+                    const fullConfig = {
+                        ...config,
+                        type // Explicitly set the type field
+                    };
+                    const configKey = `${fullConfig.host}/${fullConfig.database}`;
+                    savedConfigs[configKey] = fullConfig;
+                    setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
+                    
+                    // Show the updated list before switching
+                    updateDbList();
+                    isFormOpen = false;
+                    updateAddButtonState(false);
+                    
+                    // Switch to the new database
+                    switchDatabase(config);
+                });
+            }, 300); // Wait for fade-out animation to complete
         }
 
         function updateDbList() {
-            dbList.innerHTML = '';
+            // Save the current height for animation
+            const currentHeight = dbMenu.scrollHeight;
+            dbMenu.style.height = currentHeight + 'px';
+            
+            // If there's a form, fade it out first
+            const form = dbList.querySelector('.db-form');
+            if (form) {
+                form.classList.add('animating-out');
+                
+                // Wait for fade-out to complete
+                setTimeout(() => {
+                    dbList.innerHTML = '';
+                    populateDbList();
+                    
+                    // Animate the height change
+                    setTimeout(() => {
+                        const newHeight = dbList.scrollHeight;
+                        dbMenu.style.height = newHeight + 'px';
+                        
+                        // Add fade-in animation to the list
+                        dbList.classList.add('animating-in');
+                        
+                        // Reset animation classes when done
+                        setTimeout(() => {
+                            dbList.classList.remove('animating-in');
+                            // Reset height to auto after animation completes
+                            dbMenu.style.height = 'auto';
+                        }, 300);
+                    }, 10);
+                }, 300); // Wait for fade-out
+            } else {
+                // No form to fade out, directly update the list
+                dbList.innerHTML = '';
+                populateDbList();
+                
+                // Animate height change
+                setTimeout(() => {
+                    const newHeight = dbList.scrollHeight;
+                    dbMenu.style.height = newHeight + 'px';
+                    
+                    // Reset to auto height after transition
+                    setTimeout(() => {
+                        dbMenu.style.height = 'auto';
+                    }, 300);
+                }, 10);
+            }
+        }
+        
+        function populateDbList() {
             const entries = Object.entries(savedConfigs);
             
             // Show favicon controls when updating db list
@@ -932,6 +1004,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 deleteBtn.innerHTML = '×';
                 deleteBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
+                    if (!confirm(`Are you sure you want to remove ${config.database}?`)) {
+                        return;
+                    }
+                    
                     const currentDb = getCurrentDatabaseKey();
                     delete savedConfigs[key];
                     
@@ -1095,60 +1171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 faviconControls.style.display = 'none';
             }
             
-            dbList.innerHTML = `
-                <form class="db-form">
-                    <div class="form-group">
-                        <label>Type</label>
-                        <select name="type" required>
-                            <option value="mysql">MySQL</option>
-                            <option value="postgresql">PostgreSQL</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Host</label>
-                        <input type="text" name="host" required>
-                    </div>
-                    <div class="form-group">
-                        <label>User</label>
-                        <input type="text" name="user" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Password</label>
-                        <input type="password" name="password" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Database</label>
-                        <input type="text" name="database" required>
-                    </div>
-                    <button type="submit" class="add-db-button">
-                        <span class="lang-ko">추가</span>
-                        <span class="lang-en">Add</span>
-                    </button>
-                </form>
-            `;
-            
-            const form = dbList.querySelector('form');
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(form);
-                const config = Object.fromEntries(formData);
-                
-                const fullConfig = {
-                    ...config,
-                    type: config.type || 'mysql' // Default to MySQL if somehow missing
-                };
-                const configKey = `${fullConfig.host}/${fullConfig.database}`;
-                savedConfigs[configKey] = fullConfig;
-                setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
-                
-                // Show the updated list before switching
-                updateDbList();
-                isFormOpen = false;
-                updateAddButtonState(false);
-                
-                // Switch to the new database
-                switchDatabase(config);
-            });
+            showAddDatabaseForm();
         });
         
         // Close menu when clicking outside with proper closing animation
