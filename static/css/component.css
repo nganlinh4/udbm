@@ -1557,7 +1557,7 @@ input:checked ~ .switch-label.language-active {
     border: 1px solid var(--md-sys-color-outline);
     border-radius: 24px;
     background: var(--md-sys-color-surface);
-    color: var(--md-sys-color-on-surface);
+    color: var (--md-sys-color-on-surface);
 }
 
 [data-theme="dark"] .form-group select {
@@ -2517,7 +2517,7 @@ html[data-lang="en"] .swipe-guide::after {
 
 [data-theme="dark"] .download-button:hover {
     background: var(--md-sys-color-secondary-container);
-    color: var(--md-sys-color-on-secondary-container);
+    color: var (--md-sys-color-on-secondary-container);
 }
 #executeQuery {
     padding: 10px 24px;
@@ -2703,13 +2703,11 @@ html[data-lang="en"] .swipe-guide::after {
     border-color: var(--md-sys-color-outline);
 }
 
-/* ...existing code... */
-
-/* Updated material design reveal animation for db-menu */
+/* Enhanced material design animation for db-menu with more visible closing animation */
 .db-menu {
     position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
+    top: calc(100% + 25px);
+    left: -120px;
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -2721,20 +2719,37 @@ html[data-lang="en"] .swipe-guide::after {
     box-sizing: border-box;
     transform-origin: top center;
     opacity: 0;
-    height: 0;
+    height: auto;
     overflow: hidden;
-    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: height, opacity, transform;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+    pointer-events: none;
 }
 
 .db-menu.show {
     display: block;
     opacity: 1;
-    height: auto;
-    max-height: 500px; /* Set a reasonable max height */
-    animation: materialReveal 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    max-height: 500px;
+    pointer-events: auto;
+    animation: materialReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.db-menu.closing {
+    display: block !important;
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
+    pointer-events: none;
+    animation: materialClose 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes materialReveal {
@@ -2750,6 +2765,26 @@ html[data-lang="en"] .swipe-guide::after {
         opacity: 1;
         transform: translateY(0) scale(1);
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+}
+
+@keyframes materialClose {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 500px;
+        padding: 12px;
+        border-width: 1px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-width: 0;
+        box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
     }
 }
 

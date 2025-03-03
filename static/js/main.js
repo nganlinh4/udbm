@@ -997,12 +997,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Toggle menu with proper animation sequence
+        // Toggle menu with proper animation sequence - fixed closing animation
         dbSwitchButton.addEventListener('click', () => {
             // First make the menu visible but with animation starting state
             if (!dbMenu.classList.contains('show')) {
                 // For opening: first display the menu (still invisible due to opacity:0)
                 dbMenu.style.display = 'block';
+                dbMenu.classList.remove('closing');
                 
                 // Ensure favicon controls are properly initialized before animation
                 const faviconControls = dbMenu.querySelector('.favicon-controls');
@@ -1029,16 +1030,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }, 50);
             } else {
-                // For closing: first start the animation by removing show class
-                dbMenu.classList.remove('show');
+                // For closing: first add closing class to start the animation
+                dbMenu.classList.add('closing');
+                
+                // Allow a brief moment for closing class to apply before removing show class
+                requestAnimationFrame(() => {
+                    dbMenu.classList.remove('show');
+                });
                 
                 // Wait for animation to complete before hiding
-                dbMenu.addEventListener('transitionend', function hideMenu(e) {
-                    if (e.propertyName === 'opacity') {
-                        dbMenu.style.display = '';
-                        dbMenu.removeEventListener('transitionend', hideMenu);
+                setTimeout(() => {
+                    if (!dbMenu.classList.contains('show')) {
+                        dbMenu.style.display = 'none';
+                        dbMenu.classList.remove('closing');
                     }
-                });
+                }, 400); // Match the animation duration
                 
                 if (isFormOpen) {
                     updateDbList();
@@ -1150,19 +1156,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // Close menu when clicking outside with proper animation
+        // Close menu when clicking outside with proper closing animation
         document.addEventListener('click', (e) => {
             if (!dbMenu.contains(e.target) && !dbSwitchButton.contains(e.target) && dbMenu.classList.contains('show')) {
-                // For closing: first start the animation by removing show class
-                dbMenu.classList.remove('show');
+                // For closing: first add closing class to start the animation
+                dbMenu.classList.add('closing');
+                
+                // Allow a brief moment for closing class to apply before removing show class
+                requestAnimationFrame(() => {
+                    dbMenu.classList.remove('show');
+                });
                 
                 // Wait for animation to complete before hiding
-                dbMenu.addEventListener('transitionend', function hideMenu(e) {
-                    if (e.propertyName === 'opacity') {
-                        dbMenu.style.display = '';
-                        dbMenu.removeEventListener('transitionend', hideMenu);
+                setTimeout(() => {
+                    if (!dbMenu.classList.contains('show')) {
+                        dbMenu.style.display = 'none';
+                        dbMenu.classList.remove('closing');
                     }
-                });
+                }, 400); // Match the animation duration
                 
                 if (isFormOpen) {
                     updateDbList();
