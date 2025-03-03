@@ -441,7 +441,7 @@ input:checked ~ .switch-label.language-active {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 7px;
     font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     border: 1px solid rgba(0, 0, 0, 0.12);
     height: 35px;
@@ -781,10 +781,22 @@ select.monitor-dropdown[size]:not([size="1"]) {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: -4px;
-    margin-left: -2px;
+    position: relative;
+}
+ 
+/* SVG morphing styles */
+.morphing-icon {
+    width: 18px;
+    height: 18px;
 }
 
+.pause-path {
+    transition: d 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .pause-path {
+    fill: var(--md-sys-color-on-surface);
+}
 .pause-button:hover {
     background-color: rgba(26, 115, 232, 0.08);
 }
@@ -807,6 +819,27 @@ select.monitor-dropdown[size]:not([size="1"]) {
 
 .pause-button.paused:hover {
     background-color: rgba(211, 47, 47, 0.08);
+}
+
+
+.dropdown-container .pause-button.paused ~ .clock-icon .clock-hand {
+    animation-play-state: paused !important;
+}
+
+
+.pause-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: #666;
+}
+
+.pause-button.disabled:hover {
+    background-color: transparent;
+}
+
+.pause-button:hover .tooltip {
+    opacity: 1;
+    transform: translate(-50%, 4px);
 }
 
 @keyframes rotate-clock {
@@ -927,17 +960,14 @@ select.monitor-dropdown[size]:not([size="1"]) {
     background: rgba(97, 97, 97, 0.9);
 }
 
-.pause-button:hover .tooltip {
-    opacity: 1;
-    transform: translate(-50%, 4px);
-}
+
 
 .tooltip.temp-tooltip {
     background: rgba(33, 150, 243, 0.9);
     white-space: nowrap;
     max-width: none;
     animation: fadeInOut 3s ease-in-out forwards;
-    left: 214px;
+    left: 15px;
 }
 
 .tooltip.temp-tooltip::after {
@@ -1265,15 +1295,6 @@ select.monitor-dropdown[size]:not([size="1"]) {
     transform: translate(-50%, 4px);
 }
 
-.pause-button.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    color: #666;
-}
-
-.pause-button.disabled:hover {
-    background-color: transparent;
-}
 
 /* Add these new styles before the closing brace */
 .month-total {
@@ -2444,9 +2465,6 @@ html[data-lang="en"] .swipe-guide::after {
     will-change: transform;
 }
 
-.dropdown-container .pause-button.paused ~ .clock-icon .clock-hand {
-    animation-play-state: paused !important;
-}
 
 /* Arrow style switch */
 .arrow-style-switch {

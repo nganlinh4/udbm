@@ -353,17 +353,15 @@ function createPillWrapper(buttonCount) {
 // Add new function to handle pause/resume
 function toggleMonitoring() {
     const pauseButton = document.getElementById('pauseButton');
-    const pauseIcon = pauseButton.querySelector('.pause-icon');
-    const playIcon = pauseButton.querySelector('.play-icon');
     const clockHand = document.querySelector('.clock-hand');
     const tempTooltip = pauseButton.querySelector('.temp-tooltip');
     
     window.isMonitoringPaused = !window.isMonitoringPaused;
     
+    // Use the global function from icon-morph.js
+    window.togglePausePlayIcon(!window.isMonitoringPaused);
+    
     if (window.isMonitoringPaused) {
-        pauseIcon.style.display = 'none';
-        playIcon.style.display = 'inline';
-        pauseButton.classList.add('paused');
         if (monitorIntervalId) {
             clearInterval(monitorIntervalId);
             monitorIntervalId = null;
@@ -372,9 +370,6 @@ function toggleMonitoring() {
             clockHand.style.animationPlayState = 'paused';
         }
     } else {
-        pauseIcon.style.display = 'inline';
-        playIcon.style.display = 'none';
-        pauseButton.classList.remove('paused');
         if (clockHand) {
             clockHand.style.animationPlayState = 'running';
         }
@@ -1425,7 +1420,7 @@ function handleTextSelection() {
     const pauseButton = document.getElementById('pauseButton');
     const tempTooltip = pauseButton.querySelector('.temp-tooltip');
     const defaultTooltip = pauseButton?.querySelector('.default-tooltip');
-    
+
     // Clear any existing check interval
     if (selectionCheckInterval) {
         clearInterval(selectionCheckInterval);
