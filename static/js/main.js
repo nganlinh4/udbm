@@ -1149,56 +1149,95 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Toggle menu with proper animation sequence - fixed closing animation
+        // Toggle menu with proper animation sequence
         dbSwitchButton.addEventListener('click', () => {
-            // First make the menu visible but with animation starting state
+            // Opening the menu
             if (!dbMenu.classList.contains('show')) {
-                // First display the menu but keep it invisible
+                // Lock menu button to prevent double clicking during animation
+                dbSwitchButton.classList.add('disabled');
+
+                // First make sure the menu is available in DOM but invisible to users
+                dbMenu.classList.remove('closing');
                 dbMenu.style.display = 'block';
                 dbMenu.style.opacity = '0';
-                dbMenu.classList.remove('closing');
-                
-                // Ensure favicon controls are properly initialized before animation
-                const faviconControls = dbMenu.querySelector('.favicon-controls');
-                if (faviconControls && !isFormOpen) {
-                    faviconControls.style.display = 'flex';
-                    faviconControls.style.visibility = 'hidden';
-                } else if (faviconControls) {
-                    faviconControls.style.display = 'none';
-                    faviconControls.style.visibility = 'hidden';
-                }
+                dbMenu.style.height = 'auto'; // Let it expand to full content size
+                dbMenu.style.overflow = 'hidden';
+                dbMenu.style.visibility = 'hidden'; // Hide it completely during preparation
 
-                // Update content first
-                requestAnimationFrame(() => {
-                    if (!isFormOpen) {
-                        updateDbList();
+                // Prepare all content in the actual menu (not offscreen)
+                if (!isFormOpen) {
+                    // Update the database list
+                    const realDbList = dbMenu.querySelector('.db-list');
+                    realDbList.innerHTML = '';
+                    populateDbList(realDbList);
+                    
+                    // Show the controls
+                    const faviconControls = dbMenu.querySelector('.favicon-controls');
+                    if (faviconControls) {
+                        faviconControls.style.display = 'flex';
+                        faviconControls.style.visibility = 'visible';
+                        faviconControls.style.opacity = '1';
                     }
-
-                    // Wait for all content to be fully loaded and rendered
+                    
+                    const logoControls = dbMenu.querySelector('.logo-controls');
+                    if (logoControls) {
+                        logoControls.style.display = 'flex';
+                        logoControls.style.visibility = 'visible';
+                        logoControls.style.opacity = '1';
+                    }
+                }
+                
+                // Wait a generous amount of time for all content to be fully loaded and rendered
+                setTimeout(() => {
+                    // Measure the final height from the fully rendered content
+                    const finalHeight = dbMenu.scrollHeight;
+                    
+                    // Store for future reference
+                    const currentDb = getCurrentDatabaseKey();
+                    localStorage.setItem('dbMenuListHeight_' + (currentDb || 'default'), finalHeight + 'px');
+                    
+                    // Now prepare the actual animation
+                    // First, set starting height to 0 without showing menu yet
+                    dbMenu.style.height = '0px';
+                    dbMenu.style.opacity = '0';
+                    dbMenu.style.visibility = 'visible'; // Make visible but with 0 height/opacity
+                    
+                    // Force a reflow
+                    void dbMenu.offsetHeight;
+                    
+                    // Now start the animation with both height and opacity
                     setTimeout(() => {
-                        requestAnimationFrame(() => {
-                            // Set initial height and ensure it's correct
-                            const finalHeight = dbList.scrollHeight;
-                            dbMenu.style.height = finalHeight + 'px';
-
-                            // Make controls visible if needed
-                            if (faviconControls && !isFormOpen) {
-                                faviconControls.style.visibility = 'visible';
-                                faviconControls.style.opacity = '1';
-                            }
-
-                            // Finally show the menu with animation
-                            dbMenu.style.opacity = '1';
-                            dbMenu.classList.add('show');
-                        });
-                    }, 300); // Increased delay to ensure content is ready
-                });
-            } else { 
+                        dbMenu.style.height = `${finalHeight}px`;
+                        dbMenu.style.opacity = '1';
+                        dbMenu.classList.add('show');
+                        
+                        // Reset to auto height after animation completes
+                        setTimeout(() => {
+                            dbMenu.style.height = 'auto';
+                            dbMenu.style.overflow = '';
+                            
+                            // Re-enable the button
+                            dbSwitchButton.classList.remove('disabled');
+                        }, 300);
+                    }, 10);
+                }, 100); // Give browser time to fully render content
+                
+            } else {
                 // For closing: first add closing class to start the animation
                 dbMenu.classList.add('closing');
                 
-                // Allow a brief moment for closing class to apply before removing show class
+                // Lock height to current value to prevent jumping
+                const currentHeight = dbMenu.scrollHeight;
+                dbMenu.style.height = `${currentHeight}px`;
+                dbMenu.style.overflow = 'hidden';
+                
+                // Force a reflow
+                void dbMenu.offsetHeight;
+                
+                // Animate height to 0 and fade out
                 requestAnimationFrame(() => {
+                    dbMenu.style.height = '0';
+                    dbMenu.style.opacity = '0';
                     dbMenu.classList.remove('show');
                 });
                 
@@ -1207,9 +1246,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!dbMenu.classList.contains('show')) {
                         dbMenu.style.display = 'none';
                         dbMenu.classList.remove('closing');
+                        dbMenu.style.overflow = '';
+                        
+                        // Reset height to auto for next opening
+                        dbMenu.style.height = 'auto';
                     }
                 }, 400); // Match the animation duration
                 
+                // If a form is open, go back to the database list view
                 if (isFormOpen) {
                     updateDbList();
                     isFormOpen = false;
@@ -1238,64 +1282,217 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add new database
         addDbButton.addEventListener('click', () => {
             if (isFormOpen) {
-                // When clicking back, show the favicon controls and update the list
-                // First, get current height
-                const currentHeight = dbMenu.scrollHeight;
-                dbMenu.style.height = currentHeight + 'px';
+                // Going back to database list from form
+                // Lock button to prevent clicking during animation
+                addDbButton.classList.add('disabled');
                 
-                const faviconControls = dbMenu.querySelector('.favicon-controls');
-                if (faviconControls) {
-                    requestAnimationFrame(() => {
-                        // Wait for next frame to show controls
+                // First, mark that we're no longer in form mode
+                isFormOpen = false;
+                updateAddButtonState(false);
+                
+                // Fade out the form
+                const form = dbList.querySelector('.db-form');
+                if (form) {
+                    form.classList.add('animating-out');
+                    form.style.opacity = '0';
+                }
+                
+                // Lock current height
+                const currentHeight = dbMenu.scrollHeight;
+                dbMenu.style.height = `${currentHeight}px`;
+                dbMenu.style.overflow = 'hidden';
+                
+                // Wait briefly for form fade out to start
+                setTimeout(() => {
+                    // Create the database list in the actual menu (hidden initially)
+                    dbList.style.opacity = '0';
+                    dbList.innerHTML = '';
+                    populateDbList(dbList);
+                    
+                    // Prepare controls
+                    const faviconControls = dbMenu.querySelector('.favicon-controls');
+                    const logoControls = dbMenu.querySelector('.logo-controls');
+                    
+                    if (faviconControls) {
                         faviconControls.style.display = 'flex';
-                        void faviconControls.offsetWidth; // Force reflow
-                        setTimeout(() => {
-                            faviconControls.style.opacity = '1';
-                            faviconControls.style.visibility = 'visible';
-                        }, 50);
-                    });
-                }
-                // Wait for favicon controls to be ready before updating list
-                setTimeout(() => {
-                    updateDbList();
-                    isFormOpen = false;
-                    updateAddButtonState(false);
-                }, 100);
-
-                // Use cached list height if available
-                const currentDb = getCurrentDatabaseKey();
-                const cachedListHeight = localStorage.getItem('dbMenuListHeight_' + currentDb);
-                if (cachedListHeight && !isNaN(parseInt(cachedListHeight))) {
-                    requestAnimationFrame(() => {
-                        dbMenu.style.height = cachedListHeight + 'px';
-                    });
-                }
-
-                // After all animations complete, store the stable list height
-                setTimeout(() => {
-                    const previousHeight = dbMenu.offsetHeight;
+                        faviconControls.style.opacity = '0';
+                        faviconControls.style.visibility = 'hidden';
+                    }
+                    
+                    if (logoControls) {
+                        logoControls.style.display = 'flex';
+                        logoControls.style.opacity = '0';
+                        logoControls.style.visibility = 'hidden';
+                    }
+                    
+                    // Now measure the final height with everything in place
+                    // Give browser time to render everything
                     setTimeout(() => {
-                        const currentHeight = dbMenu.offsetHeight;
-                        if (currentHeight === previousHeight) {
-                            localStorage.setItem('dbMenuListHeight_' + currentDb, currentHeight + 'px');
-                        }
-                    }, 100);
-                }, 1000);
+                        // Temporarily set auto height to get full content height
+                        const originalHeight = dbMenu.style.height;
+                        dbMenu.style.height = 'auto';
+                        const finalHeight = dbMenu.scrollHeight;
+                        dbMenu.style.height = originalHeight; // Reset to original height
+                        
+                        // Store this height for future reference
+                        const currentDb = getCurrentDatabaseKey();
+                        localStorage.setItem('dbMenuListHeight_' + (currentDb || 'default'), finalHeight + 'px');
+                        
+                        // Now start the transition to the final state
+                        requestAnimationFrame(() => {
+                            dbMenu.style.height = `${finalHeight}px`;
+                            dbList.style.opacity = '1';
+                            
+                            // Fade in controls after height animation starts
+                            setTimeout(() => {
+                                if (faviconControls) {
+                                    faviconControls.style.visibility = 'visible';
+                                    faviconControls.style.opacity = '1';
+                                }
+                                
+                                if (logoControls) {
+                                    logoControls.style.visibility = 'visible';
+                                    logoControls.style.opacity = '1';
+                                }
+                                
+                                // Reset to auto height once animation completes
+                                setTimeout(() => {
+                                    dbMenu.style.height = 'auto';
+                                    dbMenu.style.overflow = '';
+                                    
+                                    // Re-enable the button
+                                    addDbButton.classList.remove('disabled');
+                                }, 300);
+                            }, 100);
+                        });
+                    }, 50);
+                }, 150); // Wait briefly for form fade-out
                 return;
             }
             
-            isFormOpen = true;
-            updateAddButtonState(true);
-            
-            // Just hide the favicon controls instead of removing them
-            const faviconControls = dbMenu.querySelector('.favicon-controls');
-            if (faviconControls) {
-                faviconControls.style.opacity = '0';
-                faviconControls.style.visibility = 'hidden';
-                faviconControls.style.display = 'none';
-            }
-            
-            showAddDatabaseForm();
+            // Show form - code remains the same
+            // Begin animation: fade out the current list
+            dbList.classList.add('animating-out');
+
+            // Store current height before any changes
+            const currentHeight = dbMenu.scrollHeight;
+            dbMenu.style.height = currentHeight + 'px';
+
+            // Define form content first
+            const formHtml = `
+                <form class="db-form material-form">
+                    <div class="form-group">
+                        <div class="db-type-wrapper">
+                            <select name="type" class="db-type-select" required>
+                                <option value="mysql">MySQL</option>
+                                <option value="postgresql">PostgreSQL</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="host" id="host" required placeholder=" ">
+                        <label for="host">Host</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="user" id="user" required placeholder=" ">
+                        <label for="user">User</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" name="password" id="password" required placeholder=" ">
+                        <label for="password">Password</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="database" id="database" required placeholder=" ">
+                        <label for="database">Database</label>
+                    </div>
+                    <button type="submit" class="add-db-button">
+                        <span class="lang-ko">추가</span>
+                        <span class="lang-en">Add</span>
+                    </button>
+                </form>
+            `;
+
+            // After a short delay to allow fade out animation
+            setTimeout(() => {
+                isFormOpen = true;
+                updateAddButtonState(true);
+                
+                // Instead of removing favicon controls, just hide them
+                const faviconControls = dbMenu.querySelector('.favicon-controls');
+                if (faviconControls) {
+                    // Just hide it instead of removing
+                    faviconControls.style.opacity = '0';
+                    faviconControls.style.visibility = 'hidden';
+                    faviconControls.style.display = 'none';
+                    
+                    // We don't need to store it since we're no longer removing it
+                    // But keep the reference in case it's needed elsewhere
+                    dbMenu.dataset.hasFaviconControls = 'true';
+                }
+               
+                // Create temporary container to measure form height
+                const tempContainer = document.createElement('div');
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.visibility = 'hidden';
+                tempContainer.innerHTML = formHtml;
+                dbMenu.appendChild(tempContainer);
+                
+                // Get the final height from temp container
+                const finalHeight = tempContainer.scrollHeight;
+                
+                // Remove temp container
+                dbMenu.removeChild(tempContainer);
+                
+                // Now update actual content and animate height
+                requestAnimationFrame(() => {
+                    dbList.innerHTML = formHtml;
+                    const form = dbList.querySelector('.db-form');
+                    form.style.opacity = '0';
+                    form.classList.add('animating-in');
+                    setTimeout(() => {
+                        dbMenu.style.height = form.scrollHeight + 'px';
+                    }, 50);
+                    
+                    // Add cleanup timeout
+                    setTimeout(() => {
+                        form.style.opacity = '1';
+                        dbList.classList.remove('animating-out');
+                        form.classList.remove('animating-in');
+                        // Reset to auto height after animation
+                        dbMenu.style.height = 'auto';
+                        
+                        // Setup radio button handlers after form is visible
+                        // Handle form submission after form is ready
+                        form.addEventListener('submit', (e) => {
+                            e.preventDefault();
+                            const formData = new FormData(form);
+                            const config = Object.fromEntries(formData);
+                            
+                            // Get type from select element
+                            const type = config.type; // Type is already in the FormData
+                            
+                            // Add the type to the config and save
+                            const fullConfig = {
+                                ...config,
+                                type // Explicitly set the type field
+                            };
+                            const configKey = `${fullConfig.host}/${fullConfig.database}`;
+                            savedConfigs[configKey] = fullConfig;
+                            
+                            setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
+                            
+                            // Show the updated list before switching
+                            updateDbList();
+                            isFormOpen = false;
+                            updateAddButtonState(false);
+                            
+                            // Switch to the new database
+                            switchDatabase(config);
+                        });
+                    }, 300);
+                });
+                
+            }, 300); // Wait for fade-out animation to complete
         });
         
         // Close menu when clicking outside with proper closing animation
