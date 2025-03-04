@@ -211,33 +211,10 @@ export function addDownloadButtons() {
             // Setup click handlers
             csvButton.onclick = async () => {
                 try {
-                    const response = await fetch(`${baseUrl}/data/${tableName}`);
-                    const data = await response.json();
-                    if (!data.data || !data.data.length) return;
-                    
-                    const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`;
-                    const headers = data.columns;
-                    const csvContent = [
-                        headers.join(','),
-                        ...data.data.map(row => headers.map(header => {
-                            let value = row[header] ?? '';
-                            value = String(value);
-                            if (typeof row[header] === 'object' && row[header] !== null) {
-                                value = JSON.stringify(row[header]);
-                            }
-                            if (value.includes(',') || value.includes('"')) {
-                                value = value.replace(/"/g, '""');
-                                value = `"${value}"`;
-                            }
-                            return value;
-                        }).join(','))
-                    ].join('\n');
-                    
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = filename;
-                    link.click();
+                    const response = await fetch(`${baseUrl}/download/${tableName}/csv`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const blob = await response.blob();
+                    downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`);
                 } catch (error) {
                     console.error('Error downloading CSV:', error);
                 }
@@ -245,35 +222,10 @@ export function addDownloadButtons() {
 
             xlsxButton.onclick = async () => {
                 try {
-                    const response = await fetch(`${baseUrl}/data/${tableName}`);
-                    const data = await response.json();
-                    if (!data.data || !data.data.length) return;
-
-                    const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`;
-                    const downloadResponse = await fetch(`${baseUrl}/download/xlsx`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            data: data.data.map(row => {
-                                const newRow = {};
-                                data.columns.forEach(header => {
-                                    const value = row[header];
-                                    newRow[header] = typeof value === 'object' && value !== null ? 
-                                        JSON.stringify(value) : value;
-                                });
-                                return newRow;
-                            }), 
-                            filename 
-                        })
-                    });
-
-                    if (!downloadResponse.ok) throw new Error(`HTTP error! status: ${downloadResponse.status}`);
-                    const blob = await downloadResponse.blob();
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(new Blob([blob]));
-                    link.download = filename;
-                    link.click();
-                    URL.revokeObjectURL(link.href);
+                    const response = await fetch(`${baseUrl}/download/${tableName}/xlsx`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const blob = await response.blob();
+                    downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`);
                 } catch (error) {
                     console.error('Error downloading XLSX:', error);
                 }
@@ -284,6 +236,17 @@ export function addDownloadButtons() {
             dragHandle.insertAdjacentElement('afterend', downloadButtons);
         }
     });
+}
+
+// Helper function to handle blob downloads
+function downloadBlob(blob, filename) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
 }
 
 // Set up global query handler (independent of table state)

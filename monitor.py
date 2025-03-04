@@ -10,6 +10,7 @@ import os
 import json
 import pandas as pd
 import io
+import csv
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -1131,6 +1132,169 @@ def download_xlsx():
         )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+@app.route('/download/<table_name>/csv')
+def download_table_csv(table_name):
+    try:
+        connection = get_db_connection()
+        cursor = None
+        
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor = connection.cursor()
+        else:
+            cursor = connection.cursor(dictionary=True)
+
+        # Get column names
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
+            columns = [desc[0] for desc in cursor.description]
+            cursor.fetchall()  # Fetch (and discard) results before closing
+        else:
+            cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
+            columns = [desc[0] for desc in cursor.description]
+            cursor.fetchall()  # Fetch (and discard) results before closing
+        
+        # Close and create new cursor to avoid unread results
+        cursor.close()
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor = connection.cursor()
+        else:
+            cursor = connection.cursor(dictionary=True)
+
+        # Create in-memory file
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(columns)
+
+        # Fetch and write data in chunks with proper cursor handling
+        chunk_size = 5000
+        offset = 0
+
+        while True:
+            if current_db_config.get('db_type') == 'postgresql':
+                query = f'SELECT * FROM "{table_name}" ORDER BY "{columns[0]}" LIMIT %s OFFSET %s'
+            else:
+                query = f"SELECT * FROM {table_name} ORDER BY `{columns[0]}` LIMIT %s OFFSET %s"
+            
+            cursor.execute(query, (chunk_size, offset))
+            rows = cursor.fetchall()
+            if not rows:
+                break
+
+            for row in rows:
+                if current_db_config.get('db_type') == 'postgresql':
+                    processed_row = []
+                    for value in row:
+                        processed_row.append(json.dumps(value) if isinstance(value, (dict, list)) 
+                                          else (str(value) if value is not None else ''))
+                else:
+                    processed_row = []
+                    for col in columns:
+                        value = row[col] if isinstance(row, dict) else row[columns.index(col)]
+                        processed_row.append(json.dumps(value) if isinstance(value, (dict, list))
+                                          else (str(value) if value is not None else ''))
+                writer.writerow(processed_row)
+
+            offset += chunk_size
+            connection.commit()  # Clear any pending results
+
+        # Prepare response
+        output.seek(0)
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8')),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'{table_name}_{time.strftime("%Y%m%d_%H%M%S")}.csv'
+        )
+
+    except Exception as e:
+        logger.error(f"Error downloading CSV for table {table_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
+@app.route('/download/<table_name>/xlsx')
+def download_table_xlsx(table_name):
+    try:
+        connection = get_db_connection()
+        cursor = None
+
+        # First get column names
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor = connection.cursor()
+            cursor.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
+        else:
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
+        cursor.fetchall()  # Fetch (and discard) results before closing
+
+        columns = [desc[0] for desc in cursor.description]
+        cursor.close()
+
+        # Create a new cursor for data fetching
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor = connection.cursor()
+        else:
+            cursor = connection.cursor(dictionary=True)
+
+        # Create Excel file in memory
+        output = io.BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        workbook = writer.book
+        worksheet = workbook.add_worksheet(table_name)
+
+        # Write headers
+        for col_num, column in enumerate(columns):
+            worksheet.write(0, col_num, column)
+
+        # Fetch and write data in chunks
+        chunk_size = 5000
+        offset = 0
+        row_num = 1
+
+        while True:
+            if current_db_config.get('db_type') == 'postgresql':
+                query = f'SELECT * FROM "{table_name}" ORDER BY "{columns[0]}" LIMIT %s OFFSET %s'
+            else:
+                query = f"SELECT * FROM {table_name} ORDER BY `{columns[0]}` LIMIT %s OFFSET %s"
+
+            cursor.execute(query, (chunk_size, offset))
+            rows = cursor.fetchall()
+            if not rows:
+                break
+
+            for row in rows:
+                for col_num, value in enumerate(row if isinstance(row, (list, tuple)) else [row[col] for col in columns]):
+                    if isinstance(value, (dict, list)):
+                        worksheet.write(row_num, col_num, json.dumps(value, ensure_ascii=False))
+                    else:
+                        worksheet.write(row_num, col_num, str(value) if value is not None else '')
+                row_num += 1
+
+            offset += chunk_size
+            connection.commit()  # Clear any pending results
+
+        writer.close()
+        output.seek(0)
+
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'{table_name}_{time.strftime("%Y%m%d_%H%M%S")}.xlsx'
+        )
+
+    except Exception as e:
+        logger.error(f"Error downloading XLSX for table {table_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
 @app.route('/execute_query', methods=['POST'])
 def execute_query():
     if not current_db_config:
