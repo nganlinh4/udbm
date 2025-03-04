@@ -1012,7 +1012,10 @@ function updateTableRows(tbody, tableData, columns) {
     const focusedCell = tbody.querySelector('td.focused');
     let focusedRowKey = null;
     let focusedCellIndex = -1;
-    if (focusedCell) {
+    const noDataMessage = tbody.querySelector('.no-data-message');
+        const wasNoDataFocused = focusedCell && focusedCell.querySelector('.no-data-message');
+        
+        if (focusedCell && !wasNoDataFocused) {
         focusedRowKey = focusedCell.closest('tr').querySelector('td').textContent;
         const cells = Array.from(focusedCell.closest('tr').querySelectorAll('td'));
         focusedCellIndex = cells.indexOf(focusedCell);
@@ -1135,7 +1138,7 @@ function updateTableRows(tbody, tableData, columns) {
         });
     }, 1500);
 
-    // Restore focused cell if it existed
+    // Restore focused cell state
     if (focusedRowKey !== null && focusedCellIndex !== -1) {
         const rows = tbody.querySelectorAll('tr');
         for (const row of rows) {
@@ -1147,6 +1150,12 @@ function updateTableRows(tbody, tableData, columns) {
                 }
                 break;
             }
+        }
+    } else if (wasNoDataFocused && !tableData.length) {
+        // If "No data available" cell was focused and table is still empty, restore focus
+        const noDataCell = tbody.querySelector('td');
+        if (noDataCell && noDataCell.querySelector('.no-data-message')) {
+            noDataCell.classList.add('focused');
         }
     }
 }
@@ -1192,9 +1201,13 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
     if (!tableData || !tableData.length) {
         const noDataRow = document.createElement('tr');
         const noDataCell = document.createElement('td');
+        const wasFocused = tableDiv.querySelector('.table-scroll-wrapper td.focused') !== null;
         noDataCell.colSpan = columns.length;
-        noDataCell.innerHTML = `<span class="lang-ko">데이터가 없습니다.</span><span class="lang-en">No data available.</span>`;
+        noDataCell.innerHTML = `<span class="lang-ko no-data-message">데이터가 없습니다.</span><span class="lang-en no-data-message">No data available.</span>`;
         noDataCell.style.textAlign = 'center';
+        if (wasFocused) {
+            noDataCell.classList.add('focused');
+        }
         noDataRow.appendChild(noDataCell);
         tbody.appendChild(noDataRow);
         return;
@@ -1342,14 +1355,18 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
     let existingTable = tableDiv.querySelector('table');
     if (existingTable) {
         const tbody = existingTable.querySelector('tbody');
+        const wasFocused = tbody?.querySelector('td.focused') !== null;
         if (tbody) {
             if (!tableInfo.data || !tableInfo.data.length) {
                 tbody.innerHTML = '';
                 const noDataRow = document.createElement('tr');
                 const noDataCell = document.createElement('td');
                 noDataCell.colSpan = tableInfo.columns.length;
-                noDataCell.innerHTML = `<span class="lang-ko">${translations.ko.noData}</span><span class="lang-en">${translations.en.noData}</span>`;
+                noDataCell.innerHTML = `<span class="lang-ko no-data-message">${translations.ko.noData}</span><span class="lang-en no-data-message">${translations.en.noData}</span>`;
                 noDataCell.style.textAlign = 'center';
+                if (wasFocused) {
+                    noDataCell.classList.add('focused');
+                }
                 noDataRow.appendChild(noDataCell);
                 tbody.appendChild(noDataRow);
             } else {
@@ -1888,12 +1905,12 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     table.addEventListener('click', (e) => {
         const cell = e.target.closest('td');
         if (!cell) return;
-
+        
         if (e.target.tagName === 'INPUT' || !isAdminMode) {
             return; // Don't handle clicks when not in admin mode or clicking on input
         }
 
-        if (cell.classList.contains('focused') && !isEditing) {
+        if (cell.classList.contains('focused') && !isEditing && !cell.querySelector('.no-data-message')) {
             startEditing(cell, e);
         } else if (!isEditing) {
             // Remove focus from any previously focused cell
@@ -1906,7 +1923,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     // Add double click handler
     table.addEventListener('dblclick', (e) => {
         const cell = e.target.closest('td');
-        if (cell && !isEditing && isAdminMode) {
+        if (cell && !isEditing && isAdminMode && !e.target.classList.contains('no-data-message')) {
             startEditing(cell, e);
         }
     });
