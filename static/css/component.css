@@ -372,6 +372,15 @@ input:checked ~ .theme-icon.moon-icon,
     background: linear-gradient(135deg, #34a853, #a8e6cf);
 }
 
+/* Schema type switch specific behavior */
+#schemaTypeToggle + .switch-slider {
+    background: linear-gradient(135deg, #1a73e8, #8ab4f8);
+}
+
+#schemaTypeToggle:checked + .switch-slider {
+    background: linear-gradient(135deg, #34a853, #a8e6cf);
+}
+
 /* Default switches (admin and favicon) */
 input:checked + .switch-slider {
     background: linear-gradient(135deg, #1a73e8, #8ab4f8);
@@ -387,6 +396,14 @@ input:checked + .switch-slider {
 }
 
 [data-theme="dark"] #languageToggle:checked + .switch-slider {
+    background: linear-gradient(135deg, #1b5e20, #66bb6a);
+}
+
+[data-theme="dark"] #schemaTypeToggle + .switch-slider {
+    background: linear-gradient(135deg, #0d47a1, #4285f4);
+}
+
+[data-theme="dark"] #schemaTypeToggle:checked + .switch-slider {
     background: linear-gradient(135deg, #1b5e20, #66bb6a);
 }
 
