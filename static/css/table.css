@@ -359,7 +359,7 @@ tbody tr:last-child td {
 .table-title {
     flex-grow: 1;
     text-align: center;
-    margin-left: 18vw;
+    margin-left: 11vw;
     font-family: Poppins, sans-serif;
     font-weight: 600;
     font-size: 1em;
@@ -575,7 +575,7 @@ tr {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 16px;
+    padding: 0px 16px 16px 16px;
     margin: 20px 0;
     -webkit-overflow-scrolling: touch;
     max-height: none;
