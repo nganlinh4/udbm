@@ -18,10 +18,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle logo toggle
     logoToggle.addEventListener('change', function() {
         logoUploadButton.style.display = this.checked ? 'block' : 'none';
-        pageLogo.style.display = this.checked ? 'block' : 'none';
         localStorage.setItem('logoEnabled', this.checked);
+        
+        if (this.checked && localStorage.getItem('pageLogo')) {
+            pageLogo.style.display = 'block';
+            pageLogo.innerHTML = '<img src="' + localStorage.getItem('pageLogo') + '" alt="Page Logo"><div class="resize-handle"></div>';
+        }
+        
         if (!this.checked) {
             pageLogo.innerHTML = '<div class="resize-handle"></div>';
+            pageLogo.style.display = 'none';
         }
     });
 

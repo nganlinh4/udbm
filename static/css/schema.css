@@ -9,7 +9,7 @@
     border: none;
     cursor: pointer;
     box-shadow: var(--md-elevation-level2);
-    position: fixed;
+    position: absolute;
     margin-left: -250px;
     z-index: 100;
 }
