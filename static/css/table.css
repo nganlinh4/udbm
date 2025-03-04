@@ -358,8 +358,8 @@ tbody tr:last-child td {
 
 .table-title {
     flex-grow: 1;
-    text-align: left;
-    margin-left: 47vw;
+    text-align: center;
+    margin-left: 18vw;
     font-family: Poppins, sans-serif;
     font-weight: 600;
     font-size: 1em;
@@ -430,6 +430,40 @@ tr {
 .connection-status:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table-section h2 {
+    display: flex;
+    align-items: center;
+}
+
+.table-section .download-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-right: 8px;
+}
+
+.table-section .download-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 48px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.table-section .download-button:hover {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.table-section .download-button svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
 }
 
 .table-container.theme-0 thead th {

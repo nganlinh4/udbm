@@ -10,7 +10,13 @@ import {
     checkConnection,
     connectionAttempts
 } from './utils.js';
-import { updateSingleTable, fetchTableData, fetchTableCount, adjustColumnWidths } from './table.js';
+import { 
+    updateSingleTable, 
+    fetchTableData, 
+    fetchTableCount, 
+    adjustColumnWidths,
+    addDownloadButtons 
+} from './table.js';
 
 // Constants
 const baseUrl = window.location.origin;
@@ -525,6 +531,9 @@ function toggleTable(tableName) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Add download buttons to all table headers
+    addDownloadButtons();
+    
     const initialSetup = document.getElementById('initial-setup');
     const mainInterface = document.getElementById('main-interface');
 

@@ -180,6 +180,112 @@ function setupQueryPopup() {
     return { queryPopup, executeButton, queryInput, resultArea, queryHistory, historyIndex, handleClose };
 }
 
+// New function to add download buttons to table headers
+export function addDownloadButtons() {
+    const tableSections = document.querySelectorAll('.table-section');
+    tableSections.forEach(section => {
+        const tableName = section.dataset.tableName;
+        const dragHandle = section.querySelector('.drag-handle');
+        if (dragHandle && !section.querySelector('.download-buttons')) {
+            const downloadButtons = document.createElement('div');
+            downloadButtons.className = 'download-buttons';
+            
+            const csvButton = document.createElement('button');
+            csvButton.className = 'download-button';
+            csvButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                CSV
+            `;
+            
+            const xlsxButton = document.createElement('button');
+            xlsxButton.className = 'download-button';
+            xlsxButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                XLSX
+            `;
+
+            // Setup click handlers
+            csvButton.onclick = async () => {
+                try {
+                    const response = await fetch(`${baseUrl}/data/${tableName}`);
+                    const data = await response.json();
+                    if (!data.data || !data.data.length) return;
+                    
+                    const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`;
+                    const headers = data.columns;
+                    const csvContent = [
+                        headers.join(','),
+                        ...data.data.map(row => headers.map(header => {
+                            let value = row[header] ?? '';
+                            value = String(value);
+                            if (typeof row[header] === 'object' && row[header] !== null) {
+                                value = JSON.stringify(row[header]);
+                            }
+                            if (value.includes(',') || value.includes('"')) {
+                                value = value.replace(/"/g, '""');
+                                value = `"${value}"`;
+                            }
+                            return value;
+                        }).join(','))
+                    ].join('\n');
+                    
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                } catch (error) {
+                    console.error('Error downloading CSV:', error);
+                }
+            };
+
+            xlsxButton.onclick = async () => {
+                try {
+                    const response = await fetch(`${baseUrl}/data/${tableName}`);
+                    const data = await response.json();
+                    if (!data.data || !data.data.length) return;
+
+                    const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`;
+                    const downloadResponse = await fetch(`${baseUrl}/download/xlsx`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            data: data.data.map(row => {
+                                const newRow = {};
+                                data.columns.forEach(header => {
+                                    const value = row[header];
+                                    newRow[header] = typeof value === 'object' && value !== null ? 
+                                        JSON.stringify(value) : value;
+                                });
+                                return newRow;
+                            }), 
+                            filename 
+                        })
+                    });
+
+                    if (!downloadResponse.ok) throw new Error(`HTTP error! status: ${downloadResponse.status}`);
+                    const blob = await downloadResponse.blob();
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(new Blob([blob]));
+                    link.download = filename;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                } catch (error) {
+                    console.error('Error downloading XLSX:', error);
+                }
+            };
+
+            downloadButtons.appendChild(csvButton);
+            downloadButtons.appendChild(xlsxButton);
+            dragHandle.insertAdjacentElement('afterend', downloadButtons);
+        }
+    });
+}
+
 // Set up global query handler (independent of table state)
 document.addEventListener('keydown', (e) => {
     if (!isAdminMode) return;
@@ -1137,6 +1243,113 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
 export function updateSingleTable(tableName, tableInfo, translations, currentLang, fetchTableData, baseUrl) {
     const tableDiv = document.getElementById(tableName);
     if (!tableDiv) return;
+    
+    // Add download buttons if they don't exist
+    const tableSection = tableDiv.closest('.table-section');
+    if (tableSection) {
+        const dragHandle = tableSection.querySelector('.drag-handle');
+        if (dragHandle && !tableSection.querySelector('.download-buttons')) {
+            const downloadButtons = document.createElement('div');
+            downloadButtons.className = 'download-buttons';
+            
+            const csvButton = document.createElement('button');
+            csvButton.className = 'download-button';
+            csvButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                CSV
+            `;
+            
+            const xlsxButton = document.createElement('button');
+            xlsxButton.className = 'download-button';
+            xlsxButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                XLSX
+            `;
+
+            csvButton.onclick = () => {
+                if (!tableInfo.data || !tableInfo.data.length) return;
+                const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`;
+                const headers = tableInfo.columns;
+                const csvContent = [
+                    headers.join(','),
+                    ...tableInfo.data.map(row => headers.map(header => {
+                        let value = row[header] ?? '';
+                        
+                        // Convert to string and handle special cases
+                        value = String(value);
+                        
+                        // Convert JSON objects to strings
+                        if (typeof row[header] === 'object' && row[header] !== null) {
+                            value = JSON.stringify(row[header]);
+                        }
+                        
+                        // Escape values containing commas or quotes
+                        if (value.includes(',') || value.includes('"')) {
+                            value = value.replace(/"/g, '""');
+                            value = `"${value}"`;
+                        }
+                        return value;
+                    }).join(','))
+                ].join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            };
+
+            xlsxButton.onclick = () => {
+                if (!tableInfo.data || !tableInfo.data.length) return;
+                const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`;
+                fetch(`${baseUrl}/download/xlsx`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        data: tableInfo.data,
+                        filename
+                    })
+                })
+                .then(async response => {
+                    if (response.ok) {
+                        return await response.blob();
+                    } else {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                })
+                .then(blob => {
+                    const excelBlob = new Blob([blob], { 
+                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                    });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(excelBlob);
+                    link.href = url;
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                })
+                .catch(error => {
+                    console.error('Error downloading XLSX:', error);
+                    alert(
+                        'Failed to download Excel file. Please ensure the server supports Excel downloads ' +
+                        'or try downloading as CSV instead.'
+                    );
+                });
+            };
+            
+            downloadButtons.appendChild(csvButton);
+            downloadButtons.appendChild(xlsxButton);
+            dragHandle.insertAdjacentElement('afterend', downloadButtons);
+        }
+    }
 
     const countSpan = document.getElementById(`${tableName}_count`);
     if (countSpan) {
