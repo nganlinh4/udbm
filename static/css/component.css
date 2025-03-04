@@ -1786,7 +1786,7 @@ select.monitor-dropdown[size]:not([size="1"]) {
 .material-form .form-group input:focus {
     border-color: var(--md-sys-color-primary);
     outline: none;
-    box-shadow: 0 0 0 1px var(--md-sys-color-primary);
+    box-shadow: 0 0 0 1px var (--md-sys-color-primary);
 }
 
 [data-theme="dark"] .material-form .form-group label {
@@ -2191,35 +2191,6 @@ html[data-lang="en"] .swipe-guide::after {
     white-space: nowrap; /* Prevent word wrapping */
 }
 
-/* Material Design Select Styles */
-.db-type-select {
-    width: 100%;
-    padding: 16px;
-    border: 2px solid var(--md-sys-color-outline);
-    border-radius: 8px;
-    background: var(--md-sys-color-surface);
-    font-size: 14px;
-    transition: all 0.2s ease;
-    appearance: none;
-    cursor: pointer;
-    margin-bottom: 8px;
-}
-
-.db-type-select:focus {
-    border-color: var(--md-sys-color-primary);
-    outline: none;
-    box-shadow: 0 0 0 1px var (--md-sys-color-primary);
-}
-
-/* Dropdown arrow styling */
-.db-type-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 16px;
-    padding-right: 40px;
-}
-
 [data-theme="dark"] .db-type-select {
     background-color: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface);
@@ -2348,7 +2319,6 @@ html[data-lang="en"] .swipe-guide::after {
     display: none;
 }
 
-/* Fix dark mode select options */
 [data-theme="dark"] .db-type-select option,
 [data-theme="dark"] option {
     background: var(--md-sys-color-surface-container);
@@ -2881,18 +2851,18 @@ html[data-lang="en"] .swipe-guide::after {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     padding: 12px;
     display: none;
-    width: 280px; /* Fixed width */
+    width: 280px;  /* Fixed width */
     z-index: 1000;
     border: 1px solid rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
     transform-origin: top center;
     opacity: 0;
-    height: auto;
-    overflow: hidden;
+    overflow: visible;
+    visibility: hidden; /* Keep overflow hidden for smooth animation */
     transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
                 max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), /* Keep height transition */
                 height 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Added height transition */
     will-change: transform, opacity, height; /* Added height to will-change */
     pointer-events: none;
@@ -2941,9 +2911,9 @@ html[data-lang="en"] .swipe-guide::after {
 
 .db-menu.show {
     display: block;
+    visibility: visible;
     opacity: 1;
-    max-height: 500px;
-    pointer-events: auto;
+    pointer-events: auto !important;
     animation: materialReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
@@ -2965,15 +2935,16 @@ html[data-lang="en"] .swipe-guide::after {
 @keyframes materialReveal {
     0% {
         opacity: 0;
-        transform: translateY(-20px) scale(0.9);
+        transform: translateY(-10px) scale(0.95);
         box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
     }
-    40% {
+    60% {
         opacity: 1;
+        transform: translateY(0) scale(0.98);
     }
     100% {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: none;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
     }
 }
@@ -2982,204 +2953,180 @@ html[data-lang="en"] .swipe-guide::after {
     0% {
         opacity: 1;
         transform: translateY(0) scale(1);
-        max-height: 500px;
-        padding: 12px;
-        border-width: 1px;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
     }
+    40% {
+        opacity: 0.6;
+        transform: translateY(-5px) scale(0.98);
+    }
     100% {
         opacity: 0;
-        transform: translateY(-20px) scale(0.9);
-        max-height: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-        border-width: 0;
+        transform: translateY(-10px) scale(0.95);
         box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
+        visibility: hidden;
+        pointer-events: none;
     }
 }
 
-/* Add ripple effect for material design feeling */
-.db-menu::after {
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: 20px;
-    width: 20px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 50%;
-    transform: scale(0);
-    opacity: 0;
-}
-
-.db-menu.show::after {
-    animation: rippleEffect 0.5s cubic-bezier(0, 0, 0.2, 1) forwards;
-}
-
-@keyframes rippleEffect {
-    0% {
-        transform: scale(0);
-        opacity: 0.7;
-    }
-    100% {
-        transform: scale(15);
-        opacity: 0;
-    }
-}
-
-/* Dark theme adjustments for the animation */
-[data-theme="dark"] .db-menu {
-    background: var(--md-sys-color-surface-container);
-    border-color: var(--md-sys-color-outline);
-}
-
-[data-theme="dark"] .db-menu::after {
-    background: rgba(30, 30, 30, 0.5);
-}
 
 /* ...existing code... */
 
 /* Material form db-type-group specific fixes */
 .material-form .db-type-group {
-    margin-bottom: 28px;
+    margin-bottom: 24px;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-.material-form .db-type-group .db-type-switch-container {
+/* New segmented button design for database type selection - improved alignment and clickability */
+.material-form .db-type-group .db-type-segmented {
     width: 100%;
+    display: flex;
+    border-radius: 8px;
     margin: 0 0 8px;
-    padding: 0;
-    gap: 0;
     height: 40px;
     position: relative;
-    background: transparent;
-    box-shadow: none;
-    border-radius: 24px;
-}
-
-.material-form .db-type-group .switch {
-    width: 100%;
-    height: 40px;
-    margin: 0;
-    position: relative;
-}
-
-.material-form .db-type-group .switch-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #f5f5f5;
-    transition: .3s ease-in-out;
-    border-radius: 20px;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e0e0e0;
     overflow: hidden;
+    border: 1px solid var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface);
 }
 
-.material-form .db-type-group .switch-slider:hover {
+.material-form .db-type-group .db-type-segmented input[type="radio"] {
+    opacity: 0;
+    position: absolute;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.material-form .db-type-group .db-type-segmented label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0;
+    height: 40px;
+    width: 50%;
+    cursor: pointer;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface-variant);
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.material-form .db-type-group .db-type-segmented label:first-of-type {
+    border-radius: 7px 0 0 7px;
+    border-right: 1px solid var(--md-sys-color-outline);
+}
+
+.material-form .db-type-group .db-type-segmented label:last-of-type {
+    border-radius: 0 7px 7px 0;
+}
+
+.material-form .db-type-group .db-type-segmented input[type="radio"]:checked + label {
+    color: var(--md-sys-color-on-primary);
+    background: var(--md-sys-color-primary);
+    box-shadow: var(--md-elevation-level1);
+    font-weight: 500;
+    border-right: none;
+}
+
+.material-form .db-type-group .db-type-segmented label:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+.material-form .db-type-group .db-type-segmented input[type="radio"]:checked + label:hover {
+    opacity: 0.95;
+}
+
+/* MySQL specific styling */
+.material-form .db-type-group .db-type-segmented input#mysql-radio:checked + label {
+    color: #fff;
+    background: #007bff;
+}
+
+/* PostgreSQL specific styling */
+.material-form Database type selector styles */
+.db-type-group .db-type-segmented input#postgresql-radio:checked + label {
+    color: #fff;
+    background: #dc3545;
+}
+
+/* New segmented button design for database type selection */
+.material-form .db-type-group .db-type-select {
+    width: 100%;
+    padding: 12px 16px;
+    padding-right: 40px;
+    margin-bottom: 24px;
+    border: 2px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    background: var(--md-sys-color-on-surface);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-surface);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+}
+
+.db-type-select:hover:not(:focus) {
+    background-color: var(--md-sys-color-surface-container);
+    transition: all 0.2s ease;
+}
+
+.db-type-select:focus {
     border-color: var(--md-sys-color-primary);
+    outline: none;
+    box-shadow: 0 0 0 1px var(--md-sys-color-primary),
+                0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* MySQL indicator on left side */
-.material-form .db-type-group .switch-slider:before {
-    position: absolute;
-    content: "MySQL";
-    height: 34px;
-    width: 48%;
-    left: 3px;
-    bottom: 2px;
-    background-color: white;
-    transition: .3s ease-in-out;
-    border-radius: 17px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 500;
-    color: #007bff;
+.db-type-select option {
+    padding: 12px;
+    font-weight: normal;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
 }
 
-/* PostgreSQL text on the right side */
-.material-form .db-type-group .switch-slider:after {
-    position: absolute;
-    content: "PostgreSQL";
-    height: 34px;
-    width: 48%;
-    right: 3px;
-    bottom: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 500;
-    color: #666;
-    transition: .3s ease-in-out;
+[data-theme="dark"] .db-type-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238ab4f8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 
-/* Move the indicator to right when checked */
-.material-form .db-type-group input:checked + .switch-slider:before {
-    transform: translateX(97%);
-    content: "PostgreSQL";
-    color: #dc3545;
+[data-theme="dark"] .db-type-select:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238ab4f8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    border-color: var(--md-sys-color-outline);
 }
 
-.material-form .db-type-group input:checked + .switch-slider:after {
-    content: "MySQL";
-    transform: translateX(-97%);
-    color: #666;
-}
-
-/* Dark theme support */
-[data-theme="dark"] .material-form .db-type-group .switch-slider {
-    background: #1e1e1e;
-    border-color: #444c56;
-}
-
-[data-theme="dark"] .material-form .db-type-group .switch-slider:before {
-    background-color: #2d333b;
-    color: #58a6ff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme="dark"] .material-form .db-type-group input:checked + .switch-slider:before {
-    color: #f85149;
-}
-
-[data-theme="dark"] .material-form .db-type-group .switch-slider:after {
-    color: #8b949e;
-}
-
-/* Improve the help text */
+/* Help text styling */
 .material-form .db-type-help {
     text-align: center;
     margin: 8px 0 0;
-    color: #666;
+    color: var(--md-sys-color-on-surface-variant);
     font-size: 0.85em;
     font-weight: 400;
-    transition: opacity 0.3s ease;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
     width: 100%;
 }
 
-.material-form .db-type-help small {
-    opacity: 0.8;
-    transition: opacity 0.3s ease;
-}
-
-.material-form .db-type-group:hover .db-type-help small {
+.material-form .db-type-group:hover .db-type-help {
     opacity: 1;
 }
 
 [data-theme="dark"] .material-form .db-type-help {
-    color: #8b949e;
-}
-
-/* Hide default switch labels since text is now in the slider */
-.material-form .db-type-group .switch-label {
-    display: none;
+    color: var(--md-sys-color-on-surface-variant);
 }
