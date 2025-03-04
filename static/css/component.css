@@ -1363,7 +1363,7 @@ select.monitor-dropdown[size]:not([size="1"]) {
 
 .current-db {
     color: var(--md-sys-color-primary);
-    font-weight: 500;
+    font-weight: bolder;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1371,96 +1371,56 @@ select.monitor-dropdown[size]:not([size="1"]) {
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 1rem;
 }
 
 .db-menu {
     position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
+    top: calc(100% + 25px);
+    left: -120px;
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     padding: 12px;
     display: none;
-    width: 280px;
+    width: 280px;  /* Fixed width */
+    z-index: 1000;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    transform-origin: top center;
+    opacity: 0;
+    overflow: hidden; /* Changed from visible to hidden to prevent scrollbar flashing */
+    visibility: hidden;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity, height;
+    pointer-events: none;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
 }
 
+/* Hide scrollbar for Chrome, Safari and Opera */
+.db-menu::-webkit-scrollbar {
+    display: none;
+}
+
+/* Ensure db-menu shows content but still hides scrollbars when visible */
 .db-menu.show {
     display: block;
-}
-
-.db-form {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.form-group {
-    margin-bottom: 12px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 4px;
-    color: var(--md-sys-color-on-surface);
-}
-
-.form-group input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid var(--md-sys-color-outline);
-    border-radius: 4px;
-    background: var(--md-sys-color-surface);
-}
-
-.db-type-switch-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 4px;
-    border-radius: 36px;
-    background: white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-}
-
-.db-type-switch-container .switch-label {
-    font-size: 0.9em;
-    font-weight: 500;
-    transition: color 0.3s;
-    user-select: none;
-    cursor: pointer;
-}
-
-.db-type-switch-container .switch-label.mysql.active {
-    color: #007bff;
-}
-
-.db-type-switch-container .switch-label.postgresql.active {
-    color: #dc3545;
-}
-
-.db-type-switch-container .switch-label:not(.active) {
-    color: #666;
-}
-
-.current-db::after {
-    content: '⇋';  /* Changed from '↓' to '↔' */
-    font-size: 1.2em;
-    opacity: 0.7;
-    transition: transform 0.2s ease;
-    display: inline-block;
-}
-
-.db-switch-button:hover .current-db::after {
-    transform: scale(1.2);  /* Changed from translateY to scale */
-}
-
-/* Show slightly different animation when menu is open */
-.db-menu.show + .db-switch-button .current-db::after {
-    transform: rotate(90deg);  /* Changed rotation for horizontal arrow */
+    visibility: visible;
     opacity: 1;
+    overflow: visible; /* Allow content to be seen */
+    pointer-events: auto !important;
+    animation: materialReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.db-menu.show::-webkit-scrollbar {
+    display: none;
 }
 
 .db-type-badge {
@@ -1500,11 +1460,12 @@ select.monitor-dropdown[size]:not([size="1"]) {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform, opacity;
+    pointer-events: none;
 }
 
 .db-menu.show {
     display: block;
-    transform: scale(1);
+    visibility: visible;
     opacity: 1;
 }
 
@@ -1562,6 +1523,16 @@ select.monitor-dropdown[size]:not([size="1"]) {
     overflow-y: auto;
     overflow-x: hidden; /* Add this to prevent horizontal scroll */
     width: 100%; /* Add this to ensure list takes full width */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    transform-origin: top center;
+    will-change: opacity, transform, height;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.db-list::-webkit-scrollbar {
+    display: none;
 }
 
 /* Favicon controls styles */
@@ -1672,6 +1643,12 @@ select.monitor-dropdown[size]:not([size="1"]) {
     align-items: center;
     justify-content: center;
     gap: 6px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+.add-db-button::-webkit-scrollbar {
+    display: none;
 }
 
 .add-db-button:hover {
@@ -1712,6 +1689,12 @@ select.monitor-dropdown[size]:not([size="1"]) {
 
 .form-group {
     margin-bottom: 12px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+.form-group::-webkit-scrollbar {
+    display: none;
 }
 
 .form-group label {
@@ -2857,18 +2840,40 @@ html[data-lang="en"] .swipe-guide::after {
     box-sizing: border-box;
     transform-origin: top center;
     opacity: 0;
-    overflow: visible;
-    visibility: hidden; /* Keep overflow hidden for smooth animation */
+    overflow: hidden; /* Changed from visible to hidden to prevent scrollbar flashing */
+    visibility: hidden;
     transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
                 max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), /* Keep height transition */
-                height 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Added height transition */
-    will-change: transform, opacity, height; /* Added height to will-change */
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity, height;
     pointer-events: none;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
 }
 
-/* Add animation for list-to-form and form-to-list transitions */
+/* Hide scrollbar for Chrome, Safari and Opera */
+.db-menu::-webkit-scrollbar {
+    display: none;
+}
+
+/* Ensure db-menu shows content but still hides scrollbars when visible */
+.db-menu.show {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    overflow: visible; /* Allow content to be seen */
+    pointer-events: auto !important;
+    animation: materialReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.db-menu.show::-webkit-scrollbar {
+    display: none;
+}
+
 .db-list {
     transition: opacity 0.3s ease-out, transform 0.3s ease-out;
     transform-origin: top center;
@@ -2878,10 +2883,22 @@ html[data-lang="en"] .swipe-guide::after {
 .db-list.animating-out {
     opacity: 0;
     transform: translateY(-10px) scale(0.95);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.db-list.animating-out::-webkit-scrollbar {
+    display: none;
 }
 
 .db-list.animating-in {
     animation: contentFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.db-list.animating-in::-webkit-scrollbar {
+    display: none;
 }
 
 .db-form {

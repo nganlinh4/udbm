@@ -1063,12 +1063,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 deleteBtn.innerHTML = '×';
                 deleteBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    if (!confirm(`Are you sure you want to remove ${config.database}?`)) {
-                        return;
-                    }
+                    
+                    // Store references to important elements before deletion
+                    const configKey = `${config.host}/${config.database}`;
+                    const dbItemToRemove = e.target.closest('.db-item');
+                    
+                    // Calculate initial heights before any changes
+                    const initialMenuHeight = dbMenu.scrollHeight;
+                    const itemHeight = dbItemToRemove.offsetHeight;
+                    
+                    // Estimate new height after item is removed (but before actual DOM change)
+                    const estimatedNewHeight = initialMenuHeight - itemHeight;
+                    
+                    // Set fixed height to allow for smooth transition
+                    dbMenu.style.height = `${initialMenuHeight}px`;
+                    dbMenu.style.overflow = 'hidden';
+                    
+                    // Force reflow
+                    void dbMenu.offsetHeight;
+                    
+                    // Animate item being deleted
+                    dbItemToRemove.style.transition = 'opacity 0.3s, transform 0.3s';
+                    dbItemToRemove.style.opacity = '0';
+                    dbItemToRemove.style.transform = 'translateX(-10px)';
                     
                     // Clear height caches for this DB
-                    const configKey = `${config.host}/${config.database}`;
                     try {
                         localStorage.removeItem('dbMenuListHeight_' + configKey);
                         // Don't remove form height as it's shared
@@ -1081,23 +1100,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     const currentDb = getCurrentDatabaseKey();
-                    delete savedConfigs[key];
                     
-                    // If this was the last database
-                    if (Object.keys(savedConfigs).length === 0) {
-                        setCookie('db_configs', '', -1); // Clear cookie
-                        await fetch(`${baseUrl}/api/database`, { method: 'DELETE' });
-                        location.reload(); // Refresh page to reset state
-                    } else {
-                        setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
-                        // If the deleted database was the current one, switch to another database
-                        if (key === currentDb) {
-                            const nextDbKey = Object.keys(savedConfigs)[0];
-                            switchDatabase(savedConfigs[nextDbKey]);
-                        } else {
-                            updateDbList();
-                        }
-                    }
+                    // Begin actual height transition to estimated height
+                    setTimeout(() => {
+                        dbMenu.style.height = `${estimatedNewHeight}px`;
+                        
+                        // Now remove the item from the data structure
+                        delete savedConfigs[key];
+                        
+                        // After transition completes, update the DOM structure
+                        setTimeout(() => {
+                            // If this was the last database
+                            if (Object.keys(savedConfigs).length === 0) {
+                                setCookie('db_configs', '', -1); // Clear cookie
+                                fetch(`${baseUrl}/api/database`, { method: 'DELETE' });
+                                location.reload(); // Refresh page to reset state
+                            } else {
+                                // Update the cookie first
+                                setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
+                                
+                                // Remove the item from DOM
+                                if (dbItemToRemove && dbItemToRemove.parentNode) {
+                                    dbItemToRemove.parentNode.removeChild(dbItemToRemove);
+                                }
+                                
+                                // Reset to auto height after removal is complete
+                                dbMenu.style.height = 'auto';
+                                dbMenu.style.overflow = '';
+                                
+                                // If the deleted database was the current one, switch to another database
+                                if (key === currentDb) {
+                                    const nextDbKey = Object.keys(savedConfigs)[0];
+                                    switchDatabase(savedConfigs[nextDbKey]);
+                                }
+                            }
+                        }, 300); // Match the height transition duration
+                    }, 100); // Slight delay to allow opacity change to start
                 });
                 
                 item.appendChild(contentSpan);
@@ -1105,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 container.appendChild(item);
             });
         }
-        
+
         function switchDatabase(config) {
             const dbList = document.querySelector('.db-list');
             dbList.innerHTML = '<div class="db-loading">Connecting...</div>';
@@ -1370,15 +1408,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // Show form - code remains the same
-            // Begin animation: fade out the current list
-            dbList.classList.add('animating-out');
-
-            // Store current height before any changes
+            // Disable the button during animation
+            addDbButton.classList.add('disabled');
+            
+            // Begin animation for showing the form
+            // Step 1: Measure and set initial height
             const currentHeight = dbMenu.scrollHeight;
-            dbMenu.style.height = currentHeight + 'px';
-
-            // Define form content first
+            dbMenu.style.height = `${currentHeight}px`;
+            dbMenu.style.overflow = 'hidden';
+            
+            // Step 2: Prepare the form but keep it hidden
             const formHtml = `
                 <form class="db-form material-form">
                     <div class="form-group">
@@ -1411,90 +1450,108 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </form>
             `;
-
-            // After a short delay to allow fade out animation
+            
+            // Step 3: Create a temporary form to measure its height
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.visibility = 'hidden';
+            tempContainer.style.width = dbList.offsetWidth + 'px';
+            tempContainer.innerHTML = formHtml;
+            dbMenu.appendChild(tempContainer);
+            
+            // Step 4: Measure the form height
+            const estimatedFormHeight = tempContainer.scrollHeight;
+            dbMenu.removeChild(tempContainer);
+            
+            // Step 5: Fade out current content
+            const currentContent = Array.from(dbList.children);
+            currentContent.forEach(el => {
+                el.style.transition = 'opacity 0.2s ease-out';
+                el.style.opacity = '0';
+            });
+            
+            // Step 6: Hide favicon controls with animation
+            const faviconControls = dbMenu.querySelector('.favicon-controls');
+            if (faviconControls) {
+                faviconControls.style.transition = 'opacity 0.2s ease-out';
+                faviconControls.style.opacity = '0';
+            }
+            
+            // Step 7: After fade out, swap content and animate to new height
             setTimeout(() => {
+                // Mark as form open for state tracking
                 isFormOpen = true;
                 updateAddButtonState(true);
                 
-                // Instead of removing favicon controls, just hide them
-                const faviconControls = dbMenu.querySelector('.favicon-controls');
+                // Hide favicon controls
                 if (faviconControls) {
-                    // Just hide it instead of removing
-                    faviconControls.style.opacity = '0';
                     faviconControls.style.visibility = 'hidden';
                     faviconControls.style.display = 'none';
-                    
-                    // We don't need to store it since we're no longer removing it
-                    // But keep the reference in case it's needed elsewhere
-                    dbMenu.dataset.hasFaviconControls = 'true';
                 }
-               
-                // Create temporary container to measure form height
-                const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'absolute';
-                tempContainer.style.visibility = 'hidden';
-                tempContainer.innerHTML = formHtml;
-                dbMenu.appendChild(tempContainer);
                 
-                // Get the final height from temp container
-                const finalHeight = tempContainer.scrollHeight;
+                // Update the content
+                dbList.innerHTML = formHtml;
                 
-                // Remove temp container
-                dbMenu.removeChild(tempContainer);
+                // Start with the form hidden
+                const form = dbList.querySelector('.db-form');
+                form.style.opacity = '0';
                 
-                // Now update actual content and animate height
+                // Force a reflow
+                void dbList.offsetHeight;
+                
+                // Animate to the new height
                 requestAnimationFrame(() => {
-                    dbList.innerHTML = formHtml;
-                    const form = dbList.querySelector('.db-form');
-                    form.style.opacity = '0';
-                    form.classList.add('animating-in');
-                    setTimeout(() => {
-                        dbMenu.style.height = form.scrollHeight + 'px';
-                    }, 50);
+                    dbMenu.style.height = `${estimatedFormHeight}px`;
                     
-                    // Add cleanup timeout
+                    // Once height animation has started, fade in the form
                     setTimeout(() => {
+                        form.style.transition = 'opacity 0.3s ease-in';
                         form.style.opacity = '1';
-                        dbList.classList.remove('animating-out');
-                        form.classList.remove('animating-in');
-                        // Reset to auto height after animation
-                        dbMenu.style.height = 'auto';
                         
-                        // Setup radio button handlers after form is visible
-                        // Handle form submission after form is ready
-                        form.addEventListener('submit', (e) => {
-                            e.preventDefault();
-                            const formData = new FormData(form);
-                            const config = Object.fromEntries(formData);
+                        // Final cleanup once animation completes
+                        setTimeout(() => {
+                            dbMenu.style.height = 'auto';
+                            dbMenu.style.overflow = '';
+                            addDbButton.classList.remove('disabled');
                             
-                            // Get type from select element
-                            const type = config.type; // Type is already in the FormData
+                            // Store the actual height after everything is visible
+                            const actualFormHeight = dbMenu.scrollHeight;
+                            const currentDb = getCurrentDatabaseKey();
+                            localStorage.setItem('dbMenuFormHeight_' + (currentDb || 'default'), actualFormHeight);
                             
-                            // Add the type to the config and save
-                            const fullConfig = {
-                                ...config,
-                                type // Explicitly set the type field
-                            };
-                            const configKey = `${fullConfig.host}/${fullConfig.database}`;
-                            savedConfigs[configKey] = fullConfig;
-                            
-                            setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
-                            
-                            // Show the updated list before switching
-                            updateDbList();
-                            isFormOpen = false;
-                            updateAddButtonState(false);
-                            
-                            // Switch to the new database
-                            switchDatabase(config);
-                        });
-                    }, 300);
+                            // Setup form submission handler
+                            form.addEventListener('submit', (e) => {
+                                e.preventDefault();
+                                const formData = new FormData(form);
+                                const config = Object.fromEntries(formData);
+                                
+                                // Get type from select element
+                                const type = config.type; // Type is already in the FormData
+                                
+                                // Add the type to the config and save
+                                const fullConfig = {
+                                    ...config,
+                                    type // Explicitly set the type field
+                                };
+                                const configKey = `${fullConfig.host}/${fullConfig.database}`;
+                                savedConfigs[configKey] = fullConfig;
+                                
+                                setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
+                                
+                                // Show the updated list before switching
+                                updateDbList();
+                                isFormOpen = false;
+                                updateAddButtonState(false);
+                                
+                                // Switch to the new database
+                                switchDatabase(config);
+                            });
+                        }, 300);
+                    }, 50);
                 });
-                
-            }, 300); // Wait for fade-out animation to complete
+            }, 250); // Wait for fade-out to complete
         });
-        
+
         // Close menu when clicking outside with proper closing animation
         document.addEventListener('click', (e) => {
             if (!dbMenu.contains(e.target) && !dbSwitchButton.contains(e.target) && dbMenu.classList.contains('show')) {
