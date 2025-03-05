@@ -1552,6 +1552,166 @@ select.monitor-dropdown[size]:not([size="1"]) {
     display: none;
 }
 
+/* Enhanced animations for db-list */
+.db-list {
+    margin-bottom: 12px;
+    max-height: 425px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: top center;
+    will-change: opacity, transform, height;
+}
+
+/* Entry animations for db-list items */
+.db-item {
+    padding: 8px 12px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    transition: background-color 0.2s, transform 0.2s;
+    animation: itemReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+    transform-origin: top;
+    opacity: 0;
+}
+
+/* Staggered animation for each db-item */
+.db-item:nth-child(1) { animation-delay: 0.05s; }
+.db-item:nth-child(2) { animation-delay: 0.1s; }
+.db-item:nth-child(3) { animation-delay: 0.15s; }
+.db-item:nth-child(4) { animation-delay: 0.2s; }
+.db-item:nth-child(5) { animation-delay: 0.25s; }
+.db-item:nth-child(6) { animation-delay: 0.3s; }
+.db-item:nth-child(7) { animation-delay: 0.35s; }
+.db-item:nth-child(8) { animation-delay: 0.4s; }
+.db-item:nth-child(9) { animation-delay: 0.45s; }
+.db-item:nth-child(10) { animation-delay: 0.5s; }
+
+/* Animation for db-list and form transitions */
+.db-list.animating-out {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.db-list.animating-in {
+    animation: contentFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Add/Edit form animations */
+.db-form {
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity, transform;
+}
+
+.db-form.animating-out {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.db-form.animating-in {
+    animation: contentFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Entry animation for form elements */
+.db-form .form-group {
+    animation: formItemReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+    opacity: 0;
+}
+
+.db-form .form-group:nth-child(1) { animation-delay: 0.1s; }
+.db-form .form-group:nth-child(2) { animation-delay: 0.15s; }
+.db-form .form-group:nth-child(3) { animation-delay: 0.2s; }
+.db-form .form-group:nth-child(4) { animation-delay: 0.25s; }
+.db-form .form-group:nth-child(5) { animation-delay: 0.3s; }
+
+.db-form button[type="submit"] {
+    animation: formItemReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation-delay: 0.35s;
+    opacity: 0;
+}
+
+/* Keyframe animations */
+@keyframes itemReveal {
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes formItemReveal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes contentFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Enhanced material design animation for the menu */
+@keyframes materialReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+        box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
+    }
+    60% {
+        opacity: 1;
+        transform: translateY(0) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: none;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+}
+
+@keyframes materialClose {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+    40% {
+        opacity: 0.6;
+        transform: translateY(-5px) scale(0.98);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+        box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
 /* Favicon controls styles */
 .favicon-controls {
     padding: 12px;
@@ -1561,6 +1721,16 @@ select.monitor-dropdown[size]:not([size="1"]) {
     gap: 12px;
     position: relative;
     z-index: 1;
+    opacity: 0; /* Start hidden */
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* Add transition */
+    transform: translateY(10px); /* Start slightly below */
+    will-change: opacity, transform;
+}
+
+/* Animation for favicon controls appearing */
+.favicon-controls.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .favicon-switch {
@@ -3002,6 +3172,9 @@ html[data-lang="en"] .swipe-guide::after {
     }
 }
 
+.db-menu.materialReveal {
+    animation: materialReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
 
 /* ...existing code... */
 

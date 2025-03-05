@@ -1042,6 +1042,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     void faviconControls.offsetWidth;
                     faviconControls.style.opacity = '1';
                     faviconControls.style.visibility = 'visible';
+                    
+                    // Add visible class for additional animation if defined
+                    setTimeout(() => {
+                        faviconControls.classList.add('visible');
+                    }, 50);
                 });
             }
             
@@ -1057,9 +1062,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            entries.forEach(([key, config]) => {
+            // Clear existing content
+            container.innerHTML = '';
+            
+            entries.forEach(([key, config], index) => {
                 const item = document.createElement('div');
                 item.className = 'db-item';
+                // Apply staggered animation effect if no delays are already present
+                if(!container.querySelector('.db-item')) {
+                    // First item has default animation timing
+                    // Other items will get their delay from CSS
+                }
                 
                 const contentSpan = document.createElement('span');
                 contentSpan.className = 'db-item-content';
@@ -1121,25 +1134,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => {
                             // If this was the last database
                             if (Object.keys(savedConfigs).length === 0) {
-                                setCookie('db_configs', '', -1); // Clear cookie
-                                fetch(`${baseUrl}/api/database`, { method: 'DELETE' });
-                                location.reload(); // Refresh page to reset state
-                            } else {
-                                // Update the cookie first
-                                setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
-                                
-                                // Remove the item from DOM
-                                if (dbItemToRemove && dbItemToRemove.parentNode) {
-                                    dbItemToRemove.parentNode.removeChild(dbItemToRemove);
-                                }
-                                
-                                // Reset to auto height after removal is complete
-                                dbMenu.style.height = 'auto';
-                                dbMenu.style.overflow = '';
-                                
-                                // If the deleted database was the current one, switch to another database
-                                if (key === currentDb) {
-                                    const nextDbKey = Object.keys(savedConfigs)[0];
+                                // Clear cookie and redirect to setup
+                                setCookie('db_configs', '', -1);
+                                showAddDatabaseForm();
+                                return;
+                            }
+                            
+                            // Remove the item from DOM
+                            if (dbItemToRemove.parentNode) {
+                                dbItemToRemove.parentNode.removeChild(dbItemToRemove);
+                            }
+                            
+                            // Update cookie with remaining configs
+                            setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
+                            
+                            // If we're deleting the currently active database, switch to another one
+                            if (currentDb && currentDb === configKey) {
+                                const nextDbKey = Object.keys(savedConfigs)[0];
+                                if (nextDbKey) {
                                     switchDatabase(savedConfigs[nextDbKey]);
                                 }
                             }
@@ -1224,13 +1236,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         faviconControls.style.display = 'flex';
                         faviconControls.style.visibility = 'visible';
                         faviconControls.style.opacity = '1';
-                    }
-                    
-                    const logoControls = dbMenu.querySelector('.logo-controls');
-                    if (logoControls) {
-                        logoControls.style.display = 'flex';
-                        logoControls.style.visibility = 'visible';
-                        logoControls.style.opacity = '1';
+                        
+                        // Add visible class for additional animation
+                        setTimeout(() => {
+                            faviconControls.classList.add('visible');
+                        }, 50);
                     }
                 }
                 
@@ -1258,14 +1268,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         dbMenu.style.opacity = '1';
                         dbMenu.classList.add('show');
                         
+                        // Add materialReveal animation class
+                        dbMenu.classList.add('materialReveal');
+                        
                         // Reset to auto height after animation completes
                         setTimeout(() => {
                             dbMenu.style.height = 'auto';
                             dbMenu.style.overflow = '';
                             
+                            // Remove the animation class after animation completes
+                            dbMenu.classList.remove('materialReveal');
+                            
                             // Re-enable the button
                             dbSwitchButton.classList.remove('disabled');
-                        }, 300);
+                        }, 400); // Match animation duration in CSS
                     }, 10);
                 }, 100); // Give browser time to fully render content
                 
