@@ -586,6 +586,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Handle favicon drag-and-drop
+    // Use the existing faviconUploadButton variable, but get the specific button element
+    const uploadButton = document.querySelector('.favicon-upload .upload-button');
+    uploadButton.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadButton.classList.add('dragover');
+    });
+    uploadButton.addEventListener('dragleave', () => {
+        uploadButton.classList.remove('dragover');
+    });
+    uploadButton.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadButton.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                localStorage.setItem('customFavicon', e.target.result);
+                updateFavicon();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
     // Add loaded class immediately to make content visible
     document.body.classList.add('loaded');
     

@@ -3296,7 +3296,7 @@ html[data-lang="en"] .swipe-guide::after {
 .db-type-select:focus {
     border-color: var(--md-sys-color-primary);
     outline: none;
-    box-shadow: 0 0 0 1px var(--md-sys-color-primary),
+    box-shadow: 0 0 0 1px var (--md-sys-color-primary),
                 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -3336,4 +3336,18 @@ html[data-lang="en"] .swipe-guide::after {
 
 [data-theme="dark"] .material-form .db-type-help {
     color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Styles for drag-and-drop state */
+.upload-button.dragover {
+    background: var(--md-sys-color-surface-variant);
+    border: 2px dashed var(--md-sys-color-primary);
+    color: var(--md-sys-color-primary);
+}
+
+/* Ensure dark theme support for drag-and-drop state */
+[data-theme="dark"] .upload-button.dragover {
+    background: var(--md-sys-color-surface-container);
+    border: 2px dashed var(--md-sys-color-primary);
+    color: var(--md-sys-color-primary);
 }

@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var logoToggle = document.getElementById('logoToggle');
     var logoUpload = document.getElementById('logoUpload');
     var pageLogo = document.getElementById('pageLogo');
-    var logoUploadButton = document.querySelector('.logo-upload');
+    var logoUploadButton = document.querySelector('.logo-upload .upload-button');
     var savedLogoData = localStorage.getItem('pageLogo');
     var savedLogoEnabled = localStorage.getItem('logoEnabled') === 'true';
 
@@ -38,6 +38,32 @@ document.addEventListener('DOMContentLoaded', function() {
             var reader = new FileReader();
             reader.onload = function(e) {
                 var logoData = e.target.result;
+                pageLogo.innerHTML = '<img src="' + logoData + '" alt="Page Logo"><div class="resize-handle"></div>';
+                localStorage.setItem('pageLogo', logoData);
+                pageLogo.style.display = 'block';
+                logoToggle.checked = true;
+                localStorage.setItem('logoEnabled', true);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Handle logo drag-and-drop
+    logoUploadButton.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        logoUploadButton.classList.add('dragover');
+    });
+    logoUploadButton.addEventListener('dragleave', () => {
+        logoUploadButton.classList.remove('dragover');
+    });
+    logoUploadButton.addEventListener('drop', (e) => {
+        e.preventDefault();
+        logoUploadButton.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const logoData = e.target.result;
                 pageLogo.innerHTML = '<img src="' + logoData + '" alt="Page Logo"><div class="resize-handle"></div>';
                 localStorage.setItem('pageLogo', logoData);
                 pageLogo.style.display = 'block';
