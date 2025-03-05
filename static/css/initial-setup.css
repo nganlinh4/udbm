@@ -1,0 +1,48 @@
+/* Initial setup screen styles */
+.initial-setup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 125vw;
+    height: 125vh;
+    background: var(--md-sys-color-background);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.setup-content {
+    width: 400px;
+    text-align: center;
+    padding: 2rem;
+    border-radius: 24px;
+    background: var(--md-sys-color-surface);
+    box-shadow: var(--md-elevation-level3);
+}
+
+.setup-content h1 {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+    color: var(--md-sys-color-on-surface);
+}
+
+.setup-description {
+    color: var(--md-sys-color-on-surface-variant);
+    margin-bottom: 2rem;
+    font-size: 1rem;
+}
+
+.setup-form-container {
+    text-align: left;
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+    width: 100%;
+}
+
+.setup-form-container form {
+    opacity: 1;
+    visibility: visible;
+    transition: none;
+}

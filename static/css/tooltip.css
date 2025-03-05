@@ -1,0 +1,138 @@
+.tooltip {
+    position: absolute;
+    background: rgba(97, 97, 97, 0.9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 36px;
+    font-size: 0.8rem;
+    max-width: 500px;
+    line-height: 1.4;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 1000;
+    font-family: Roboto, sans-serif;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    top: 115%;
+    left: 89%;
+    transform: translate(-50%, 8px);
+}
+
+.tooltip::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background: rgba(97, 97, 97, 0.9);
+}
+
+
+
+.tooltip.temp-tooltip {
+    background: rgba(33, 150, 243, 0.9);
+    white-space: nowrap;
+    max-width: none;
+    animation: fadeInOut 3s ease-in-out forwards;
+    left: 15px;
+}
+
+.tooltip.temp-tooltip::after {
+    background: rgba(33, 150, 243, 0.9);  /* Match the tooltip background color */
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translate(-50%, 8px); }
+    10% { opacity: 1; transform: translate(-50%, 4px); }
+    80% { opacity: 1; transform: translate(-50%, 4px); }
+    100% { opacity: 0; transform: translate(-50%, 8px); }
+}
+
+.default-tooltip {
+    display: none;
+}
+
+.pause-button:hover .default-tooltip {
+    display: block;
+}
+
+.schema-button .tooltip {
+    left: 50%;
+    width: max-content;
+}
+
+.schema-button:hover .tooltip {
+    opacity: 1;
+    transform: translate(-50%, 4px);
+}
+
+.switch-container:hover .tooltip {
+    opacity: 1;
+    transform: translate(-50%, 4px);
+}
+
+/* Admin mode tooltip specific styles */
+.switch-container .tooltip {
+    position: absolute;
+    top: 130%;
+    left: 50%;
+    transform: translate(-50%, 8px);
+    min-width: 280px;
+    line-height: 1.5;
+    padding: 12px 20px;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    font-size: 0.9em;
+    background: rgba(97, 97, 97, 0.9);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.switch-container .tooltip span {
+    display: block;
+    text-align: left;
+}
+
+.switch-container .tooltip kbd {
+    display: inline-block;
+    padding: 3px 8px;
+    margin: 0 2px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.switch-container .tooltip hr {
+    border: none;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 10px 0;
+    padding: 0;
+}
+
+[data-theme="dark"] .switch-container .tooltip {
+    background: rgba(97, 97, 97, 0.9);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.switch-container .tooltip span[class*='lang-'] {
+    padding: 6px 0;
+}
+
+.admin-mode-container .tooltip::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background: inherit;
+}

@@ -1,0 +1,62 @@
+.toggle-button {
+    cursor: pointer;
+    padding: 8px 16px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 20px;
+    color: var(--md-sys-color-on-primary);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    background: var(--md-sys-color-primary);
+    box-shadow: var(--md-elevation-level1);
+}
+
+.toggle-button.show {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.toggle-button.hide {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.toggle-button.hide.theme-0,
+.toggle-button.hide.theme-1,
+.toggle-button.hide.theme-2,
+.toggle-button.hide.theme-3,
+.toggle-button.hide.theme-4,
+.toggle-button.hide.theme-5,
+.toggle-button.hide.theme-6,
+.toggle-button.hide.theme-7,
+.toggle-button.hide.theme-8,
+.toggle-button.hide.theme-9 {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+[data-theme="dark"] .toggle-button.hide.theme-0,
+[data-theme="dark"] .toggle-button.hide.theme-1,
+[data-theme="dark"] .toggle-button.hide.theme-2,
+[data-theme="dark"] .toggle-button.hide.theme-3,
+[data-theme="dark"] .toggle-button.hide.theme-4,
+[data-theme="dark"] .toggle-button.hide.theme-5,
+[data-theme="dark"] .toggle-button.hide.theme-6,
+[data-theme="dark"] .toggle-button.hide.theme-7,
+[data-theme="dark"] .toggle-button.hide.theme-8,
+[data-theme="dark"] .toggle-button.hide.theme-9 {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.toggle-button:hover {
+    opacity: 1;
+    background-position: right center;
+    transform: translateY(-1px);
+    box-shadow: var(--md-elevation-level2);
+}
+
+.toggle-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}

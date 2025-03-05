@@ -1,0 +1,627 @@
+.db-form {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px; /* Reduced padding */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    position: relative;
+    z-index: 2;
+}
+
+.form-group {
+    margin-bottom: 12px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+.form-group::-webkit-scrollbar {
+    display: none;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--md-sys-color-on-surface);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 24px;
+    background: var(--md-sys-color-surface);
+    color: var (--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .form-group select {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface);
+    border-color: var(--md-sys-color-outline);
+}
+
+[data-theme="dark"] .form-group select option {
+    background-color: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface);
+}
+
+/* Material Design Form Styles */
+.material-form .form-group {
+    margin-bottom: 24px;
+    position: relative;
+}
+
+.material-form .form-group label {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: transparent;
+    padding: 0 4px;
+    color: var(--md-sys-color-on-surface-variant);
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.material-form .form-group input {
+    width: 100%;
+    padding: 16px;
+    border: 2px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    background: var(--md-sys-color-surface);
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.material-form .form-group input:focus + label,
+.material-form .form-group input:not(:placeholder-shown) + label {
+    top: 0;
+    transform: translateY(-50%) scale(0.85);
+    background: white;
+    color: var(--md-sys-color-primary);
+}
+
+[data-theme="dark"] .material-form .form-group input:focus + label,
+[data-theme="dark"] .material-form .form-group input:not(:placeholder-shown) + label {
+    background: var(--md-sys-color-surface);
+}
+
+.material-form .form-group input:focus {
+    border-color: var(--md-sys-color-primary);
+    outline: none;
+    box-shadow: 0 0 0 1px var (--md-sys-color-primary);
+}
+
+[data-theme="dark"] .material-form .form-group label {
+    background: #00000000;
+    color: var(--md-sys-color-primary);
+}
+
+[data-theme="dark"] .material-form .form-group input {
+    background: var(--md-sys-color-surface-variant);
+    border-color: var(--md-sys-color-outline);
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .material-form .form-group input:focus {
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 1px var(--md-sys-color-primary);
+}
+
+.db-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-group label {
+    font-size: 0.9em;
+    color: var(--md-sys-color-on-surface);
+}
+
+.form-group input {
+    padding: 15px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 24px;
+    background: var(--md-sys-color-surface);
+}
+
+.add-db-button {
+    margin-top: 8px;
+    padding: 8px;
+    border: none;
+    border-radius: 24px;
+    background: #4f8adc;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-db-button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.db-loading {
+    padding: 20px;
+    text-align: center;
+    color: var(--md-sys-color-on-surface);
+    font-style: italic;
+}
+
+.db-error {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background: #ffebee;
+    color: #d32f2f;
+    border-radius: 8px;
+    border: 1px solid #ffcdd2;
+}
+
+/* Update form styles to be more robust */
+.db-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.db-form .form-group {
+    margin: 0;
+}
+
+.db-form input {
+    height: 36px;
+    box-sizing: border-box;
+}
+
+.db-form button[type="submit"] {
+    margin-top: 8px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+}
+
+/* Add new styles for the back button state */
+.add-db-button.back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--md-sys-color-on-surface-variant);
+    border: none;
+    background: #ffffff;
+}
+
+.add-db-button.back::before {
+    content: "←";
+    font-size: 1.2em;
+    margin-right: 4px;
+}
+
+.add-db-button.back:hover {
+    background: var(--md-sys-color-surface-variant);
+    opacity: 0.9;
+}
+
+[data-theme="dark"] .db-form input {
+    background: var(--md-sys-color-surface);
+    border-color: var(--md-sys-color-outline);
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .db-form label {
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .db-loading {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+[data-theme="dark"] .db-error {
+    background: rgba(244, 67, 54, 0.1);
+    border-color: rgba(244, 67, 54, 0.2);
+    color: #ff8a80;
+}
+
+[data-theme="dark"] .add-db-button.back {
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+[data-theme="dark"] .add-db-button.back:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+/* Add these rules to properly handle language visibility in the add-db-button */
+.db-form .add-db-button .lang-ko,
+.db-form .add-db-button .lang-en {
+    display: none;
+}
+
+[data-theme="light"] .db-form .add-db-button .lang-ko,
+[data-theme="dark"] .db-form .add-db-button .lang-ko {
+    display: inline;
+}
+
+html[data-lang="en"] .db-form .add-db-button .lang-ko {
+    display: none;
+}
+
+html[data-lang="en"] .db-form .add-db-button .lang-en {
+    display: inline;
+}
+
+.db-form ~ .favicon-controls {
+    display: none;
+}
+
+.db-menu.show .db-form ~ .favicon-controls,
+.db-menu .db-form ~ .favicon-controls {
+    display: none;
+}
+
+/* Hide favicon controls when db-form is present */
+.db-list:has(.db-form) ~ .favicon-controls {
+    display: none !important;
+}
+
+.db-menu.show .db-form + .favicon-controls,
+#dbMenu:has(.db-form) .favicon-controls {
+    display: none !important;
+}
+
+
+/* When form is present, ensure favicon controls are hidden */
+.db-menu:has(.db-form) .favicon-controls {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Add/Edit form animations */
+.db-form {
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity, transform;
+}
+
+.db-form.animating-out {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.db-form.animating-in {
+    animation: contentFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Entry animation for form elements */
+.db-form .form-group {
+    animation: formItemReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+    opacity: 0;
+}
+
+.db-form .form-group:nth-child(1) { animation-delay: 0.1s; }
+.db-form .form-group:nth-child(2) { animation-delay: 0.15s; }
+.db-form .form-group:nth-child(3) { animation-delay: 0.2s; }
+.db-form .form-group:nth-child(4) { animation-delay: 0.25s; }
+.db-form .form-group:nth-child(5) { animation-delay: 0.3s; }
+
+.db-form button[type="submit"] {
+    animation: formItemReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation-delay: 0.35s;
+    opacity: 0;
+}
+
+@keyframes formItemReveal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.add-db-button {
+    width: 100%;
+    padding: 8px;
+    border: 1px dashed var(--md-sys-color-outline);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    color: var(--md-sys-color-primary);
+    display: inline-flex;  /* Changed from flex to inline-flex */
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+.add-db-button::-webkit-scrollbar {
+    display: none;
+}
+
+.add-db-button:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+.add-db-button .add-text::before {
+    content: '+';
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-right: 4px;
+    display: inline-block;
+    line-height: 1;
+}
+
+[data-theme="dark"] .add-db-button {
+    border-color: var(--md-sys-color-outline);
+    background: #8dcdff;
+    color: #000000;
+}
+
+[data-theme="dark"] .add-db-button:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+.db-type-switch-container {
+    background: #f5f5f5;
+    padding: 8px;
+    border-radius: 24px;
+    margin-bottom: 20px;
+}
+
+[data-theme="dark"] .db-type-switch-container {
+    background: var(--md-sys-color-surface-variant);
+}
+
+[data-theme="dark"] .db-type-help {
+    color: #999;
+}
+
+.db-form .db-type-help {
+    text-align: center;
+    margin: 4px 0 20px;
+    color: #666;
+    font-size: 0.85em;
+}
+
+/* New segmented button design for database type selection - improved alignment and clickability */
+.material-form .db-type-group .db-type-segmented {
+    width: 100%;
+    display: flex;
+    border-radius: 8px;
+    margin: 0 0 8px;
+    height: 40px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface);
+}
+
+.material-form .db-type-group .db-type-segmented input[type="radio"] {
+    opacity: 0;
+    position: absolute;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.material-form .db-type-group .db-type-segmented label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0;
+    height: 40px;
+    width: 50%;
+    cursor: pointer;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface-variant);
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.material-form .db-type-group .db-type-segmented label:first-of-type {
+    border-radius: 7px 0 0 7px;
+    border-right: 1px solid var(--md-sys-color-outline);
+}
+
+.material-form .db-type-group .db-type-segmented label:last-of-type {
+    border-radius: 0 7px 7px 0;
+}
+
+.material-form .db-type-group .db-type-segmented input[type="radio"]:checked + label {
+    color: var(--md-sys-color-on-primary);
+    background: var(--md-sys-color-primary);
+    box-shadow: var(--md-elevation-level1);
+    font-weight: 500;
+    border-right: none;
+}
+
+.material-form .db-type-group .db-type-segmented label:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+.material-form .db-type-group .db-type-segmented input[type="radio"]:checked + label:hover {
+    opacity: 0.95;
+}
+
+/* MySQL specific styling */
+.material-form .db-type-group .db-type-segmented input#mysql-radio:checked + label {
+    color: #fff;
+    background: #007bff;
+}
+
+/* PostgreSQL specific styling */
+.material-form Database type selector styles */
+.db-type-group .db-type-segmented input#postgresql-radio:checked + label {
+    color: #fff;
+    background: #dc3545;
+}
+
+/* New segmented button design for database type selection */
+.material-form .db-type-group .db-type-select {
+    width: 100%;
+    padding: 12px 16px;
+    padding-right: 40px;
+    margin-bottom: 24px;
+    border: 2px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    background: var(--md-sys-color-on-surface);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-surface);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+}
+
+.db-type-select:hover:not(:focus) {
+    background-color: var(--md-sys-color-surface-container);
+    transition: all 0.2s ease;
+}
+
+.db-type-select:focus {
+    border-color: var(--md-sys-color-primary);
+    outline: none;
+    box-shadow: 0 0 0 1px var (--md-sys-color-primary),
+                0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.db-type-select option {
+    padding: 12px;
+    font-weight: normal;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .db-type-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238ab4f8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .db-type-select:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238ab4f8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    border-color: var(--md-sys-color-outline);
+}
+
+/* Help text styling */
+.material-form .db-type-help {
+    text-align: center;
+    margin: 8px 0 0;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 0.85em;
+    font-weight: 400;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+    width: 100%;
+}
+
+.material-form .db-type-group:hover .db-type-help {
+    opacity: 1;
+}
+
+[data-theme="dark"] .material-form .db-type-help {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Styles for drag-and-drop state */
+.upload-button.dragover {
+    background: var(--md-sys-color-surface-variant);
+    border: 2px dashed var(--md-sys-color-primary);
+    color: var(--md-sys-color-primary);
+}
+
+/* Ensure dark theme support for drag-and-drop state */
+[data-theme="dark"] .upload-button.dragover {
+    background: var(--md-sys-color-surface-container);
+    border: 2px dashed var(--md-sys-color-primary);
+    color: var(--md-sys-color-primary);
+}
+
+/* Favicon controls styles */
+.favicon-controls {
+    padding: 12px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+    opacity: 0; /* Start hidden */
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* Add transition */
+    transform: translateY(10px); /* Start slightly below */
+    will-change: opacity, transform;
+}
+
+/* Animation for favicon controls appearing */
+.favicon-controls.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.favicon-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.favicon-switch .switch-label {
+    font-size: 0.9em;
+    color: var(--md-sys-color-on-surface);
+}
+
+.favicon-upload .upload-button {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 24px;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.favicon-upload .upload-button:hover {
+    background: var(--md-sys-color-surface-variant);
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .favicon-upload .upload-button {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+[data-theme="dark"] .favicon-upload .upload-button:hover {
+    background: var(--md-sys-color-surface-variant);
+}
