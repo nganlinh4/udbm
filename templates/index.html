@@ -44,8 +44,38 @@
         // Set initial language toggle state
         window.addEventListener('DOMContentLoaded', () => {
             const toggle = document.getElementById('languageToggle');
-            if (toggle) {
-                toggle.checked = savedLang === 'en';
+            const initialToggle = document.getElementById('initialLanguageToggle');
+            
+            const setToggleState = (toggle) => {
+                if (toggle) toggle.checked = savedLang === 'en';
+            };
+            [toggle, initialToggle].forEach(setToggleState);
+
+            // Add event listener to initial setup language toggle
+            if (initialToggle) {
+                initialToggle.addEventListener('change', function() {
+                    const newLang = this.checked ? 'en' : 'ko';
+                    document.documentElement.setAttribute('data-lang', newLang);
+                    document.cookie = `preferred_language=${newLang};path=/;max-age=31536000`;
+                    if (toggle) toggle.checked = this.checked;
+                    
+                    // Immediately update language display without page refresh
+                    document.querySelectorAll('.lang-ko, .lang-en').forEach(el => {
+                        el.style.cssText = 'display: none !important';
+                    });
+                    document.querySelectorAll(`.lang-${newLang}`).forEach(el => {
+                        el.style.cssText = 'display: inline !important';
+                    });
+                    
+                    // Update switch label opacity
+                    document.querySelectorAll('.switch-label').forEach(label => {
+                        if (label.getAttribute('data-lang') === newLang) {
+                            label.style.opacity = '1';
+                        } else {
+                            label.style.opacity = '0.5';
+                        }
+                    });
+                });
             }
         });
     </script>
@@ -71,6 +101,27 @@
                 };
             }
         });
+
+        // Theme toggle synchronization
+        window.addEventListener('DOMContentLoaded', () => {
+            const mainThemeToggle = document.getElementById('themeToggle');
+            const initialThemeToggle = document.getElementById('initialThemeToggle');
+            
+            // Set initial state based on current theme
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (mainThemeToggle) mainThemeToggle.checked = isDarkTheme;
+            if (initialThemeToggle) initialThemeToggle.checked = isDarkTheme;
+            
+            // Add event listener to initial theme toggle
+            if (initialThemeToggle) {
+                initialThemeToggle.addEventListener('change', function() {
+                    const theme = this.checked ? 'dark' : 'light';
+                    document.documentElement.setAttribute('data-theme', theme);
+                    document.cookie = `preferred_theme=${theme};path=/;max-age=31536000`;
+                    if (mainThemeToggle) mainThemeToggle.checked = this.checked;
+                });
+            }
+        });
     </script>
 </head>
 
@@ -78,6 +129,27 @@
     <!-- Initial setup screen for no database -->
     <div id="initial-setup" style="display: {{ 'flex' if not has_database else 'none' }};" class="initial-setup">
         <div class="setup-content">
+            <div class="setup-header">
+                <div class="setup-controls">
+                    <div class="setup-language-switcher">
+                        <span class="switch-label ko" data-lang="ko">한국어</span>
+                        <label class="switch">
+                            <input type="checkbox" id="initialLanguageToggle">
+                            <span class="switch-slider"></span>
+                        </label>
+                        <span class="switch-label en" data-lang="en">ENG</span>
+                    </div>
+                    <div class="setup-theme-switcher">
+                        <label class="theme-switch" title="Toggle dark mode">
+                            <input type="checkbox" id="initialThemeToggle" style="margin: 7px;">
+                            <span class="theme-switch-slider">
+                                <span class="theme-icon sun-icon"></span>
+                                <span class="theme-icon moon-icon"></span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
             <h1>
                 <span class="lang-ko">데이터베이스 설정</span>
                 <span class="lang-en">Database Setup</span>

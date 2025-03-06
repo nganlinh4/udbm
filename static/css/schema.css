@@ -10,8 +10,9 @@
     cursor: pointer;
     box-shadow: var(--md-elevation-level2);
     position: absolute;
-    margin-left: -250px;
+    right: 358px;
     z-index: 100;
+    min-width: 74px;
 }
 
 .schema-button:hover {
