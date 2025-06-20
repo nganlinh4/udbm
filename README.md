@@ -40,7 +40,19 @@ git clone udbm
 cd udbm
 ```
 
-2. Install Python dependencies:
+2. Create and activate a virtual environment:
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+```
+
+3. Install Python dependencies:
 ```bash
 pip install -r requirements.txt
 ```
