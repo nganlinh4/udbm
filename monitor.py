@@ -7,10 +7,51 @@ import time
 import logging
 import os
 import json
+from datetime import timedelta, datetime, date
+from decimal import Decimal
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+def make_json_serializable(obj):
+    """
+    Convert non-JSON-serializable objects to JSON-serializable formats.
+    Handles timedelta, datetime, date, Decimal, and other common PostgreSQL types.
+    """
+    if isinstance(obj, timedelta):
+        # Convert timedelta to string representation (e.g., "0:01:23.456789")
+        return str(obj)
+    elif isinstance(obj, (datetime, date)):
+        # Convert datetime/date to ISO format string
+        return obj.isoformat()
+    elif isinstance(obj, Decimal):
+        # Convert Decimal to float
+        return float(obj)
+    elif isinstance(obj, (dict, list)):
+        # Recursively process dictionaries and lists
+        if isinstance(obj, dict):
+            return {key: make_json_serializable(value) for key, value in obj.items()}
+        else:
+            return [make_json_serializable(item) for item in obj]
+    else:
+        # Return as-is for JSON-serializable types
+        return obj
+
+def process_database_rows(rows):
+    """
+    Process database rows to make them JSON serializable.
+    """
+    processed_rows = []
+    for row in rows:
+        if isinstance(row, dict):
+            # Handle RealDictCursor results (PostgreSQL)
+            processed_row = {key: make_json_serializable(value) for key, value in row.items()}
+        else:
+            # Handle regular cursor results or other formats
+            processed_row = make_json_serializable(row)
+        processed_rows.append(processed_row)
+    return processed_rows
 
 print(f"Script directory: {os.path.dirname(os.path.abspath(__file__))}")
 
@@ -467,8 +508,8 @@ def data_table(table_name):
                         
                         cursor.execute(query, (limit, offset))
                         rows = cursor.fetchall()
-                        # RealDictCursor already returns dict-like objects, no need for dict() conversion
-                        response['data'] = list(rows)
+                        # RealDictCursor already returns dict-like objects, process for JSON serialization
+                        response['data'] = process_database_rows(rows)
                         response['limited'] = offset + limit < row_count
                     except (psycopg2.Error, ValueError) as e:
                         logger.error(f"Error fetching data from table {table_name}: {e}")
@@ -500,7 +541,8 @@ def data_table(table_name):
                     f"SELECT * FROM {table_name} ORDER BY `{sort_column}` DESC LIMIT %s OFFSET %s",
                     (limit, offset)
                 )
-                response['data'] = cursor.fetchall()
+                rows = cursor.fetchall()
+                response['data'] = process_database_rows(rows)
                 response['limited'] = offset + limit < row_count
 
         return jsonify(response)
@@ -595,8 +637,10 @@ def add_row(table_name):
                 cursor.execute(query, values)
                 new_row = cursor.fetchone()
                 connection.commit()
-                
-                return jsonify(dict(new_row))
+
+                # Process the new row for JSON serialization
+                processed_row = make_json_serializable(dict(new_row))
+                return jsonify(processed_row)
             except psycopg2.Error as e:
                 logger.error(f"PostgreSQL error adding row to {table_name}: {str(e)}")
                 connection.rollback()
@@ -632,9 +676,11 @@ def add_row(table_name):
             cursor.execute(query)
             cursor.execute(f"SELECT * FROM {table_name} WHERE id = LAST_INSERT_ID()")
             new_row = cursor.fetchone()
-            
+
             connection.commit()
-            return jsonify(new_row)
+            # Process the new row for JSON serialization
+            processed_row = make_json_serializable(new_row)
+            return jsonify(processed_row)
 
     except Exception as e:
         logger.error(f"Error adding empty row to {table_name}: {e}")
