@@ -1,0 +1,75 @@
+.pause-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 1.2em;
+    color: #1a73e8;
+    width: 36px;
+    height: 36px;
+    height: 34px;
+    width: 34px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+ 
+/* SVG morphing styles */
+.morphing-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.pause-path {
+    transition: d 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .pause-path {
+    fill: var(--md-sys-color-on-surface);
+}
+.pause-button:hover {
+    background-color: rgba(26, 115, 232, 0.08);
+}
+
+.pause-button:active {
+    background-color: rgba(26, 115, 232, 0.12);
+}
+
+.pause-button.paused .pause-icon {
+    display: none;
+}
+
+.pause-button.paused .play-icon {
+    display: inline !important;
+}
+
+.pause-button.paused {
+    color: #d32f2f;
+}
+
+.pause-button.paused:hover {
+    background-color: rgba(211, 47, 47, 0.08);
+}
+
+
+.dropdown-container .pause-button.paused ~ .clock-icon .clock-hand {
+    animation-play-state: paused !important;
+}
+
+
+.pause-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: #666;
+}
+
+.pause-button.disabled:hover {
+    background-color: transparent;
+}

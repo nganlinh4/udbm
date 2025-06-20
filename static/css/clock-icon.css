@@ -1,0 +1,91 @@
+@keyframes rotate-clock {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.clock-icon {
+    width: 28px;
+    height: 28px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px; /* Change margin-left to margin-right */
+}
+
+.clock-face {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    overflow: visible;
+    background: var(--md-sys-color-primary);
+    transition: var(--theme-transition);
+    transform: translateZ(0);
+    /* Force GPU acceleration */
+}
+
+.clock-hand {
+    width: 2px;
+    /* Make hand slightly thinner */
+    height: 60%;
+    background-color: #ffffff;
+    /* Match web background */
+    position: absolute;
+    top: -10%;
+    left: 50%;
+    transform-origin: bottom;
+    animation: rotate-hand linear infinite;
+    animation-play-state: running;
+    border-radius: 1px;
+    will-change: transform;
+    /* Optimize animations */
+    transform: translateX(-50%) rotate(0deg);
+    backface-visibility: hidden;
+    /* Prevent flickering */
+}
+
+/* Add dark theme style for clock hand */
+[data-theme="dark"] .clock-hand {
+    background-color: #1f2328;
+}
+
+@keyframes rotate-hand {
+    from {
+        transform: translateX(-50%) rotate(0deg);
+    }
+
+    to {
+        transform: translateX(-50%) rotate(360deg);
+    }
+}
+
+@keyframes heartbeat {
+    0% {
+        transform: scale(1);
+    }
+
+    30% {
+        transform: scale(1.2);
+    }
+
+    60% {
+        transform: scale(1);
+    }
+}
+
+.clock-icon.effect .clock-face {
+    animation: heartbeat 0.3s ease-in-out;
+}
+
+/* Fix clock animation with pause */
+.clock-hand {
+    animation: rotate-hand 2s linear infinite;
+    animation-play-state: running;
+    will-change: transform;
+}

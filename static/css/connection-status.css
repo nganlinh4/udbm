@@ -1,0 +1,44 @@
+/* Connection status styles */
+.connection-status {
+    cursor: default;
+    padding: 4px 13px;
+    border-radius: 36px;
+    color: white;
+    font-size: 0.8em;
+    display: flex;
+    align-items: center;
+    gap: 0px;
+    user-select: none;
+}
+
+.connection-status.connecting {
+    background: #fb8c00;  /* Orange for connecting */
+}
+
+.connection-status.connected {
+    background: #4caf50;  /* Green for connected */
+}
+
+.connection-status.disconnected {
+    background: #d32f2f;  /* Red for disconnected */
+}
+
+.connection-status.no-database {
+    background: #9e9e9e;  /* Gray for no database */
+}
+
+[data-theme="dark"] .connection-status.connecting {
+    background: #e65100;  /* Darker orange for dark theme */
+}
+
+[data-theme="dark"] .connection-status.connected {
+    background: #2e7d32;  /* Darker green for dark theme */
+}
+
+[data-theme="dark"] .connection-status.disconnected {
+    background: #b71c1c;  /* Darker red for dark theme */
+}
+
+[data-theme="dark"] .connection-status.no-database {
+    background: #616161;  /* Darker gray for dark theme */
+}

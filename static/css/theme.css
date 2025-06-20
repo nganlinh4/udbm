@@ -15,17 +15,239 @@
     /* Dark theme toggle button background */
     --toggle-button-text: #ffffff;
     /* Dark theme toggle button text */
-    /* Adjust colors for dark mode */
-    --theme-1-color: #FF8F00;
-    /* Darker Amber */
-    --theme-1-darker: #FF6F00;
-    --theme-2-color: #0277BD;
-    /* Darker Light Blue */
-    --theme-2-darker: #01579B;
-    --theme-3-color: #2E7D32;
-    /* Darker Green */
-    --theme-3-darker: #1B5E20;
-    /* Add more themes as needed */
+}
+
+/* Base scrollbar styles */
+.table-scroll-wrapper::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    transition: background-color 0.2s ease;
+}
+
+[data-theme="dark"] .table-scroll-wrapper::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Theme 0 scrollbar */
+.table-container.theme-0 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-0 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #C5CAE9;
+}
+
+.table-container.theme-0 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-0 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #7986CB;
+}
+
+/* Theme 1 scrollbar */
+.table-container.theme-1 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-1 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #B2DFDB;
+}
+
+.table-container.theme-1 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-1 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #4DB6AC;
+}
+
+/* Theme 2 scrollbar */
+.table-container.theme-2 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-2 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #F8BBD0;
+}
+
+.table-container.theme-2 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-2 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #EC407A;
+}
+
+/* Theme 3 scrollbar */
+.table-container.theme-3 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-3 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #FFE0B2;
+}
+
+.table-container.theme-3 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-3 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #FFA726;
+}
+
+/* Theme 4 scrollbar */
+.table-container.theme-4 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-4 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #C8E6C9;
+}
+
+.table-container.theme-4 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-4 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #66BB6A;
+}
+
+/* Theme 5 scrollbar */
+.table-container.theme-5 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-5 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #E1BEE7;
+}
+
+.table-container.theme-5 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-5 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #AB47BC;
+}
+
+/* Theme 6 scrollbar */
+.table-container.theme-6 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-6 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #B3E5FC;
+}
+
+.table-container.theme-6 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-6 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #29B6F6;
+}
+
+/* Theme 7 scrollbar */
+.table-container.theme-7 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-7 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #FFF9C4;
+}
+
+.table-container.theme-7 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-7 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #FFEE58;
+}
+
+/* Theme 8 scrollbar */
+.table-container.theme-8 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-8 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #D7CCC8;
+}
+
+.table-container.theme-8 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-8 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #8D6E63;
+}
+
+/* Theme 9 scrollbar */
+.table-container.theme-9 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-section.theme-9 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #CFD8DC;
+}
+
+.table-container.theme-9 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+.table-section.theme-9 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #78909C;
+}
+
+/* Dark theme scrollbar variants */
+[data-theme="dark"] .table-container.theme-0 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-0 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #1a237e;
+}
+
+[data-theme="dark"] .table-container.theme-0 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-0 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #3f51b5;
+}
+
+[data-theme="dark"] .table-container.theme-1 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-1 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #004d40;
+}
+
+[data-theme="dark"] .table-container.theme-1 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-1 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #00897b;
+}
+
+[data-theme="dark"] .table-container.theme-2 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-2 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #880e4f;
+}
+
+[data-theme="dark"] .table-container.theme-2 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-2 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #c2185b;
+}
+
+[data-theme="dark"] .table-container.theme-3 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-3 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #e65100;
+}
+
+[data-theme="dark"] .table-container.theme-3 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-3 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #f57c00;
+}
+
+[data-theme="dark"] .table-container.theme-4 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-4 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #1b5e20;
+}
+
+[data-theme="dark"] .table-container.theme-4 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-4 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #388e3c;
+}
+
+[data-theme="dark"] .table-container.theme-5 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-5 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #4a148c;
+}
+
+[data-theme="dark"] .table-container.theme-5 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-5 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #7b1fa2;
+}
+
+[data-theme="dark"] .table-container.theme-6 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-6 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #01579b;
+}
+
+[data-theme="dark"] .table-container.theme-6 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-6 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #0288d1;
+}
+
+[data-theme="dark"] .table-container.theme-7 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-7 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #f57f17;
+}
+
+[data-theme="dark"] .table-container.theme-7 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-7 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #fbc02d;
+}
+
+[data-theme="dark"] .table-container.theme-8 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-8 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #3e2723;
+}
+
+[data-theme="dark"] .table-container.theme-8 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-8 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #5d4037;
+}
+
+[data-theme="dark"] .table-container.theme-9 .table-scroll-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-9 .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #263238;
+}
+
+[data-theme="dark"] .table-container.theme-9 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .table-section.theme-9 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
+    background-color: #455a64;
 }
 
 /* Dark theme adjustments */
@@ -279,46 +501,6 @@
     background-image: linear-gradient(339deg, #546e7a, #607d8b);
     color: #e0e0e0;
 }
-
-.table-section.theme-1 .toggle-button.active {
-    background-color: var(--theme-1-darker);
-}
-
-.table-section.theme-1 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background-color: var(--theme-1-color);
-}
-
-.table-section.theme-1 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
-    background-color: var(--theme-1-darker);
-}
-
-
-.table-section.theme-2 .toggle-button.active {
-    background-color: var(--theme-2-darker);
-}
-
-.table-section.theme-2 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background-color: var(--theme-2-color);
-}
-
-.table-section.theme-2 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
-    background-color: var(--theme-2-darker);
-}
-
-
-.table-section.theme-3 .toggle-button.active {
-    background-color: var(--theme-3-darker);
-}
-
-.table-section.theme-3 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-    background-color: var(--theme-3-color);
-}
-
-.table-section.theme-3 .table-scroll-wrapper:hover::-webkit-scrollbar-thumb {
-    background-color: var(--theme-3-darker);
-}
-
-/* Add more themes as needed */
 
 /* Update toggle button styles for both light and dark mode */
 .toggle-button.show {

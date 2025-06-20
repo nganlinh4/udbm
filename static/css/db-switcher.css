@@ -1,0 +1,497 @@
+/* Add separate hover effect for db-switcher */
+.db-switcher {
+    position: absolute;
+    left: calc(100% + 20px);
+    top: 3px;
+    z-index: 100;
+    transition: all 0.2s ease;
+}
+
+.db-switcher:hover {
+    transform: translateY(-1px);
+}
+
+.db-switch-button {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s ease;
+}
+
+.db-switch-button:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.db-switcher {
+    position: absolute;
+    left: calc(100% + 20px);
+    top: 3px;
+    z-index: 100;
+}
+
+.db-switch-button {
+    padding: 4px 12px;
+    border-radius: 36px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 35px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    min-width: 0;
+    width: auto;
+}
+
+.current-db {
+    color: var(--md-sys-color-primary);
+    font-weight: bolder;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+}
+
+.db-menu {
+    position: absolute;
+    top: calc(100% + 25px);
+    left: -120px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 12px;
+    display: none;
+    width: 280px;  /* Fixed width */
+    z-index: 1000;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    transform-origin: top center;
+    opacity: 0;
+    overflow: hidden; /* Changed from visible to hidden to prevent scrollbar flashing */
+    visibility: hidden;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity, height;
+    pointer-events: none;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.db-menu::-webkit-scrollbar {
+    display: none;
+}
+
+/* Ensure db-menu shows content but still hides scrollbars when visible */
+.db-menu.show {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    overflow: visible; /* Allow content to be seen */
+    pointer-events: auto !important;
+    animation: materialReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.db-menu.show::-webkit-scrollbar {
+    display: none;
+}
+
+.db-type-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-left: 8px;
+}
+
+.db-type-mysql {
+    background-color: #00758F;
+    color: white;
+}
+
+.db-type-postgresql {
+    background-color: #336791;
+    color: white;
+}
+
+.db-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 12px;
+    display: none;
+    width: 280px; /* Changed from min-width to fixed width */
+    z-index: 1000;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-sizing: border-box; /* Add this to include padding in width calculation */
+    transform-origin: top right;
+    transform: scale(0.8);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+    pointer-events: none;
+}
+
+.db-menu.show {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+}
+
+.db-type-badge {
+    display: inline-block;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    margin-left: 5px;
+    color: white;
+}
+
+.db-type-badge.db-type-mysql {
+    background-color: #007bff; /* MySQL badge color */
+}
+
+.db-type-badge.db-type-postgresql {
+    background-color: #dc3545; /* PostgreSQL badge color */
+}
+
+.db-menu.show {
+    display: block;
+}
+
+.db-menu.force-show {
+    display: block !important;
+    pointer-events: auto !important;
+}
+
+.db-list {
+    margin-bottom: 12px;
+    max-height: 425px;
+    overflow-y: auto;
+    overflow-x: hidden; /* Add this to prevent horizontal scroll */
+    width: 100%; /* Add this to ensure list takes full width */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    transform-origin: top center;
+    will-change: opacity, transform, height;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.db-list::-webkit-scrollbar {
+    display: none;
+}
+
+/* Enhanced animations for db-list */
+.db-list {
+    margin-bottom: 12px;
+    max-height: 425px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: top center;
+    will-change: opacity, transform, height;
+}
+
+/* Entry animations for db-list items */
+.db-item {
+    padding: 8px 12px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    transition: background-color 0.2s, transform 0.2s;
+    animation: itemReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+    transform-origin: top;
+    opacity: 0;
+}
+
+/* Staggered animation for each db-item */
+.db-item:nth-child(1) { animation-delay: 0.05s; }
+.db-item:nth-child(2) { animation-delay: 0.1s; }
+.db-item:nth-child(3) { animation-delay: 0.15s; }
+.db-item:nth-child(4) { animation-delay: 0.2s; }
+.db-item:nth-child(5) { animation-delay: 0.25s; }
+.db-item:nth-child(6) { animation-delay: 0.3s; }
+.db-item:nth-child(7) { animation-delay: 0.35s; }
+.db-item:nth-child(8) { animation-delay: 0.4s; }
+.db-item:nth-child(9) { animation-delay: 0.45s; }
+.db-item:nth-child(10) { animation-delay: 0.5s; }
+
+/* Animation for db-list and form transitions */
+.db-list.animating-out {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.db-list.animating-in {
+    animation: contentFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Keyframe animations */
+@keyframes itemReveal {
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes contentFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Enhanced material design animation for the menu */
+@keyframes materialReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+        box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
+    }
+    60% {
+        opacity: 1;
+        transform: translateY(0) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: none;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+}
+
+@keyframes materialClose {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+    40% {
+        opacity: 0.6;
+        transform: translateY(-5px) scale(0.98);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+        box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
+.db-item {
+    padding: 8px 12px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    transition: background-color 0.2s;
+}
+
+.db-item-content {
+    flex: 1;
+    cursor: pointer;
+    padding-right: 8px;
+}
+
+.delete-db {
+    padding: 4px 8px;
+    background: rgba(211, 47, 47, 0.1);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    color: #d32f2f;
+    font-size: 1.2em;
+    line-height: 1;
+    min-width: 28px;
+}
+
+.db-item:hover .delete-db {
+    opacity: 1;
+}
+
+.delete-db:hover {
+    background: rgba(211, 47, 47, 0.2);
+    transform: scale(1.1);
+}
+
+.delete-db:active {
+    transform: scale(0.95);
+}
+
+.db-item.active {
+    background: var(--md-sys-color-primary);
+    color: white;
+}
+
+/* DB Switcher Dark Theme Adaptations */
+[data-theme="dark"] .db-switch-button {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+[data-theme="dark"] .current-db {
+    color: var(--md-sys-color-primary);
+}
+
+[data-theme="dark"] .db-menu {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+[data-theme="dark"] .db-item {
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .db-item:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+[data-theme="dark"] .db-item.active {
+    background: var(--md-sys-color-primary);
+}
+
+[data-theme="dark"] .delete-db {
+    background: rgba(244, 67, 54, 0.1);
+    color: #ff8a80;
+}
+
+[data-theme="dark"] .delete-db:hover {
+    background: rgba(244, 67, 54, 0.2);
+}
+
+/* Enhanced material design animation for db-menu with more visible closing animation */
+.db-menu {
+    position: absolute;
+    top: calc(100% + 25px);
+    left: -120px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 12px;
+    display: none;
+    width: 280px;  /* Fixed width */
+    z-index: 1000;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    transform-origin: top center;
+    opacity: 0;
+    overflow: hidden; /* Changed from visible to hidden to prevent scrollbar flashing */
+    visibility: hidden;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity, height;
+    pointer-events: none;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.db-menu::-webkit-scrollbar {
+    display: none;
+}
+
+/* Ensure db-menu shows content but still hides scrollbars when visible */
+.db-menu.show {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    overflow: visible; /* Allow content to be seen */
+    pointer-events: auto !important;
+    animation: materialReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.db-menu.show::-webkit-scrollbar {
+    display: none;
+}
+
+.db-list {
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    transform-origin: top center;
+    will-change: opacity, transform, height;
+}
+
+.db-list.animating-out {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.db-list.animating-out::-webkit-scrollbar {
+    display: none;
+}
+
+.db-list.animating-in {
+    animation: contentFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.db-list.animating-in::-webkit-scrollbar {
+    display: none;
+}
+
+.db-menu.show {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto !important;
+    animation: materialReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.db-menu.closing {
+    display: block !important;
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    box-shadow: 0 0px 0px rgba(0, 0, 0, 0);
+    pointer-events: none;
+    animation: materialClose 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.db-menu.materialReveal {
+    animation: materialReveal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}

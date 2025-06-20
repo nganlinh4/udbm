@@ -1,17 +1,702 @@
 import { setCookie, getCookie, getTextWidth, translations, getCurrentLanguage } from './utils.js';
 
-// Constants
+// Constants and state variables
 const ROWS_PER_LOAD = 50;
-
-// Global state variables
-let tableChunks = {};  // Store the current chunk range for each table
+let tableChunks = {};
 let isLoading = {};
 let autoScrolling = false;
-let isAdminMode = false;
-
-// Global state variables
+let isAdminMode = localStorage.getItem('adminToggleState') === 'true';
 let isRelationMode = false;
+
+// Function to set up query popup handlers
+function setupQueryPopup() {
+    const queryPopup = document.getElementById('queryPopup');
+    const executeButton = document.getElementById('executeQuery');
+    const queryInput = document.getElementById('queryInput');
+    const resultArea = document.getElementById('queryResult');
+    
+    // Load saved query history
+    const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
+    let historyIndex = -1;
+
+    // Function to handle closing the popup
+    function handleClose() {
+        queryPopup.classList.remove('visible');
+        queryInput.value = '';
+        document.querySelector('.download-buttons')?.remove();
+        document.querySelector('.example-queries')?.remove();
+        resultArea.textContent = '';
+    }
+
+    // Create example queries container only if it doesn't exist
+    if (!queryPopup.querySelector('.example-queries')) {
+        const exampleContainer = document.createElement('div');
+        exampleContainer.className = 'example-queries';
+        exampleContainer.style.cssText = `
+            display: flex;
+            overflow-x: auto;
+            gap: 8px;
+            padding: 8px;
+            margin-bottom: -4px;
+            -webkit-overflow-scrolling: touch;
+        `;
+        
+        // Example queries
+        const examples = [
+            { name: 'Select All', query: 'SELECT * FROM table_name', caution: false },
+            { name: 'Basic Select', query: 'SELECT column1, column2 FROM table_name WHERE condition' },
+            { name: 'Count Rows', query: 'SELECT COUNT(*) FROM table_name' },
+            { name: 'Simple Join', query: 'SELECT * FROM table1 JOIN table2 ON table1.id = table2.id' },
+            { name: 'Insert Row', query: 'INSERT INTO table_name (column1, column2) VALUES (value1, value2)' },
+            { name: 'Update Row', query: 'UPDATE table_name SET column1 = value1 WHERE condition', caution: true },
+            { name: 'Delete Row', query: 'DELETE FROM table_name WHERE condition', caution: true },
+            { name: 'Group By', query: 'SELECT column1, COUNT(*) FROM table_name GROUP BY column1' },
+            { name: 'Order By', query: 'SELECT * FROM table_name ORDER BY column_name DESC' },
+            
+            // Advanced SELECT queries
+            { name: 'Select Distinct', query: 'SELECT DISTINCT column_name FROM table_name' },
+            { name: 'Select Case', query: 'SELECT column1, CASE WHEN condition THEN value1 ELSE value2 END FROM table_name' },
+            { name: 'Select With', query: 'WITH cte_name AS (SELECT * FROM table_name) SELECT * FROM cte_name' },
+            { name: 'Select Into', query: 'SELECT * INTO backup_table FROM source_table' },
+            { name: 'Select Top', query: 'SELECT TOP 10 * FROM table_name' },
+            { name: 'Select Offset', query: 'SELECT * FROM table_name OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY' },
+            
+            // JOIN variations
+            { name: 'Inner Join', query: 'SELECT * FROM table1 INNER JOIN table2 ON table1.id = table2.id' },
+            { name: 'Left Join', query: 'SELECT * FROM table1 LEFT JOIN table2 ON table1.id = table2.id' },
+            { name: 'Right Join', query: 'SELECT * FROM table1 RIGHT JOIN table2 ON table1.id = table2.id' },
+            { name: 'Full Join', query: 'SELECT * FROM table1 FULL OUTER JOIN table2 ON table1.id = table2.id' },
+            { name: 'Cross Join', query: 'SELECT * FROM table1 CROSS JOIN table2' },
+            { name: 'Self Join', query: 'SELECT * FROM table1 t1 JOIN table1 t2 ON t1.id = t2.parent_id' },
+            { name: 'Multiple Joins', query: 'SELECT * FROM table1 JOIN table2 ON table1.id = table2.id JOIN table3 ON table2.id = table3.id' },
+            
+            // Aggregate functions
+            { name: 'Count Rows', query: 'SELECT COUNT(*) FROM table_name;' },
+            { name: 'Average', query: 'SELECT AVG(column_name) FROM table_name;' },
+            { name: 'Sum', query: 'SELECT SUM(column_name) FROM table_name' },
+            { name: 'Max Value', query: 'SELECT MAX(column_name) FROM table_name' },
+            { name: 'Min Value', query: 'SELECT MIN(column_name) FROM table_name' },
+            { name: 'String Agg', query: 'SELECT STRING_AGG(column_name, \',\') FROM table_name' },
+            
+            // Complex conditions
+            { name: 'Between', query: 'SELECT * FROM table_name WHERE column_name BETWEEN value1 AND value2' },
+            { name: 'In List', query: 'SELECT * FROM table_name WHERE column_name IN (value1, value2, value3)' },
+            { name: 'Like Pattern', query: 'SELECT * FROM table_name WHERE column_name LIKE \'pattern%\'' },
+            { name: 'Null Check', query: 'SELECT * FROM table_name WHERE column_name IS NULL' },
+            { name: 'Exists', query: 'SELECT * FROM table1 WHERE EXISTS (SELECT 1 FROM table2 WHERE table2.id = table1.id)' },
+            
+            // Having clauses
+            { name: 'Having Count', query: 'SELECT column1, COUNT(*) FROM table_name GROUP BY column1 HAVING COUNT(*) > 1' },
+            { name: 'Having Sum', query: 'SELECT column1, SUM(amount) FROM table_name GROUP BY column1 HAVING SUM(amount) > 1000' },
+            { name: 'Having Avg', query: 'SELECT column1, AVG(amount) FROM table_name GROUP BY column1 HAVING AVG(amount) > 100' },
+            
+            // Subqueries
+            { name: 'Subquery Where', query: 'SELECT * FROM table_name WHERE column_name IN (SELECT column_name FROM another_table)' },
+            { name: 'Subquery From', query: 'SELECT * FROM (SELECT * FROM table_name) AS subquery' },
+            { name: 'Correlated', query: 'SELECT * FROM table1 WHERE column1 > (SELECT AVG(column1) FROM table1 t2 WHERE t2.id = table1.id)' },
+            
+            // Table operations
+            { name: 'Create Table', query: 'CREATE TABLE table_name (column1 datatype, column2 datatype)', caution: true },
+            { name: 'Drop Table', query: 'DROP TABLE table_name', caution: true },
+            { name: 'Truncate', query: 'TRUNCATE TABLE table_name', caution: true },
+            { name: 'Rename Table', query: 'ALTER TABLE old_name RENAME TO new_name', caution: true },
+            { name: 'Copy Table', query: 'CREATE TABLE new_table AS SELECT * FROM existing_table' },
+            
+            // Column operations
+            { name: 'Add Column', query: 'ALTER TABLE table_name ADD COLUMN column_name datatype', caution: true },
+            { name: 'Drop Column', query: 'ALTER TABLE table_name DROP COLUMN column_name', caution: true },
+            { name: 'Modify Column', query: 'ALTER TABLE table_name ALTER COLUMN column_name TYPE new_datatype', caution: true },
+            { name: 'Rename Column', query: 'ALTER TABLE table_name RENAME COLUMN old_name TO new_name', caution: true },
+            
+            // Constraint operations
+            { name: 'Add Primary Key', query: 'ALTER TABLE table_name ADD PRIMARY KEY (column_name)', caution: true },
+            { name: 'Add Foreign Key', query: 'ALTER TABLE table_name ADD FOREIGN KEY (column_name) REFERENCES other_table(id)', caution: true },
+            { name: 'Add Unique', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name UNIQUE (column_name)', caution: true },
+            { name: 'Add Check', query: 'ALTER TABLE table_name ADD CONSTRAINT constraint_name CHECK (condition)', caution: true },
+            
+            // Index operations
+            { name: 'Create Index', query: 'CREATE INDEX index_name ON table_name (column_name)' },
+            { name: 'Create Unique Index', query: 'CREATE UNIQUE INDEX index_name ON table_name (column_name)' },
+            { name: 'Drop Index', query: 'DROP INDEX index_name', caution: true },
+            { name: 'Rebuild Index', query: 'ALTER INDEX index_name REBUILD' },
+            
+            // View operations
+            { name: 'Create View', query: 'CREATE VIEW view_name AS SELECT * FROM table_name WHERE condition', caution: true },
+            { name: 'Replace View', query: 'CREATE OR REPLACE VIEW view_name AS SELECT * FROM table_name', caution: true },
+            { name: 'Drop View', query: 'DROP VIEW view_name', caution: true },
+            { name: 'Materialized View', query: 'CREATE MATERIALIZED VIEW view_name AS SELECT * FROM table_name' },
+            
+            // Transaction control
+            { name: 'Begin Transaction', query: 'BEGIN TRANSACTION' },
+            { name: 'Commit', query: 'COMMIT' },
+            { name: 'Rollback', query: 'ROLLBACK' },
+            { name: 'Savepoint', query: 'SAVEPOINT savepoint_name' },
+            
+            // User management
+            { name: 'Create User', query: 'CREATE USER username WITH PASSWORD \'password\'', caution: true },
+            { name: 'Grant Select', query: 'GRANT SELECT ON table_name TO username', caution: true },
+            { name: 'Revoke', query: 'REVOKE SELECT ON table_name FROM username', caution: true },
+            { name: 'Drop User', query: 'DROP USER username', caution: true },
+            
+            // Database operations
+            { name: 'Create Database', query: 'CREATE DATABASE database_name', caution: true },
+            { name: 'Drop Database', query: 'DROP DATABASE database_name', caution: true },
+            { name: 'Backup Database', query: 'BACKUP DATABASE database_name TO DISK = \'path\'', caution: true },
+            { name: 'Restore Database', query: 'RESTORE DATABASE database_name FROM DISK = \'path\'' }
+        ];
+        
+        examples.forEach(({name, query, caution}) => {
+            const button = document.createElement('button');
+            button.className = 'example-query-pill';
+            if (caution) {
+                button.classList.add('caution');
+            }
+            button.textContent = name;
+            
+            button.addEventListener('click', () => {
+                const input = document.getElementById('queryInput');
+                if (input) {
+                    input.value = query;
+                    input.focus();
+                }
+            });
+            
+            exampleContainer.appendChild(button);
+        });
+        
+        // Insert container into query-header
+        const queryHeader = queryPopup.querySelector('.query-header');
+        const closeButton = queryHeader.querySelector('.query-close');
+        queryHeader.insertBefore(exampleContainer, closeButton);
+
+        // Add horizontal scroll handler for mouse wheel
+        exampleContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+        // Increase scroll speed with multiplier
+            exampleContainer.scrollLeft += e.deltaY * 3;
+        });
+    }
+
+    return { queryPopup, executeButton, queryInput, resultArea, queryHistory, historyIndex, handleClose };
+}
+
+// New function to add download buttons to table headers
+export function addDownloadButtons() {
+    const tableSections = document.querySelectorAll('.table-section');
+    tableSections.forEach(section => {
+        const tableName = section.dataset.tableName;
+        const dragHandle = section.querySelector('.drag-handle');
+        if (dragHandle && !section.querySelector('.download-buttons')) {
+            const downloadButtons = document.createElement('div');
+            downloadButtons.className = 'download-buttons';
+            
+            const csvButton = document.createElement('button');
+            csvButton.className = 'download-button';
+            csvButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                CSV
+            `;
+            
+            const xlsxButton = document.createElement('button');
+            xlsxButton.className = 'download-button';
+            xlsxButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                XLSX
+            `;
+
+            // Setup click handlers
+            csvButton.onclick = async () => {
+                try {
+                    const response = await fetch(`${baseUrl}/download/${tableName}/csv`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const blob = await response.blob();
+                    downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`);
+                } catch (error) {
+                    console.error('Error downloading CSV:', error);
+                }
+            };
+
+            xlsxButton.onclick = async () => {
+                try {
+                    const response = await fetch(`${baseUrl}/download/${tableName}/xlsx`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const blob = await response.blob();
+                    downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`);
+                } catch (error) {
+                    console.error('Error downloading XLSX:', error);
+                }
+            };
+
+            downloadButtons.appendChild(csvButton);
+            downloadButtons.appendChild(xlsxButton);
+            dragHandle.insertAdjacentElement('afterend', downloadButtons);
+        }
+    });
+}
+
+// Helper function to handle blob downloads
+function downloadBlob(blob, filename) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}
+
+// Set up global query handler (independent of table state)
+document.addEventListener('keydown', (e) => {
+    if (!isAdminMode) return;
+    if (!e.key || e.key.toLowerCase() !== 'q') return;
+
+    let { queryPopup, executeButton, queryInput, resultArea, queryHistory, historyIndex, handleClose } = setupQueryPopup();
+
+    const isQueryInputFocused = document.activeElement?.id === 'queryInput';
+    const isQueryPopupVisible = queryPopup?.classList.contains('visible');
+    
+    if (isQueryInputFocused || isQueryPopupVisible) return;
+    
+    e.preventDefault();
+
+    // Clear and show popup
+    queryPopup.classList.add('visible');
+    queryInput.value = '';
+    document.querySelector('.download-buttons')?.remove();
+    resultArea.textContent = '';
+
+    // Set up execute button text
+    executeButton.innerHTML = `
+        <span class="lang-ko">(Ctrl+Enter) 실행</span>
+        <span class="lang-en">(Ctrl+Enter) Execute</span>
+    `;
+
+    // Replace elements to clear old event listeners
+    const newInput = queryInput.cloneNode(true);
+    const newButton = executeButton.cloneNode(true);
+    queryInput.parentNode.replaceChild(newInput, queryInput);
+    executeButton.parentNode.replaceChild(newButton, executeButton);
+    queryInput = newInput;
+    queryInput.focus();
+
+    // Handle query execution
+    const handleExecute = async () => {
+        const query = queryInput.value.trim();
+        // Clean up previous download buttons
+        document.querySelector('.download-buttons')?.remove();
+        if (!query) return;
+
+        // Save to history
+        if (!queryHistory.includes(query)) {
+            queryHistory.unshift(query);
+            if (queryHistory.length > 50) queryHistory.pop();
+            localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+        }
+        historyIndex = -1;
+
+        try {
+            const response = await fetch(`${window.baseUrl}/execute_query`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+
+            const data = await response.json();
+            if (data.error) {
+                resultArea.textContent = `Error: ${data.error}`;
+                return;
+            }
+
+            if (data.results) {
+                if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                    createQueryResultTable(resultArea, data.results);
+                } else {
+                    resultArea.textContent = JSON.stringify(data.results, null, 2);
+                }
+            }
+         } catch (error) {
+             resultArea.textContent = `Error: ${error.message}`;
+         }
+    };
+
+    // Create query result table function
+    function createQueryResultTable(resultArea, results) {
+        resultArea.innerHTML = '';
+        const tableWrapper = document.createElement('div');
+        tableWrapper.className = 'table-scroll-wrapper';
+    
+    // Create download buttons container
+    const downloadButtons = document.createElement('div');
+    downloadButtons.className = 'download-buttons';
+    
+    const csvButton = document.createElement('button');
+    csvButton.className = 'download-button';
+    csvButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+        </svg>
+        CSV
+    `;
+    
+    const xlsxButton = document.createElement('button');
+    xlsxButton.className = 'download-button';
+    xlsxButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+        </svg>
+        XLSX
+    `;
+    
+    csvButton.onclick = () => {
+        const filename = `query_result_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`;
+        if (!results || !results.length) return;
+        const headers = Object.keys(results[0]);
+        const csvContent = [
+            headers.join(','),
+            ...results.map(row => headers.map(header => {
+                let value = row[header] ?? '';
+                
+                // Convert to string and handle special cases
+                value = String(value);
+                
+                // Convert JSON objects to strings
+                if (typeof row[header] === 'object' && row[header] !== null) {
+                    value = JSON.stringify(row[header]);
+                }
+                
+                // Escape values containing commas or quotes
+                if (value.includes(',') || value.includes('"')) {
+                    value = value.replace(/"/g, '""');
+                    value = `"${value}"`;
+                }
+                return value;
+            }).join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    };
+    
+    xlsxButton.onclick = () => {
+        const filename = `query_result_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`;
+        if (!results || !results.length) return;
+
+        const headers = Object.keys(results[0]);
+        fetch(`${window.baseUrl}/download/xlsx`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                data: results.map(row => {
+                    const newRow = {};
+                    headers.forEach(header => {
+                        const value = row[header];
+                        newRow[header] = typeof value === 'object' && value !== null ? JSON.stringify(value) : value;
+                    });
+                    return newRow;
+                }), 
+                filename })
+        })
+        .then(async response => {
+            if (response.ok) {
+                return await response.blob();
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        })
+        .then(blob => {
+            // Create a new blob with explicit type
+            const excelBlob = new Blob([blob], { 
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+            });
+            
+            // Download file
+            let link = document.createElement('a');
+            const url = URL.createObjectURL(excelBlob);
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+        })
+        .catch(error => {
+            console.error('Error downloading XLSX:', error);
+            alert(
+                'Failed to download Excel file. Please ensure the server supports Excel downloads ' +
+                'or try downloading as CSV instead.'
+            );
+            link.click();
+        });
+    };
+    
+    downloadButtons.appendChild(csvButton);
+    downloadButtons.appendChild(xlsxButton);
+    
+    // Add download buttons to query-buttons
+    const queryButtons = document.querySelector('.query-buttons');
+    if (queryButtons) {
+        queryButtons.insertBefore(downloadButtons, queryButtons.firstChild);
+    }
+        const table = document.createElement('table');
+        
+        // Create header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        Object.keys(results[0]).forEach(key => {
+            const th = document.createElement('th');
+            th.textContent = key;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Create body
+        const tbody = document.createElement('tbody');
+        results.forEach(row => {
+            const tr = document.createElement('tr');
+            Object.values(row).forEach(value => {
+                const td = document.createElement('td');
+                if (value === null) {
+                    td.textContent = 'NULL';
+                } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
+                    const jsonView = formatJsonCell(value);
+                    td.appendChild(jsonView);
+                } else {
+                    td.textContent = value;
+                }
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        
+        tableWrapper.appendChild(table);
+        resultArea.appendChild(tableWrapper);
+        setTimeout(() => adjustColumnWidths(table), 0);
+    }
+
+    // Event listeners
+    queryInput.addEventListener('keydown', (e) => {
+        if (e.key === 'q' && e.ctrlKey) {
+            e.stopPropagation();
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            if (!queryInput.value && queryInput.placeholder) {
+                queryInput.value = queryInput.placeholder;
+                queryInput.selectionStart = queryInput.value.length;
+                queryInput.selectionEnd = queryInput.value.length;
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (historyIndex < queryHistory.length - 1) {
+                historyIndex++;
+                queryInput.value = queryHistory[historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIndex > -1) {
+                historyIndex--;
+                queryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+            }
+        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleExecute();
+
+        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleExecute();
+        }
+    });
+
+    // Set up close handlers
+    queryPopup.querySelector('.query-close').addEventListener('click', handleClose);
+    queryPopup.addEventListener('keydown', e => e.key === 'Escape' && handleClose());
+});
+let queryHandler = null;
+
+// Initialize global query handler
+function setupQueryHandler() {
+    if (queryHandler) return; // Only set up once
+
+    queryHandler = (e) => {
+        if (!isAdminMode) return;
+        if (!e.key || e.key.toLowerCase() !== 'q') return;
+        
+        const queryPopup = document.getElementById('queryPopup');
+        const isQueryInputFocused = document.activeElement?.id === 'queryInput';
+        const isQueryPopupVisible = queryPopup?.classList.contains('visible');
+        
+        if (isQueryInputFocused || isQueryPopupVisible) return;
+        
+        e.preventDefault();
+        
+        const queryInput = document.getElementById('queryInput');
+        const executeButton = document.getElementById('executeQuery');
+        const resultArea = document.getElementById('queryResult');
+        
+        // Load saved query history
+        const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
+        let historyIndex = -1;
+        
+        queryPopup.classList.add('visible');
+        queryInput.value = '';
+        resultArea.textContent = '';
+        queryInput.focus();
+        
+        executeButton.innerHTML = `
+            <span class="lang-ko">(Ctrl+Enter) 실행</span>
+            <span class="lang-en">(Ctrl+Enter) Execute</span>
+        `;
+
+        // Clean up previous event listeners
+        const newExecuteButton = executeButton.cloneNode(true);
+        const newQueryInput = queryInput.cloneNode(true);
+        executeButton.parentNode.replaceChild(newExecuteButton, executeButton);
+        queryInput.parentNode.replaceChild(newQueryInput, queryInput);
+        
+        // Set up new event listeners
+        newQueryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'q' && e.ctrlKey) {
+                e.stopPropagation();
+            }
+            
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex < queryHistory.length - 1) {
+                    historyIndex++;
+                    newQueryInput.value = queryHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > -1) {
+                    historyIndex--;
+                    newQueryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+                }
+            } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                handleExecute();
+            }
+        });
+        
+        const handleExecute = async () => {
+            const query = newQueryInput.value.trim();
+            if (!query) return;
+            
+            // Save to history
+            if (!queryHistory.includes(query)) {
+                queryHistory.unshift(query);
+                if (queryHistory.length > 50) queryHistory.pop();
+                localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+            }
+            
+            try {
+                const response = await fetch(`${window.baseUrl}/execute_query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                const data = await response.json();
+                resultArea.textContent = data.error 
+                    ? `Error: ${data.error}` 
+                    : JSON.stringify(data.results, null, 2);
+            } catch (error) {
+                resultArea.textContent = `Error: ${error.message}`;
+            }
+        };
+        
+        newExecuteButton.addEventListener('click', handleExecute);
+    };
+
+    // Add global keydown listener
+    document.addEventListener('keydown', queryHandler);
+}
+
+// Call setup when module loads
+setupQueryHandler();
 let schemaData = null;
+
+// Helper function to get sorted table order based on relationships
+function getSortedTableOrder() {
+    if (!schemaData || !schemaData.relationships) {
+        return Array.from(document.querySelectorAll('.table-section'))
+            .map(section => section.getAttribute('data-table-name'));
+    }
+
+    // Build relationship graph
+    const relationGraph = new Map();
+    const connectionCounts = new Map();
+    
+    // Initialize maps with all tables
+    document.querySelectorAll('.table-section').forEach(section => {
+        const tableName = section.getAttribute('data-table-name');
+        relationGraph.set(tableName, new Set());
+        connectionCounts.set(tableName, 0);
+    });
+    
+    // Add relationships and count connections
+    schemaData.relationships.forEach(rel => {
+        relationGraph.get(rel.from.table).add(rel.to.table);
+        relationGraph.get(rel.to.table).add(rel.from.table);
+        connectionCounts.set(rel.from.table, (connectionCounts.get(rel.from.table) || 0) + 1);
+        connectionCounts.set(rel.to.table, (connectionCounts.get(rel.to.table) || 0) + 1);
+    });
+
+    // Sort tables by connection count and then group related tables
+    const visited = new Set();
+    const sortedTables = [];
+    
+    // Sort by connection count first
+    const tablesByConnections = Array.from(connectionCounts.entries())
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([table]) => table);
+
+    // Helper function to add related tables
+    function addRelatedTables(tableName) {
+        if (visited.has(tableName)) return;
+        visited.add(tableName);
+        sortedTables.push(tableName);
+        
+        // Add directly related tables
+        if (relationGraph.has(tableName)) {
+            Array.from(relationGraph.get(tableName))
+                .sort((a, b) => {
+                    const countDiff = (connectionCounts.get(b) || 0) - (connectionCounts.get(a) || 0);
+                    return countDiff !== 0 ? countDiff : a.localeCompare(b);
+                })
+                .forEach(related => {
+                    if (!visited.has(related)) {
+                        addRelatedTables(related);
+                    }
+                });
+        }
+    }
+
+    // Process all tables
+    tablesByConnections.forEach(tableName => {
+        if (!visited.has(tableName)) {
+            addRelatedTables(tableName);
+        }
+    });
+
+    return sortedTables;
+}
+
+// Helper function to check if a table has relations
+function hasRelations(tableName) {
+    return schemaData?.relationships?.some(rel =>
+        rel.from.table === tableName || rel.to.table === tableName
+    ) || false;
+}
 
 // Preload schema data when page loads
 async function loadSchemaData() {
@@ -25,85 +710,257 @@ async function loadSchemaData() {
     }
 }
 
-// Initialize admin mode and arrangement handler
-let initialArrangement = localStorage.getItem('arrangementMode') === 'true';
-
-// Set initial arrangement state before DOM is fully loaded
-document.addEventListener('DOMContentLoaded', async () => {
-    const adminToggle = document.getElementById('adminToggle');
-    const arrangementToggle = document.getElementById('arrangementToggle');
-    
-    // Load schema data first
-    await loadSchemaData();
-    
-    // Hide content until we arrange it
+// Load schema data immediately when script loads
+loadSchemaData().then(() => {
+    // Hide content and prepare initial arrangement
     const tablesContainer = document.getElementById('tables-container');
     const buttonsLine = document.querySelector('.table-buttons-line');
-    if (tablesContainer && buttonsLine) {
-        tablesContainer.style.visibility = 'hidden';
-        buttonsLine.style.visibility = 'hidden';
-    }
+    const savedArrangement = localStorage.getItem('arrangementMode');
+    const initialArrangement = savedArrangement !== null ? JSON.parse(savedArrangement) : false;
     
-    if (adminToggle) {
-        adminToggle.addEventListener('change', (e) => {
-            isAdminMode = e.target.checked;
-            document.querySelectorAll('td.focused').forEach(cell => {
-                cell.classList.remove('focused');
-            });
-        });
-    }
-    
-    if (arrangementToggle) {
-        // Load saved state
-        // Load and apply saved state immediately without transitions
-        arrangementToggle.checked = initialArrangement;
-        isRelationMode = initialArrangement;
-        
+    if (tablesContainer && buttonsLine && schemaData) {
         const tableSections = document.querySelectorAll('.table-section');
-        const sortedOrder = initialArrangement && schemaData ? getSortedTableOrder() :
+        const sortedOrder = initialArrangement ? getSortedTableOrder() :
             Array.from(tableSections).map(section => section.getAttribute('data-table-name')).sort();
-        
-        const tablesContainer = document.getElementById('tables-container');
-        const buttonsLine = document.querySelector('.table-buttons-line');
 
-        // Apply arrangement without animations
         sortedOrder.forEach(tableName => {
-            // Rearrange table sections
             const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
             if (section) {
                 tablesContainer.appendChild(section);
             }
-            
-            // Rearrange table pills
             const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
             if (pill) {
                 buttonsLine.appendChild(pill);
             }
         });
 
-        if (initialArrangement) {
-            // Mark related tables
-            tableSections.forEach(section => {
-                const tableName = section.getAttribute('data-table-name');
-                if (hasRelations(tableName)) {
-                    section.classList.add('relation-group');
+        // Show content after initial arrangement
+        requestAnimationFrame(() => {
+            tablesContainer.style.opacity = '1';
+            buttonsLine.style.opacity = '1';
+        });
+    }
+});
+
+// Move query popup handler to module level for global availability
+document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('keydown', async (e) => {
+        // Handle Q key for query popup
+        // Prevent query popup when typing in query input or when query popup is visible
+        const queryPopup = document.getElementById('queryPopup');
+        const isQueryInputFocused = document.activeElement && document.activeElement.id === 'queryInput';
+        const isQueryPopupVisible = queryPopup && queryPopup.classList.contains('visible');
+        
+        if (e.key && e.key.toLowerCase() === 'q' && isAdminMode && !isQueryInputFocused && !isQueryPopupVisible) {
+            e.preventDefault();
+            
+            const queryInput = document.getElementById('queryInput');
+            const executeButton = document.getElementById('executeQuery');
+            const resultArea = document.getElementById('queryResult');
+            const queryContent = document.querySelector('.query-content');
+            
+            // Load saved query history from localStorage
+            const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
+            let historyIndex = -1;
+            
+            queryPopup.classList.add('visible');
+            queryInput.focus();
+            
+            // Clear previous result
+            resultArea.textContent = '';
+            
+            // Set Execute button style with Ctrl+Enter text
+            executeButton.innerHTML = `
+                <span class="lang-ko">(Ctrl+Enter) 실행</span>
+                <span class="lang-en">(Ctrl+Enter) Execute</span>
+            `;
+
+            // Clean up previous event listeners
+            const newExecuteButton = executeButton.cloneNode(true);
+            const newQueryInput = queryInput.cloneNode(true);
+            executeButton.parentNode.replaceChild(newExecuteButton, executeButton);
+            queryInput.parentNode.replaceChild(newQueryInput, queryInput);
+            
+            newQueryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'q' && e.ctrlKey) {
+                    e.stopPropagation(); // Prevent triggering the global Q handler
+                }
+            });
+
+            // Handle query history navigation
+            newQueryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (historyIndex < queryHistory.length - 1) {
+                        historyIndex++;
+                        newQueryInput.value = queryHistory[historyIndex];
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (historyIndex > -1) {
+                        historyIndex--;
+                        newQueryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+                    }
+                }
+            });
+            
+            // Handle execute button click
+            const handleExecute = async () => {
+                const query = newQueryInput.value.trim();
+                if (!query) return;
+                
+                // Save to history (if not already the most recent)
+                if (!queryHistory.includes(query)) {
+                    queryHistory.unshift(query);
+                    if (queryHistory.length > 50) queryHistory.pop(); // Keep last 50 queries
+                    localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+                }
+                historyIndex = -1;
+
+                try {
+                    const response = await fetch(`${window.baseUrl}/execute_query`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: newQueryInput.value })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.error) {
+                        resultArea.textContent = `Error: ${data.error}`;
+                        return;
+                    }
+                    
+                    if (data.results) {
+                        if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                            resultArea.innerHTML = '';
+                            const tableWrapper = document.createElement('div');
+                            tableWrapper.className = 'table-scroll-wrapper';
+                            const table = document.createElement('table');
+                            
+                            // Create header
+                            const thead = document.createElement('thead');
+                            const headerRow = document.createElement('tr');
+                            Object.keys(data.results[0]).forEach(key => {
+                                const th = document.createElement('th');
+                                th.textContent = key;
+                                headerRow.appendChild(th);
+                            });
+                            thead.appendChild(headerRow);
+                            table.appendChild(thead);
+                            
+                            // Create body
+                            const tbody = document.createElement('tbody');
+                            data.results.forEach(row => {
+                                const tr = document.createElement('tr');
+                                Object.values(row).forEach(value => {
+                                    const td = document.createElement('td');
+                                    if (value === null) {
+                                        td.textContent = 'NULL';
+                                    } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
+                                        const jsonView = formatJsonCell(value);
+                                        td.appendChild(jsonView);
+                                    } else {
+                                        td.textContent = value;
+                                    }
+                                    tr.appendChild(td);
+                                });
+                                tbody.appendChild(tr);
+                            });
+                            table.appendChild(tbody);
+                            
+                            tableWrapper.appendChild(table);
+                            resultArea.appendChild(tableWrapper);
+                            setTimeout(() => adjustColumnWidths(table), 0);
+                        } else {
+                            resultArea.textContent = JSON.stringify(data.results, null, 2);
+                        }
+                    } else {
+                        resultArea.textContent = data.message;
+                    }
+                } catch (error) {
+                    resultArea.textContent = `Error: ${error.message}`;
+                }
+            };
+            
+            newExecuteButton.addEventListener('click', handleExecute);
+            
+            // Handle Ctrl+Enter for execution
+            let isExecuting = false;
+            newQueryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !isExecuting) {
+                    e.preventDefault();
+                    isExecuting = true;
+                    handleExecute().finally(() => {
+                        isExecuting = false;
+                    });
+                }
+            });
+            
+            // Handle close button
+            const closeButton = queryPopup.querySelector('.query-close');
+            const handleClose = () => {
+                queryPopup.classList.remove('visible');
+            };
+            
+            closeButton.addEventListener('click', handleClose);
+            
+            // Handle Escape key
+            queryPopup.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    handleClose();
                 }
             });
         }
+    });
+});
 
-        // Show content after arrangement is complete
-        if (tablesContainer && buttonsLine) {
-            tablesContainer.style.visibility = '';
-            buttonsLine.style.visibility = '';
-        }
+// Initialize visibility control
+(function hideContentImmediately() {
+    const tablesContainer = document.getElementById('tables-container');
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    if (tablesContainer && buttonsLine) {
+        tablesContainer.style.opacity = '0';
+        buttonsLine.style.opacity = '0';
+        tablesContainer.style.transition = 'opacity 0.3s ease-out';
+        buttonsLine.style.transition = 'opacity 0.3s ease-out';
+    }
+})();
+
+// Set up initial arrangement and admin mode
+document.addEventListener('DOMContentLoaded', async () => {
+    const adminToggle = document.getElementById('adminToggle');
+    const arrangementToggle = document.getElementById('arrangementToggle');
+    
+    // Set up admin mode
+    if (adminToggle) {
+        adminToggle.addEventListener('change', (e) => {
+            const checked = e.target.checked;
+            isAdminMode = checked;
+            document.querySelectorAll('td.focused').forEach(cell => {
+                cell.classList.remove('focused');
+            });
+        });
+    }
+
+    // Set up arrangement toggle
+    if (arrangementToggle) {
+        // Load and apply saved state
+        const savedArrangement = localStorage.getItem('arrangementMode');
+        const initialArrangement = savedArrangement !== null ? JSON.parse(savedArrangement) : false;
+        
+        arrangementToggle.checked = initialArrangement;
+        isRelationMode = initialArrangement;
+
         // Add change event listener
         arrangementToggle.addEventListener('change', (e) => {
             isRelationMode = e.target.checked;
-            localStorage.setItem('arrangementMode', e.target.checked);
+            localStorage.setItem('arrangementMode', JSON.stringify(e.target.checked));
             const tableSections = document.querySelectorAll('.table-section');
             const tablePills = document.querySelectorAll('.table-button');
             
-            // Add transitions
+            // Add transitions for smooth reordering
             tableSections.forEach(section => {
                 section.style.transition = 'all 0.3s ease-out';
             });
@@ -112,34 +969,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             
             if (isRelationMode) {
-                // Get sorted order from relation arrangement
-                const sortedOrder = getSortedTableOrder();
-                
-                // Rearrange table sections
-                const tablesContainer = document.getElementById('tables-container');
-                sortedOrder.forEach(tableName => {
-                    const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
-                    if (section) {
-                        tablesContainer.appendChild(section);
-                    }
-                });
-                
-                // Rearrange table pills
-                const buttonsLine = document.querySelector('.table-buttons-line');
-                sortedOrder.forEach(tableName => {
-                    const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
-                    if (pill) {
-                        buttonsLine.appendChild(pill);
-                    }
-                });
-
-                // Mark related tables
-                tableSections.forEach(section => {
-                    const tableName = section.getAttribute('data-table-name');
-                    if (hasRelations(tableName)) {
-                        section.classList.add('relation-group');
-                    }
-                });
+                arrangeByRelations();
             } else {
                 arrangeAlphabetically();
             }
@@ -155,266 +985,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 300);
         });
     }
-
-    // Helper function to get sorted table order based on relationships
-    function getSortedTableOrder() {
-        if (!schemaData || !schemaData.relationships) {
-            return Array.from(document.querySelectorAll('.table-section'))
-                .map(section => section.getAttribute('data-table-name'));
-        }
-
-        // Build relationship graph
-        const relationGraph = new Map();
-        const connectionCounts = new Map();
-        
-        // Initialize maps with all tables
-        document.querySelectorAll('.table-section').forEach(section => {
-            const tableName = section.getAttribute('data-table-name');
-            relationGraph.set(tableName, new Set());
-            connectionCounts.set(tableName, 0);
-        });
-        
-        // Add relationships and count connections
-        schemaData.relationships.forEach(rel => {
-            relationGraph.get(rel.from.table).add(rel.to.table);
-            relationGraph.get(rel.to.table).add(rel.from.table);
-            connectionCounts.set(rel.from.table, (connectionCounts.get(rel.from.table) || 0) + 1);
-            connectionCounts.set(rel.to.table, (connectionCounts.get(rel.to.table) || 0) + 1);
-        });
-
-        // Sort tables by connection count and then group related tables
-        const visited = new Set();
-        const sortedTables = [];
-        
-        // Sort by connection count first
-        const tablesByConnections = Array.from(connectionCounts.entries())
-            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-            .map(([table]) => table);
-
-        // Helper function to add related tables
-        function addRelatedTables(tableName) {
-            if (visited.has(tableName)) return;
-            visited.add(tableName);
-            sortedTables.push(tableName);
-            
-            // Add directly related tables
-            if (relationGraph.has(tableName)) {
-                Array.from(relationGraph.get(tableName))
-                    .sort((a, b) => {
-                        const countDiff = (connectionCounts.get(b) || 0) - (connectionCounts.get(a) || 0);
-                        return countDiff !== 0 ? countDiff : a.localeCompare(b);
-                    })
-                    .forEach(related => {
-                        if (!visited.has(related)) {
-                            addRelatedTables(related);
-                        }
-                    });
-            }
-        }
-
-        // Process all tables
-        tablesByConnections.forEach(tableName => {
-            if (!visited.has(tableName)) {
-                addRelatedTables(tableName);
-            }
-        });
-
-        return sortedTables;
-    }
-
-    // Helper function to check if a table has relations
-    function hasRelations(tableName) {
-        return schemaData?.relationships?.some(rel =>
-            rel.from.table === tableName || rel.to.table === tableName
-        ) || false;
-    }
 });
 
-// Function to arrange tables by relations
-// Function to arrange tables by relations
-function arrangeByRelations() {
-    if (!schemaData || !schemaData.relationships) {
-        console.error('Schema data not available');
-        return;
+function formatJsonCell(value) {
+    try {
+        // If it's already an object, use it directly
+        const jsonObj = typeof value === 'object' ? value : JSON.parse(value);
+        const formattedJson = JSON.stringify(jsonObj, null, 2);
+        // Create a wrapper div with custom styling
+        const wrapper = document.createElement('div');
+        wrapper.className = 'json-cell';
+        wrapper.style.whiteSpace = 'pre-wrap';
+        wrapper.textContent = formattedJson;
+        return wrapper;
+    } catch (e) {
+        return value;
     }
-
-    const tablesContainer = document.getElementById('tables-container');
-    const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
-    
-    // Reset all groups
-    tableSections.forEach(section => {
-        section.classList.remove('relation-group');
-        section.style.opacity = '0';
-    });
-
-    // Build relationship graph
-    const relationGraph = new Map();
-    // Count direct connections for each table
-    const connectionCounts = new Map();
-    
-    schemaData.relationships.forEach(rel => {
-        // Initialize maps
-        [rel.from.table, rel.to.table].forEach(table => {
-            if (!relationGraph.has(table)) {
-                relationGraph.set(table, new Set());
-                connectionCounts.set(table, 0);
-            }
-        });
-        
-        // Add bidirectional relationships
-        relationGraph.get(rel.from.table).add(rel.to.table);
-        relationGraph.get(rel.to.table).add(rel.from.table);
-        
-        // Increment connection counts
-        connectionCounts.set(rel.from.table, connectionCounts.get(rel.from.table) + 1);
-        connectionCounts.set(rel.to.table, connectionCounts.get(rel.to.table) + 1);
-    });
-
-    // Sort tables by connection count (most connected first)
-    const sortedTables = [...tableSections].sort((a, b) => {
-        const nameA = a.getAttribute('data-table-name');
-        const nameB = b.getAttribute('data-table-name');
-        const countA = connectionCounts.get(nameA) || 0;
-        const countB = connectionCounts.get(nameB) || 0;
-        
-        if (countA !== countB) {
-            return countB - countA;
-        }
-        return nameA.localeCompare(nameB);
-    });
-
-    // Group related tables together
-    const grouped = new Set();
-    const finalOrder = [];
-
-    sortedTables.forEach(section => {
-        const tableName = section.getAttribute('data-table-name');
-        if (grouped.has(tableName)) return;
-
-        const group = [];
-        const addToGroup = (name) => {
-            if (grouped.has(name)) return;
-            
-            const tableSection = sortedTables.find(s =>
-                s.getAttribute('data-table-name') === name
-            );
-            if (tableSection) {
-                group.push(tableSection);
-                grouped.add(name);
-                
-                // Add direct relations
-                if (relationGraph.has(name)) {
-                    relationGraph.get(name).forEach(related => {
-                        if (!grouped.has(related)) {
-                            addToGroup(related);
-                        }
-                    });
-                }
-            }
-        };
-
-        addToGroup(tableName);
-
-        // Add groups to final order with visual separation
-        if (group.length > 0) {
-            if (finalOrder.length > 0) {
-                const lastSection = finalOrder[finalOrder.length - 1];
-                lastSection.style.marginBottom = '20px';
-            }
-            
-            // Mark related tables
-            if (group.length > 1) {
-                group.forEach(section => {
-                    section.classList.add('relation-group');
-                });
-            }
-            
-            finalOrder.push(...group);
-        }
-    });
-
-    // Add any remaining tables
-    sortedTables.forEach(section => {
-        if (!grouped.has(section.getAttribute('data-table-name'))) {
-            finalOrder.push(section);
-        }
-    });
-
-    // Update DOM with animation
-    finalOrder.forEach((section, index) => {
-        section.style.transition = 'all 0.3s ease-out';
-        section.style.transitionDelay = `${index * 0.05}s`;
-        tablesContainer.appendChild(section);
-        requestAnimationFrame(() => {
-            section.style.opacity = '1';
-        });
-    });
-
-    // Clean up transitions
-    setTimeout(() => {
-        finalOrder.forEach(section => {
-            section.style.transition = '';
-            section.style.transitionDelay = '';
-        });
-    }, finalOrder.length * 50 + 300);
-}
-// Function to arrange tables alphabetically
-function arrangeAlphabetically() {
-    const tablesContainer = document.getElementById('tables-container');
-    const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
-    const buttonsLine = document.querySelector('.table-buttons-line');
-    const tablePills = Array.from(buttonsLine.querySelectorAll('.table-button'));
-    
-    // Remove relation-group class and reset margins
-    tableSections.forEach(section => {
-        section.classList.remove('relation-group');
-        section.style.marginBottom = '';
-        section.style.opacity = '0';
-    });
-    
-    // Get alphabetically sorted table names
-    const sortedNames = tableSections
-        .map(section => section.getAttribute('data-table-name'))
-        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    
-    // Reorder table sections with animation
-    sortedNames.forEach((tableName, index) => {
-        const section = tableSections.find(s =>
-            s.getAttribute('data-table-name') === tableName
-        );
-        if (section) {
-            section.style.transition = 'all 0.3s ease-out';
-            section.style.transitionDelay = `${index * 0.05}s`;
-            tablesContainer.appendChild(section);
-            requestAnimationFrame(() => {
-                section.style.opacity = '1';
-            });
-        }
-    });
-    
-    // Reorder table pills with animation
-    sortedNames.forEach((tableName, index) => {
-        const pill = tablePills.find(p =>
-            p.getAttribute('data-table') === tableName
-        );
-        if (pill) {
-            pill.style.transition = 'all 0.3s ease-out';
-            pill.style.transitionDelay = `${index * 0.05}s`;
-            buttonsLine.appendChild(pill);
-        }
-    });
-    
-    // Clean up transitions
-    setTimeout(() => {
-        tableSections.forEach(section => {
-            section.style.transition = '';
-            section.style.transitionDelay = '';
-        });
-        tablePills.forEach(pill => {
-            pill.style.transition = '';
-            pill.style.transitionDelay = '';
-        });
-    }, sortedNames.length * 50 + 300);
 }
 
 function updateTableRows(tbody, tableData, columns) {
@@ -426,7 +1012,10 @@ function updateTableRows(tbody, tableData, columns) {
     const focusedCell = tbody.querySelector('td.focused');
     let focusedRowKey = null;
     let focusedCellIndex = -1;
-    if (focusedCell) {
+    const noDataMessage = tbody.querySelector('.no-data-message');
+        const wasNoDataFocused = focusedCell && focusedCell.querySelector('.no-data-message');
+        
+        if (focusedCell && !wasNoDataFocused) {
         focusedRowKey = focusedCell.closest('tr').querySelector('td').textContent;
         const cells = Array.from(focusedCell.closest('tr').querySelectorAll('td'));
         focusedCellIndex = cells.indexOf(focusedCell);
@@ -439,7 +1028,18 @@ function updateTableRows(tbody, tableData, columns) {
         const rowKey = cells[0]?.textContent;
         existingRows.set(rowKey, {
             element: tr,
-            data: Array.from(cells).map(cell => cell.textContent)
+            data: Array.from(cells).map(cell => {
+                const jsonCell = cell.querySelector('.json-cell');
+                if (jsonCell) {
+                    try {
+                        // Parse JSON data for proper comparison
+                        return JSON.parse(jsonCell.textContent);
+                    } catch (e) {
+                        return jsonCell.textContent;
+                    }
+                }
+                return cell.textContent;
+            })
         });
     });
 
@@ -452,20 +1052,42 @@ function updateTableRows(tbody, tableData, columns) {
         const tr = document.createElement('tr');
         
         if (existing) {
-            // Check if data changed
+            // Check if data changed by comparing actual values
             const hasChanged = columns.some((col, idx) => {
-                const newVal = row[col] !== null ? String(row[col]) : '';
-                return existing.data[idx] !== newVal;
+                const newVal = row[col];
+                const existingVal = existing.data[idx];
+                
+                // Special handling for JSON comparison
+                if (typeof newVal === 'object' && newVal !== null) {
+                    try {
+                        // Deep compare objects
+                        return JSON.stringify(newVal) !== JSON.stringify(existingVal);
+                    } catch (e) {
+                        return true;
+                    }
+                }
+                
+                return String(newVal !== null ? newVal : '') !== String(existingVal !== null ? existingVal : '');
             });
 
-            if (hasChanged || animateAll) {
+            if (hasChanged) {
                 tr.classList.add('changed');
             }
             
             columns.forEach((col, idx) => {
                 const td = document.createElement('td');
-                const newVal = row[col] !== null ? String(row[col]) : '';
-                td.textContent = newVal;
+                const val = row[col];
+                
+                if (val !== null) {
+                    if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
+                        const jsonView = formatJsonCell(val);
+                        td.appendChild(jsonView);
+                    } else {
+                        td.textContent = String(val);
+                    }
+                } else {
+                    td.textContent = '';
+                }
                 tr.appendChild(td);
             });
             
@@ -475,10 +1097,21 @@ function updateTableRows(tbody, tableData, columns) {
             if (currentRows > 0) {
                 tr.classList.add('new-row');
             }
+            
             columns.forEach(col => {
                 const td = document.createElement('td');
                 const val = row[col];
-                td.textContent = val !== null ? String(val) : '';
+                
+                if (val !== null) {
+                    if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
+                        const jsonView = formatJsonCell(val);
+                        td.appendChild(jsonView);
+                    } else {
+                        td.textContent = String(val);
+                    }
+                } else {
+                    td.textContent = '';
+                }
                 tr.appendChild(td);
             });
         }
@@ -505,7 +1138,7 @@ function updateTableRows(tbody, tableData, columns) {
         });
     }, 1500);
 
-    // Restore focused cell if it existed
+    // Restore focused cell state
     if (focusedRowKey !== null && focusedCellIndex !== -1) {
         const rows = tbody.querySelectorAll('tr');
         for (const row of rows) {
@@ -518,6 +1151,12 @@ function updateTableRows(tbody, tableData, columns) {
                 break;
             }
         }
+    } else if (wasNoDataFocused && !tableData.length) {
+        // If "No data available" cell was focused and table is still empty, restore focus
+        const noDataCell = tbody.querySelector('td');
+        if (noDataCell && noDataCell.querySelector('.no-data-message')) {
+            noDataCell.classList.add('focused');
+        }
     }
 }
 
@@ -525,6 +1164,7 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'table-scroll-wrapper';
 
+    
     const table = document.createElement('table');
     const thead = document.createElement('thead');
     const tbody = document.createElement('tbody');
@@ -561,9 +1201,13 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
     if (!tableData || !tableData.length) {
         const noDataRow = document.createElement('tr');
         const noDataCell = document.createElement('td');
+        const wasFocused = tableDiv.querySelector('.table-scroll-wrapper td.focused') !== null;
         noDataCell.colSpan = columns.length;
-        noDataCell.innerHTML = `<span class="lang-ko">데이터가 없습니다.</span><span class="lang-en">No data available.</span>`;
+        noDataCell.innerHTML = `<span class="lang-ko no-data-message">데이터가 없습니다.</span><span class="lang-en no-data-message">No data available.</span>`;
         noDataCell.style.textAlign = 'center';
+        if (wasFocused) {
+            noDataCell.classList.add('focused');
+        }
         noDataRow.appendChild(noDataCell);
         tbody.appendChild(noDataRow);
         return;
@@ -575,6 +1219,113 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
 export function updateSingleTable(tableName, tableInfo, translations, currentLang, fetchTableData, baseUrl) {
     const tableDiv = document.getElementById(tableName);
     if (!tableDiv) return;
+    
+    // Add download buttons if they don't exist
+    const tableSection = tableDiv.closest('.table-section');
+    if (tableSection) {
+        const dragHandle = tableSection.querySelector('.drag-handle');
+        if (dragHandle && !tableSection.querySelector('.download-buttons')) {
+            const downloadButtons = document.createElement('div');
+            downloadButtons.className = 'download-buttons';
+            
+            const csvButton = document.createElement('button');
+            csvButton.className = 'download-button';
+            csvButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                CSV
+            `;
+            
+            const xlsxButton = document.createElement('button');
+            xlsxButton.className = 'download-button';
+            xlsxButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                XLSX
+            `;
+
+            csvButton.onclick = () => {
+                if (!tableInfo.data || !tableInfo.data.length) return;
+                const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`;
+                const headers = tableInfo.columns;
+                const csvContent = [
+                    headers.join(','),
+                    ...tableInfo.data.map(row => headers.map(header => {
+                        let value = row[header] ?? '';
+                        
+                        // Convert to string and handle special cases
+                        value = String(value);
+                        
+                        // Convert JSON objects to strings
+                        if (typeof row[header] === 'object' && row[header] !== null) {
+                            value = JSON.stringify(row[header]);
+                        }
+                        
+                        // Escape values containing commas or quotes
+                        if (value.includes(',') || value.includes('"')) {
+                            value = value.replace(/"/g, '""');
+                            value = `"${value}"`;
+                        }
+                        return value;
+                    }).join(','))
+                ].join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            };
+
+            xlsxButton.onclick = () => {
+                if (!tableInfo.data || !tableInfo.data.length) return;
+                const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`;
+                fetch(`${baseUrl}/download/xlsx`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        data: tableInfo.data,
+                        filename
+                    })
+                })
+                .then(async response => {
+                    if (response.ok) {
+                        return await response.blob();
+                    } else {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                })
+                .then(blob => {
+                    const excelBlob = new Blob([blob], { 
+                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                    });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(excelBlob);
+                    link.href = url;
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                })
+                .catch(error => {
+                    console.error('Error downloading XLSX:', error);
+                    alert(
+                        'Failed to download Excel file. Please ensure the server supports Excel downloads ' +
+                        'or try downloading as CSV instead.'
+                    );
+                });
+            };
+            
+            downloadButtons.appendChild(csvButton);
+            downloadButtons.appendChild(xlsxButton);
+            dragHandle.insertAdjacentElement('afterend', downloadButtons);
+        }
+    }
 
     const countSpan = document.getElementById(`${tableName}_count`);
     if (countSpan) {
@@ -604,14 +1355,18 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
     let existingTable = tableDiv.querySelector('table');
     if (existingTable) {
         const tbody = existingTable.querySelector('tbody');
+        const wasFocused = tbody?.querySelector('td.focused') !== null;
         if (tbody) {
             if (!tableInfo.data || !tableInfo.data.length) {
                 tbody.innerHTML = '';
                 const noDataRow = document.createElement('tr');
                 const noDataCell = document.createElement('td');
                 noDataCell.colSpan = tableInfo.columns.length;
-                noDataCell.innerHTML = `<span class="lang-ko">${translations.ko.noData}</span><span class="lang-en">${translations.en.noData}</span>`;
+                noDataCell.innerHTML = `<span class="lang-ko no-data-message">${translations.ko.noData}</span><span class="lang-en no-data-message">${translations.en.noData}</span>`;
                 noDataCell.style.textAlign = 'center';
+                if (wasFocused) {
+                    noDataCell.classList.add('focused');
+                }
                 noDataRow.appendChild(noDataCell);
                 tbody.appendChild(noDataRow);
             } else {
@@ -805,7 +1560,17 @@ function appendTableData(tableName, tableInfo, translations, currentLang) {
             tableInfo.columns.forEach(col => {
                 const td = document.createElement('td');
                 const val = row[col];
-                td.textContent = val !== null ? String(val) : '';
+                
+                if (val !== null) {
+                    if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
+                        const jsonView = formatJsonCell(val);
+                        td.appendChild(jsonView);
+                    } else {
+                        td.textContent = String(val);
+                    }
+                } else {
+                    td.textContent = '';
+                }
                 tr.appendChild(td);
             });
             tbody.appendChild(tr);
@@ -876,11 +1641,22 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     let isEditing = false;
     let currentEditCell = null;
     let originalValue = null;
-
+    
     // Function to restore cell to non-editing state
     const restoreCell = (cell) => {
         if (!cell) return;
-        cell.textContent = originalValue;
+        
+        // Check if it's a JSON cell
+        try {
+            const parsedJson = JSON.parse(originalValue);
+            const jsonView = formatJsonCell(parsedJson);
+            cell.textContent = '';
+            cell.appendChild(jsonView);
+        } catch (e) {
+            // Not JSON, restore as plain text
+            cell.textContent = originalValue;
+        }
+        
         cell.classList.remove('editing');
         isEditing = false;
         currentEditCell = null;
@@ -898,7 +1674,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     let editingState = null;
 
     // Handler for starting cell edit
-    const startEditing = (cell) => {
+    const startEditing = (cell, clickEvent) => {
         if (isEditing) {
             restoreCell(currentEditCell);
         }
@@ -909,12 +1685,78 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             window.toggleMonitoring();
         }
 
-        originalValue = cell.textContent;
+        const jsonCell = cell.querySelector('.json-cell');
+        originalValue = jsonCell ? jsonCell.textContent : cell.textContent;
         currentEditCell = cell;
         isEditing = true;
         cell.classList.add('editing');
-        const input = document.createElement('input');
-        input.value = originalValue;
+
+        const input = document.createElement('textarea');
+        input.style.overflow = 'hidden';
+        input.style.resize = 'none';
+        input.style.fontSize = jsonCell ? '0.9rem' : '1em';  // Match font size based on cell type
+        input.style.boxSizing = 'border-box';
+
+        input.value = jsonCell ? JSON.stringify(JSON.parse(originalValue), null, 2) : originalValue;
+
+        // Adjust height on content change
+        const adjustHeight = () => {
+            input.style.height = '0'; // Reset height
+            const minHeight = jsonCell ? 100 : Math.max(24, input.scrollHeight);
+            const newHeight = Math.max(minHeight, input.scrollHeight);
+            input.style.height = `${newHeight}px`;
+        };
+
+        // Handle input height adjustments
+        input.addEventListener('input', adjustHeight);
+        
+        // Initial height adjustment
+        cell.appendChild(input);
+        requestAnimationFrame(() => {
+            adjustHeight();
+
+            // Focus the input and set cursor position if click event exists
+            if (clickEvent) {
+                input.focus();
+
+                const cellRect = cell.getBoundingClientRect();
+                const clickX = clickEvent.clientX - cellRect.left;
+                const clickY = clickEvent.clientY - cellRect.top;
+                const style = window.getComputedStyle(input);
+                const lineHeight = parseFloat(style.lineHeight);
+                const paddingLeft = parseFloat(style.paddingLeft);
+
+                if (jsonCell) {
+                    // Calculate line number from click position
+                    const lines = input.value.split('\n');
+                    let clickedLineIndex = Math.floor((clickY - parseFloat(style.paddingTop)) / lineHeight);
+                    clickedLineIndex = Math.max(0, Math.min(clickedLineIndex, lines.length - 1));
+
+                    // Get position within the line
+                    const charWidth = getTextWidth('m', style.font); // Use 'm' as average character width
+                    let position = 0;
+
+                    // Add length of all previous lines
+                    for (let i = 0; i < clickedLineIndex; i++) {
+                        position += lines[i].length + 1; // +1 for newline
+                    }
+
+                    // Calculate position within the clicked line
+                    const clickedLine = lines[clickedLineIndex];
+                    const adjustedClickX = clickX - paddingLeft;
+                    const charPosition = Math.floor(adjustedClickX / charWidth);
+                    position += Math.max(0, Math.min(charPosition, clickedLine.length));
+
+                    input.setSelectionRange(position, position);
+                } else {
+                    const charWidth = getTextWidth('a', style.font);
+                    const estimatedPosition = Math.round(clickX / charWidth);
+                    input.setSelectionRange(estimatedPosition, estimatedPosition);
+                }
+            } else {
+                input.focus();
+            }
+        });
 
         // Store editing state for monitoring updates
         const row = cell.closest('tr');
@@ -935,6 +1777,11 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                 const columnName = table.querySelector('th:nth-child(' + (columnIndex + 1) + ')').textContent;
                 
                 try {
+                    // Validate JSON if it's a JSON cell
+                    if (jsonCell) {
+                        JSON.parse(newValue); // Will throw if invalid
+                    }
+                    
                     const response = await fetch(`${baseUrl}/update/${tableName}/${rowId}/${columnName}`, {
                         method: 'PUT',
                         headers: {
@@ -942,14 +1789,20 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                         },
                         body: JSON.stringify({ value: newValue })
                     });
-
+                    
                     if (!response.ok) {
                         throw new Error('Update failed');
                     }
-
-                    cell.textContent = newValue;
+                    
+                    if (jsonCell) {
+                        const newJsonView = formatJsonCell(newValue);
+                        cell.textContent = '';
+                        cell.appendChild(newJsonView);
+                    } else {
+                        cell.textContent = newValue;
+                    }
                     originalValue = newValue;
-
+                    
                     // Show success popup
                     const deletePopup = document.getElementById('deletePopup');
                     deletePopup.querySelector('.warning-icon').textContent = '✓';
@@ -961,18 +1814,22 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                     }, 2000);
                 } catch (error) {
                     console.error('Error updating cell:', error);
-                    restoreCell(cell);
-                    // Show error popup
+                    // Show error message for all update failures
+                    const errorMessage = error instanceof SyntaxError ? 'Invalid JSON format' : 'Failed to update value';
+                    const koreanMessage = error instanceof SyntaxError ? 'JSON 형식이 잘못되었습니다' : '값 업데이트에 실패했습니다';
+                    
                     const deletePopup = document.getElementById('deletePopup');
                     const icon = deletePopup.querySelector('.warning-icon');
                     icon.textContent = '⚠';
-                    deletePopup.querySelector('.lang-en').textContent = 'Failed to update value';
-                    deletePopup.querySelector('.lang-ko').textContent = '값 업데이트에 실패했습니다';
+                    deletePopup.querySelector('.lang-en').textContent = errorMessage;
+                    deletePopup.querySelector('.lang-ko').textContent = koreanMessage;
                     deletePopup.classList.add('show');
                     setTimeout(() => {
                         icon.textContent = '✓';
                         deletePopup.classList.remove('show');
                     }, 2000);
+                    // Restore cell to original value
+                    restoreCell(cell);
                     return;
                 }
             } else {
@@ -984,17 +1841,59 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             currentEditCell = null;
         };
 
+        // Handle Enter, Tab, and Escape events
         input.addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Tab' || e.key === 'Enter' || e.key === 'Escape') {
                 e.preventDefault();
-                handleEditComplete(input.value, true);
-            } else if (e.key === 'Escape') {
-                handleEditComplete(originalValue, false);
+                const shouldSave = e.key !== 'Escape';
+
+                if (e.key === 'Tab') {
+                    // Save current cell
+                    await handleEditComplete(input.value, true);
+                    
+                    // Find the next cell to edit
+                    const currentRow = cell.closest('tr');
+                    const cells = Array.from(currentRow.cells);
+                    const currentIndex = cells.indexOf(cell);
+                    
+                    // Remove focus from current cell
+                    cell.classList.remove('focused');
+                    
+                    if (!e.shiftKey && currentIndex < cells.length - 1) {
+                        // Move to next cell in the same row
+                        cells[currentIndex + 1].classList.add('focused');
+                        startEditing(cells[currentIndex + 1]);
+                    } else if (e.shiftKey && currentIndex > 0) {
+                        // Move to previous cell in the same row
+                        cells[currentIndex - 1].classList.add('focused');
+                        startEditing(cells[currentIndex - 1]);
+                    } else if (!e.shiftKey) {
+                        // Move to first cell of next row
+                        const nextRow = currentRow.nextElementSibling;
+                        if (nextRow) {
+                            nextRow.cells[0].classList.add('focused');
+                            startEditing(nextRow.cells[0]);
+                        }
+                    } else {
+                        // Move to last cell of previous row
+                        const prevRow = currentRow.previousElementSibling;
+                        if (prevRow) {
+                            prevRow.cells[prevRow.cells.length - 1].classList.add('focused');
+                            startEditing(prevRow.cells[prevRow.cells.length - 1]);
+                        }
+                    }
+                } else {
+                    handleEditComplete(input.value, shouldSave);
+                }
             }
         });
 
-        input.addEventListener('blur', () => {
-            handleEditComplete(originalValue, false);
+        input.addEventListener('blur', (e) => {
+            // Don't restore original value on blur if we're switching to another cell
+            const relatedTarget = e.relatedTarget;
+            if (!relatedTarget || !relatedTarget.closest('td')) {
+                handleEditComplete(originalValue, false);
+            }
         });
         
         cell.textContent = '';
@@ -1006,13 +1905,13 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     table.addEventListener('click', (e) => {
         const cell = e.target.closest('td');
         if (!cell) return;
-
+        
         if (e.target.tagName === 'INPUT' || !isAdminMode) {
             return; // Don't handle clicks when not in admin mode or clicking on input
         }
 
-        if (cell.classList.contains('focused') && !isEditing) {
-            startEditing(cell);
+        if (cell.classList.contains('focused') && !isEditing && !cell.querySelector('.no-data-message')) {
+            startEditing(cell, e);
         } else if (!isEditing) {
             // Remove focus from any previously focused cell
             table.querySelectorAll('td').forEach(td => td.classList.remove('focused'));
@@ -1024,8 +1923,22 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     // Add double click handler
     table.addEventListener('dblclick', (e) => {
         const cell = e.target.closest('td');
-        if (cell && !isEditing && isAdminMode) {
-            startEditing(cell);
+        if (cell && !isEditing && isAdminMode && !e.target.classList.contains('no-data-message')) {
+            startEditing(cell, e);
+        }
+    });
+
+    // Add document click handler for deselection
+    document.addEventListener('click', (e) => {
+        if (!isAdminMode) return;
+        
+        // Check if click was outside any table cell
+        const clickedCell = e.target.closest('td');
+        if (!clickedCell) {
+            // Remove focus from any focused cells
+            document.querySelectorAll('td.focused').forEach(td => {
+                td.classList.remove('focused');
+            });
         }
     });
 
@@ -1036,174 +1949,9 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         const queryPopup = document.getElementById('queryPopup');
         const isQueryInputFocused = document.activeElement && document.activeElement.id === 'queryInput';
         const isQueryPopupVisible = queryPopup && queryPopup.classList.contains('visible');
+        // Removed query popup handler since it's now handled globally
         
-        if (e.key.toLowerCase() === 'q' && isAdminMode && !isQueryInputFocused && !isQueryPopupVisible) {
-          e.preventDefault();
-            
-            const queryInput = document.getElementById('queryInput');
-            const executeButton = document.getElementById('executeQuery');
-            const resultArea = document.getElementById('queryResult');
-            const queryContent = document.querySelector('.query-content');
-            
-            // Load saved query history from localStorage
-            const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
-            let historyIndex = -1;
-            
-            queryPopup.classList.add('visible');
-            queryInput.focus();
-            
-            // Clear previous result
-            resultArea.textContent = '';
-            
-            // Set Execute button style with Ctrl+Enter text
-            executeButton.innerHTML = `
-                <span class="lang-ko">(Ctrl+Enter) 실행</span>
-                <span class="lang-en">(Ctrl+Enter) Execute</span>
-            `;
-            queryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'q' && e.ctrlKey) {
-                    e.stopPropagation(); // Prevent triggering the global Q handler
-                }
-            });
-            // Handle query history navigation
-            queryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    if (historyIndex < queryHistory.length - 1) {
-                        historyIndex++;
-                        queryInput.value = queryHistory[historyIndex];
-                    }
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (historyIndex > -1) {
-                        historyIndex--;
-                        queryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
-                    }
-                }
-            });
-            
-            // Handle execute button click
-            const handleExecute = async () => {
-                const query = queryInput.value.trim();
-                if (!query) return;
-                
-                // Save to history (if not already the most recent)
-                if (!queryHistory.includes(query)) {
-                    queryHistory.unshift(query);
-                    if (queryHistory.length > 50) queryHistory.pop(); // Keep last 50 queries
-                    localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
-                }
-                historyIndex = -1;
-                try {
-                    const response = await fetch(`${baseUrl}/execute_query`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ query: queryInput.value })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.error) {
-                        resultArea.textContent = `Error: ${data.error}`;
-                        return;
-                    }
-                    
-                    if (data.results) {
-                        // Check if results is array of objects (table format)
-                        if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
-                            // Clear previous content
-                            resultArea.innerHTML = '';
-                            
-                            // Create table wrapper with dynamic width
-                            const queryContent = document.querySelector('.query-content');
-                            queryContent.style.width = '100%';
-                            queryContent.style.overflowX = 'auto';
-
-                            const tableWrapper = document.createElement('div');
-                            tableWrapper.className = 'table-scroll-wrapper';
-                            tableWrapper.style.width = '100%';
-                            tableWrapper.style.maxWidth = '100%';
-                            
-                            const table = document.createElement('table');
-                            table.style.width = '100%';
-                            
-                            // Create header
-                            const thead = document.createElement('thead');
-                            const headerRow = document.createElement('tr');
-                            Object.keys(data.results[0]).forEach(key => {
-                                const th = document.createElement('th');
-                                th.textContent = key;
-                                headerRow.appendChild(th);
-                            });
-                            thead.appendChild(headerRow);
-                            table.appendChild(thead);
-                            
-                            // Create body
-                            const tbody = document.createElement('tbody');
-                            data.results.forEach(row => {
-                                const tr = document.createElement('tr');
-                                Object.values(row).forEach(value => {
-                                    const td = document.createElement('td');
-                                    td.textContent = value === null ? 'NULL' : value;
-                                    tr.appendChild(td);
-                                });
-                                tbody.appendChild(tr);
-                            });
-                            table.appendChild(tbody);
-                            
-                            // Append table to wrapper and wrapper to result area
-                            tableWrapper.appendChild(table);
-                            resultArea.appendChild(tableWrapper);
-
-                            // Auto-adjust column widths after data is loaded
-                            setTimeout(() => adjustColumnWidths(table), 0);
-                        } else {
-                            resultArea.textContent = JSON.stringify(data.results, null, 2);
-                        }
-                    } else {
-                        resultArea.textContent = data.message;
-                    }
-                } catch (error) {
-                    resultArea.textContent = `Error: ${error.message}`;
-                }
-            };
-            
-            // Clean up previous event listeners
-            executeButton.removeEventListener('click', handleExecute);
-            executeButton.addEventListener('click', handleExecute);
-            
-            // Handle close button
-            const closeButton = queryPopup.querySelector('.query-close');
-            const handleClose = () => {
-                queryPopup.classList.remove('visible');
-            };
-            
-            closeButton.removeEventListener('click', handleClose);
-            closeButton.addEventListener('click', handleClose);
-            
-            // Handle Escape key
-            queryPopup.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    handleClose();
-                }
-            }, { once: true });
-            
-            let isExecuting = false;
-            // Handle Enter with Ctrl/Cmd
-            queryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !isExecuting) {
-                    e.preventDefault();
-                    isExecuting = true;
-                    handleExecute().finally(() => {
-                        isExecuting = false;
-                    });
-                }
-            });
-            
-            return;
-        }
-        if ((e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'x')
+                if ((e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'x')
             && !isEditing && isAdminMode) {
             const focusedCell = table.querySelector('td.focused');
             if (!focusedCell) return;
@@ -1211,7 +1959,6 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             const row = focusedCell.closest('tr');
             if (!row) return;
 
-            // Get row ID from first cell
             if (e.key.toLowerCase() === 'x') {
                 const columnIndex = Array.from(row.cells).indexOf(focusedCell);
                 const valueToDelete = focusedCell.textContent;
@@ -1406,36 +2153,72 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
 
 export function adjustColumnWidths(table) {
     const columns = Array.from(table.querySelectorAll('th'));
-    columns.forEach((th, index) => {
-        // Reset any existing widths
-        th.style.width = '';
+    const PADDING = 20;
+    const MIN_JSON_WIDTH = 0;
+    const MAX_JSON_WIDTH = 400;
+    const INDENT_SIZE = 2;
+    const NESTING_PADDING = 10; // Reduced padding per nesting level
 
-        // Calculate the max width needed for this column
+    columns.forEach((th, index) => {
+        th.style.width = '';
         const cells = Array.from(table.querySelectorAll(`td:nth-child(${index + 1})`));
         const allCells = [th, ...cells];
         let maxWidth = 0;
+        let hasJsonCells = false;
 
         allCells.forEach(cell => {
-            const cellText = cell.innerText || cell.textContent;
-            const cellFont = window.getComputedStyle(cell).font;
-            const cellWidth = getTextWidth(cellText, cellFont);
-            if (cellWidth > maxWidth) {
-                maxWidth = cellWidth;
+            const jsonCell = cell.querySelector('.json-cell');
+            if (jsonCell) {
+                hasJsonCells = true;
+                try {
+                    const jsonObj = JSON.parse(jsonCell.textContent);
+                    const formattedJson = JSON.stringify(jsonObj, null, INDENT_SIZE);
+                    const lines = formattedJson.split('\n');
+                    const cellFont = window.getComputedStyle(jsonCell).font;
+
+                    // Calculate optimal width based on longest meaningful content
+                    let contentMaxWidth = 0;
+                    lines.forEach(line => {
+                        // Only consider content length, not full indentation
+                        const content = line.trim();
+                        // Ignore braces and brackets alone
+                        if (content && !['[', ']', '{', '}', ','].includes(content)) {
+                            contentMaxWidth = Math.max(contentMaxWidth, getTextWidth(content, cellFont));
+                        }
+                    });
+                    maxWidth = Math.max(maxWidth, contentMaxWidth);
+ 
+                } catch (e) {
+                    maxWidth = Math.max(maxWidth, getTextWidth(jsonCell.textContent, window.getComputedStyle(jsonCell).font));
+                }
+            } else {
+                const cellText = cell.textContent;
+                const cellFont = window.getComputedStyle(cell).font;
+                // For normal cells, consider word breaks for long content
+                const cellWidth = Math.min(getTextWidth(cellText, cellFont), 300);
+                maxWidth = Math.max(maxWidth, cellWidth);
             }
         });
 
-        // Apply the width to the header and cells (add padding as needed)
-        let finalWidth = maxWidth + 24; // Add padding
-
-        // Add extra width to the final column for the delete button
+        // Add padding and handle special cases
+        let finalWidth = maxWidth + PADDING;
+        if (hasJsonCells) {
+            // Add fixed padding for JSON formatting
+            finalWidth += NESTING_PADDING;
+            finalWidth = Math.max(finalWidth, MIN_JSON_WIDTH);
+            finalWidth = Math.min(finalWidth, MAX_JSON_WIDTH);
+        }
         if (index === columns.length - 1) {
-            finalWidth += 30; // Extra width for the 'x' button
+            finalWidth += 30;
         }
 
-        th.style.width = `${finalWidth}px`;
-
-        cells.forEach(cell => {
+        // Apply the width uniformly
+        [th, ...cells].forEach(cell => {
             cell.style.width = `${finalWidth}px`;
+            cell.style.minWidth = `${finalWidth}px`;
+            if (!cell.querySelector('.json-cell')) {
+                cell.style.maxWidth = `${finalWidth}px`;
+            }
         });
     });
 }
@@ -1453,7 +2236,7 @@ export function handleTableScroll(wrapper, tableName) {
     
     // Exit early if this is a horizontal scroll
     if (isHorizontalScroll) return;
-
+    
     // Handle vertical scroll events
     const bottomOffset = 50;
     const topOffset = 50;
@@ -1461,43 +2244,57 @@ export function handleTableScroll(wrapper, tableName) {
     const atTop = wrapper.scrollTop < topOffset;
     const tableDiv = document.getElementById(tableName);
     const isHidden = tableDiv.classList.contains('hidden-table');
-
+    
     if (atBottom && !isLoading[tableName] && !isHorizontalScroll) {
         // Show temporary pause message
         const pauseButton = document.getElementById('pauseButton');
-        const defaultTooltip = pauseButton.querySelector('.default-tooltip');
-        const tempTooltip = pauseButton.querySelector('.temp-tooltip');
-        const currentLang = getCurrentLanguage();  // Get current language
+        const defaultTooltip = pauseButton?.querySelector('.default-tooltip');
+        const tempTooltip = pauseButton?.querySelector('.temp-tooltip');
+        
+        // Safely get currentLang, default to 'ko' if it's undefined
+        let currentLang = 'ko';
+        try {
+            currentLang = getCurrentLanguage() || 'ko';
+        } catch (e) {
+            console.warn('Error getting current language, defaulting to Korean', e);
+        }
         
         // Only trigger pause on first historical data load
         const hasOldData = Object.keys(tableChunks).some(tn => tableChunks[tn].end > ROWS_PER_LOAD);
         const noOldDataYet = !hasOldData;
         
         if (!window.isMonitoringPaused && !isHidden && noOldDataYet) {
-            defaultTooltip.style.display = 'none';
-            tempTooltip.style.display = 'block';
-            window.toggleMonitoring();
+            if (defaultTooltip && tempTooltip) {
+                defaultTooltip.style.display = 'none';
+                tempTooltip.style.display = 'block';
+            }
+            
+            if (window.toggleMonitoring) {
+                window.toggleMonitoring();
+            }
     
             const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
-            if (limitedInfoSpan) {
+            if (limitedInfoSpan && translations) {
                 limitedInfoSpan.innerHTML = `
-                    <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.scrollMore}</span>
-                    <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.scrollMore}</span>
+                    <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko?.scrollMore || '스크롤하여 더 많은 데이터 불러오기!'}</span>
+                    <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en?.scrollMore || 'Scroll to load more data!'}</span>
                 `;
                 limitedInfoSpan.classList.add('visible');
             }
     
             // Hide temp tooltip after 3 seconds
-            setTimeout(() => {
-                tempTooltip.style.display = 'none';
-                defaultTooltip.style.display = '';
-            }, 3000);
+            if (tempTooltip && defaultTooltip) {
+                setTimeout(() => {
+                    tempTooltip.style.display = 'none';
+                    defaultTooltip.style.display = '';
+                }, 3000);
+            }
         }
     
         // Always fetch more data when scrolling to bottom, regardless of monitoring state
-        fetchTableData(tableName, true, baseUrl, translations, getCurrentLanguage(), updateSingleTable);
+        fetchTableData(tableName, true, baseUrl, translations, currentLang, updateSingleTable);
     }
-
+    
     // Resume monitoring if table is hidden or at top
     if ((atTop || isHidden) && window.isMonitoringPaused) {
         autoScrolling = true;
@@ -1509,7 +2306,9 @@ export function handleTableScroll(wrapper, tableName) {
         }
         
         setTimeout(() => {
-            window.toggleMonitoring();
+            if (window.toggleMonitoring) {
+                window.toggleMonitoring();
+            }
             autoScrolling = false;
         }, 300);
     }
@@ -1535,4 +2334,107 @@ export function scrollAllTablesToTop() {
     visibleTables.forEach(container => {
         scrollTableToTop(container);
     });
+}
+
+// Function to arrange tables by relations
+function arrangeByRelations() {
+    if (!schemaData || !schemaData.relationships) {
+        console.error('Schema data not available');
+        return;
+    }
+
+    const tablesContainer = document.getElementById('tables-container');
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
+    
+    // Reset all groups
+    tableSections.forEach(section => {
+        section.classList.remove('relation-group');
+        section.style.opacity = '0';
+    });
+
+    const sortedOrder = getSortedTableOrder();
+    
+    // Update DOM with animation
+    sortedOrder.forEach((tableName, index) => {
+        const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+        const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
+        
+        if (section) {
+            section.style.transition = 'all 0.3s ease-out';
+            section.style.transitionDelay = `${index * 0.05}s`;
+            tablesContainer.appendChild(section);
+            if (hasRelations(tableName)) {
+                section.classList.add('relation-group');
+            }
+            requestAnimationFrame(() => {
+                section.style.opacity = '1';
+            });
+        }
+        
+        if (pill) {
+            buttonsLine.appendChild(pill);
+        }
+    });
+
+    // Clean up transitions
+    setTimeout(() => {
+        tableSections.forEach(section => {
+            section.style.transition = '';
+            section.style.transitionDelay = '';
+        });
+    }, sortedOrder.length * 50 + 300);
+}
+
+// Function to arrange tables alphabetically
+function arrangeAlphabetically() {
+    const tablesContainer = document.getElementById('tables-container');
+    const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    const tablePills = Array.from(buttonsLine.querySelectorAll('.table-button'));
+    
+    // Remove relation-group class and reset margins
+    tableSections.forEach(section => {
+        section.classList.remove('relation-group');
+        section.style.marginBottom = '';
+        section.style.opacity = '0';
+    });
+    
+    // Get alphabetically sorted table names
+    const sortedNames = tableSections
+        .map(section => section.getAttribute('data-table-name'))
+        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    
+    // Reorder table sections with animation
+    sortedNames.forEach((tableName, index) => {
+        const section = tableSections.find(s =>
+            s.getAttribute('data-table-name') === tableName
+        );
+        if (section) {
+            section.style.transition = 'all 0.3s ease-out';
+            section.style.transitionDelay = `${index * 0.05}s`;
+            tablesContainer.appendChild(section);
+            requestAnimationFrame(() => {
+                section.style.opacity = '1';
+            });
+        }
+    });
+    
+    // Reorder table pills
+    sortedNames.forEach((tableName) => {
+        const pill = tablePills.find(p =>
+            p.getAttribute('data-table') === tableName
+        );
+        if (pill) {
+            buttonsLine.appendChild(pill);
+        }
+    });
+    
+    // Clean up transitions
+    setTimeout(() => {
+        tableSections.forEach(section => {
+            section.style.transition = '';
+            section.style.transitionDelay = '';
+        });
+    }, sortedNames.length * 50 + 300);
 }

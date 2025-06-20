@@ -13,6 +13,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/table.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/schema.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/logo.css') }}">
+    <script src="{{ url_for('static', filename='js/icon-morph.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logo.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <script>
         // Get saved language preference
@@ -40,8 +44,38 @@
         // Set initial language toggle state
         window.addEventListener('DOMContentLoaded', () => {
             const toggle = document.getElementById('languageToggle');
-            if (toggle) {
-                toggle.checked = savedLang === 'en';
+            const initialToggle = document.getElementById('initialLanguageToggle');
+            
+            const setToggleState = (toggle) => {
+                if (toggle) toggle.checked = savedLang === 'en';
+            };
+            [toggle, initialToggle].forEach(setToggleState);
+
+            // Add event listener to initial setup language toggle
+            if (initialToggle) {
+                initialToggle.addEventListener('change', function() {
+                    const newLang = this.checked ? 'en' : 'ko';
+                    document.documentElement.setAttribute('data-lang', newLang);
+                    document.cookie = `preferred_language=${newLang};path=/;max-age=31536000`;
+                    if (toggle) toggle.checked = this.checked;
+                    
+                    // Immediately update language display without page refresh
+                    document.querySelectorAll('.lang-ko, .lang-en').forEach(el => {
+                        el.style.cssText = 'display: none !important';
+                    });
+                    document.querySelectorAll(`.lang-${newLang}`).forEach(el => {
+                        el.style.cssText = 'display: inline !important';
+                    });
+                    
+                    // Update switch label opacity
+                    document.querySelectorAll('.switch-label').forEach(label => {
+                        if (label.getAttribute('data-lang') === newLang) {
+                            label.style.opacity = '1';
+                        } else {
+                            label.style.opacity = '0.5';
+                        }
+                    });
+                });
             }
         });
     </script>
@@ -49,9 +83,43 @@
         // Wait for mermaid to be loaded
         window.mermaidPromise = new Promise((resolve) => {
             if (typeof mermaid !== 'undefined') {
+                mermaid.initialize({
+                    startOnLoad: true,
+                    theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+                    securityLevel: 'loose',
+                    er: { useMaxWidth: true }
+                });
                 resolve(mermaid);
             } else {
-                document.querySelector('script[src*="mermaid"]').onload = () => resolve(mermaid);
+                document.querySelector('script[src*="mermaid"]').onload = () => {
+                    mermaid.initialize({
+                        startOnLoad: true,
+                        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+                        securityLevel: 'loose'
+                    });
+                    resolve(mermaid);
+                };
+            }
+        });
+
+        // Theme toggle synchronization
+        window.addEventListener('DOMContentLoaded', () => {
+            const mainThemeToggle = document.getElementById('themeToggle');
+            const initialThemeToggle = document.getElementById('initialThemeToggle');
+            
+            // Set initial state based on current theme
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (mainThemeToggle) mainThemeToggle.checked = isDarkTheme;
+            if (initialThemeToggle) initialThemeToggle.checked = isDarkTheme;
+            
+            // Add event listener to initial theme toggle
+            if (initialThemeToggle) {
+                initialThemeToggle.addEventListener('change', function() {
+                    const theme = this.checked ? 'dark' : 'light';
+                    document.documentElement.setAttribute('data-theme', theme);
+                    document.cookie = `preferred_theme=${theme};path=/;max-age=31536000`;
+                    if (mainThemeToggle) mainThemeToggle.checked = this.checked;
+                });
             }
         });
     </script>
@@ -61,6 +129,27 @@
     <!-- Initial setup screen for no database -->
     <div id="initial-setup" style="display: {{ 'flex' if not has_database else 'none' }};" class="initial-setup">
         <div class="setup-content">
+            <div class="setup-header">
+                <div class="setup-controls">
+                    <div class="setup-language-switcher">
+                        <span class="switch-label ko" data-lang="ko">한국어</span>
+                        <label class="switch">
+                            <input type="checkbox" id="initialLanguageToggle">
+                            <span class="switch-slider"></span>
+                        </label>
+                        <span class="switch-label en" data-lang="en">ENG</span>
+                    </div>
+                    <div class="setup-theme-switcher">
+                        <label class="theme-switch" title="Toggle dark mode">
+                            <input type="checkbox" id="initialThemeToggle" style="margin: 7px;">
+                            <span class="theme-switch-slider">
+                                <span class="theme-icon sun-icon"></span>
+                                <span class="theme-icon moon-icon"></span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
             <h1>
                 <span class="lang-ko">데이터베이스 설정</span>
                 <span class="lang-en">Database Setup</span>
@@ -129,35 +218,32 @@
                     <option value="700">0.7</option>
                     <option value="800">0.8</option>
                     <option value="900">0.9</option>
-                    <option value="1000" selected>1</option>
+                    <option value="1000">1</option>
                     <option value="1250">1.25</option>
                     <option value="1500">1.5</option>
                     <option value="1750">1.75</option>
                     <option value="2000">2</option>
                     <option value="3000">3</option>
                     <option value="4000">4</option>
-                    <option value="5000">5</option>
+                    <option value="5000"selected>5</option>
                     <option value="7500">7.5</option>
                     <option value="10000">10</option>
                     <option value="20000">20</option>
                     <option value="60000">60</option>
                 </select>
                 <button id="pauseButton" class="pause-button">
-                    <span class="pause-icon" style="display: inline;">⏸</span>
-                    <span class="play-icon" style="display: none;">▶</span>
-                    <div class="tooltip default-tooltip">
-                        <span class="lang-ko">내용을 쉽게 복사하기 위해 모니터링을 일시 중지합니다</span>
-                        <span class="lang-en">Pausing monitoring lets you copy contents more easily</span>
-                    </div>
+                    <svg class="morphing-icon" viewBox="0 0 24 24" width="18" height="18">
+                        <path class="pause-path" fill="currentColor" d="M6,5 L10,5 L10,19 L6,19 L6,5 M14,5 L18,5 L18,19 L14,19 L14,5"></path>
+                    </svg>
                     <div class="tooltip temp-tooltip" style="display: none;">
-                        <span class="lang-ko">이전 데이터 확인을 위해 일시적으로 중지되었습니다</span>
-                        <span class="lang-en">Temporarily paused for viewing historical data</span>
+                        <span class="lang-ko">텍스트를 복사하는 동안 모니터링이 일시 중지되었습니다</span>
+                        <span class="lang-en">Monitoring is paused since you are copying texts</span>
                     </div>
                 </button>
             </div>
             <div class="db-switcher">
                 <button id="dbSwitchButton" class="db-switch-button">
-                    <span class="current-db"></span>
+                    <span class="current-db">⇋</span>
                     <!-- Arrow indicator is now handled by CSS ::after pseudo-element -->
                 </button>
                 <div id="dbMenu" class="db-menu">
@@ -175,8 +261,8 @@
                     <div class="favicon-controls">
                         <div class="favicon-switch">
                             <span class="switch-label">
-                                <span class="lang-ko">기본 파비콘 사용</span>
-                                <span class="lang-en">Use Default Favicon</span>
+                                <span class="lang-ko">사용자 지정 파비콘 사용</span>
+                                <span class="lang-en">Use Custom Favicon</span>
                             </span>
                             <label class="switch">
                                 <input type="checkbox" id="faviconToggle">
@@ -191,26 +277,51 @@
                             </button>
                         </div>
                     </div>
+                    <div class="logo-controls">
+                        <div class="logo-switch">
+                            <span class="switch-label">
+                                <span class="lang-ko">사용자 지정 로고 사용</span>
+                                <span class="lang-en">Use Custom Logo</span>
+                            </span>
+                            <label class="switch">
+                                <input type="checkbox" id="logoToggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="logo-upload">
+                            <input type="file" id="logoUpload" accept="image/*" style="display: none;">
+                            <button class="upload-button" onclick="document.getElementById('logoUpload').click()">
+                                <span class="lang-ko">로고 업로드</span>
+                                <span class="lang-en">Upload Logo</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div id="connection-status" class="connection-status connected">
-            <div class="status-indicator"></div>
-            <span class="status-text">
-                <span class="lang-ko">연결됨</span>
-                <span class="lang-en">Connected</span>
-            </span>
-        </div>
-        <h1 id="pageTitle" contenteditable="true" data-placeholder="Edit page title" spellcheck="false"></h1>
-        <button id="schemaButton" class="schema-button">
-            <span class="lang-ko">스키마</span>
-            <span class="lang-en">SCHEMA</span>
-            <div class="tooltip">
-                <span class="lang-ko">데이터베이스의 최신 스키마를 확인합니다</span>
-                <span class="lang-en">See the latest SCHEMA from the database</span>
+            <div id="connection-status" class="connection-status connected">
+                <div class="status-indicator"></div>
+                <span class="status-text">
+                    <span class="lang-ko">연결됨</span>
+                    <span class="lang-en">Connected</span>
+                </span>
             </div>
-        </button>
+        </div>
+        <div class="title-container">
+            <div id="pageLogo" class="page-logo" style="display: none;">
+                <div class="resize-handle"></div>
+            </div>
+            <h1 id="pageTitle" contenteditable="true" data-placeholder="Edit page title" spellcheck="false"></h1>
+        </div>
+        
         <div id="language-switcher" class="language-switcher">
+            <button id="schemaButton" class="schema-button">
+                <span class="lang-ko">스키마</span>
+                <span class="lang-en">SCHEMA</span>
+                <div class="tooltip">
+                    <span class="lang-ko">데이터베이스의 최신 스키마를 확인합니다</span>
+                    <span class="lang-en">See the latest SCHEMA from the database</span>
+                </div>
+            </button>
             <div class="admin-mode-container">
                 <span class="admin-mode-label">
                     <span class="lang-ko">관리자 모드</span>
@@ -284,8 +395,10 @@
     <div id="queryPopup" class="query-popup">
         <div class="query-content">
             <div class="query-header">
-                <span class="lang-ko">사용자 정의 쿼리</span>
-                <span class="lang-en">Custom Query</span>
+                <div class="query-title">
+                    <span class="lang-ko">사용자 정의 쿼리</span>
+                    <span class="lang-en">Custom Query</span>
+                </div>
                 <button class="query-close" title="Close">&times;</button>
             </div>
             <div class="query-form">
@@ -348,15 +461,35 @@
     <!-- Schema modal structure -->
     <div id="schemaModal" class="schema-modal">
         <div class="schema-content">
-            <div id="schemaLoading" class="schema-loading">Loading schema...</div>
-            <div id="schemaError" class="schema-error" style="display: none;"></div>
             <div class="schema-container">
-                <div class="mermaid" id="schemaContent">
-                    Loading schema diagram...
+                <div class="schema-loading">Loading schema...</div>
+                <div class="schema-error" style="display: none;"></div>
+
+                <div class="mermaid" style="display: none;"></div>
+                <img id="graphvizContent">
+                
+                <!-- Schema controls -->
+                <div class="schema-controls">
+                    <div class="schema-switch">
+                        <span class="switch-label">GraphViz</span>
+                        <label class="switch schema-type-switch">
+                            <input type="checkbox" id="schemaTypeToggle">
+                            <span class="switch-slider"></span>
+                        </label>
+                        <span class="switch-label">Mermaid</span>
+                    </div>
+                    <button class="copy-button" title="Copy schema to clipboard">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.242a2 2 0 0 0-.602-1.43L16.083 2.57A2 2 0 0 0 14.685 2H10a2 2 0 0 0-2 2z"></path><path d="M16 18v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2"></path></svg>
+                    </button>
+                    <button class="download-button" title="Download schema as image">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
                 </div>
+
+                <!-- Zoom controls -->
                 <div class="zoom-controls">
-                    <button class="zoom-button zoom-out" title="Zoom out">−</button>
                     <button class="zoom-button zoom-in" title="Zoom in">+</button>
+                    <button class="zoom-button zoom-out" title="Zoom out">−</button>
                 </div>
             </div>
             <button class="schema-close" title="Close schema view">×</button>
@@ -364,35 +497,36 @@
     </div>
 
 <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logo.js') }}"></script>
 <script type="module">
     import { initializeSchema } from '/static/js/schema.js';
-    const baseUrl = window.location.origin;
+    var baseUrl = window.location.origin;
 
     document.addEventListener('DOMContentLoaded', () => {
         // Initialize schema visualization
-        const schemaButton = document.getElementById('schemaButton');
-        const schemaModal = document.getElementById('schemaModal');
-        const loading = document.getElementById('schemaLoading');
-        const error = document.getElementById('schemaError');
+        var schemaButton = document.getElementById('schemaButton');
+        var schemaModal = document.getElementById('schemaModal');
+        var loading = document.querySelector('.schema-loading');
+        var error = document.querySelector('.schema-error');
         const container = document.querySelector('.schema-container');
 
         initializeSchema(schemaButton, schemaModal, loading, error, container);
     });
 
     function getCurrentDatabaseKey() {
-            const getCookie = (name) => {
-                const value = `; ${document.cookie}`;
-                const parts = value.split(`; ${name}=`);
-                if (parts.length === 2) return parts.pop().split(';').shift();
+            var getCookie = function(name) {
+                var value = '; ' + document.cookie;
+                var parts = value.split('; ' + name + '=');
+                if (parts.length === 2) { return parts.pop().split(';').shift(); }
                 return null;
             };
             
-            const dbConfigsCookie = getCookie('db_configs');
-            const lastUsedDb = getCookie('last_used_db');
+            var dbConfigsCookie = getCookie('db_configs');
+            var lastUsedDb = getCookie('last_used_db');
             
             if (dbConfigsCookie && lastUsedDb) {
                 try {
-                    const dbConfigs = JSON.parse(decodeURIComponent(dbConfigsCookie));
+                    var dbConfigs = JSON.parse(decodeURIComponent(dbConfigsCookie));
                     return lastUsedDb;
                 } catch (e) {
                     console.error('Error parsing database configuration:', e);
@@ -402,12 +536,12 @@
         }
         
         function initializePageTitle() {
-            const pageTitle = document.getElementById('pageTitle');
-            const currentDb = getCurrentDatabaseKey();
+            var pageTitle = document.getElementById('pageTitle');
+            var currentDb = getCurrentDatabaseKey();
 
             if (currentDb) {
-                const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
-                const savedTitle = savedTitles[currentDb];
+                var savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+                var savedTitle = savedTitles[currentDb];
                 
                 if (savedTitle) {
                     requestAnimationFrame(() => {
@@ -435,12 +569,12 @@
         }
 
         function savePageTitle() {
-            const pageTitle = document.getElementById('pageTitle');
-            const currentDb = getCurrentDatabaseKey();
-            const titleText = pageTitle.textContent.trim();
+            var pageTitle = document.getElementById('pageTitle');
+            var currentDb = getCurrentDatabaseKey();
+            var titleText = pageTitle.textContent.trim();
 
             if (currentDb && titleText) {
-                const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+                var savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
                 savedTitles[currentDb] = titleText;
                 localStorage.setItem('pageTitles', JSON.stringify(savedTitles));
             }
@@ -449,17 +583,17 @@
         // Schema button click handler is now handled by the initializeSchema function
 
         document.querySelector('.schema-close').addEventListener('click', function () {
-            const modal = document.getElementById('schemaModal');
+            var modal = document.getElementById('schemaModal');
             modal.classList.remove('visible');
             setTimeout(() => modal.style.display = 'none', 300);
         });
 
         document.addEventListener('DOMContentLoaded', function () {
-            const tableButtons = document.querySelectorAll('.table-button');
-            tableButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const tableName = button.dataset.table;
-                    const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+            var tableButtons = document.querySelectorAll('.table-button');
+            tableButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var tableName = button.dataset.table;
+                    var tableSection = document.querySelector('.table-section[data-table-name="' + tableName + '"]');
 
                     if (!button.classList.contains('active')) {
                         button.classList.add('active');
@@ -484,19 +618,19 @@
             loadToggleStates();
             initializePageTitle();
 
-            const updateButtonCount = (tableName, count) => {
-                const buttonCount = document.getElementById(`${tableName}_button_count`);
+            var updateButtonCount = function(tableName, count) {
+                var buttonCount = document.getElementById(tableName + '_button_count');
                 if (buttonCount) {
-                    buttonCount.textContent = `(${count})`;
+                    buttonCount.textContent = '(' + count + ')';
                 }
             };
 
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
                     // Fix: Use endsWith instead of endswith
                     if (mutation.target.id.endsWith('_count')) {
-                        const tableName = mutation.target.id.replace('_count', '');
-                        const count = mutation.target.textContent.match(/\d+/)[0];
+                        var tableName = mutation.target.id.replace('_count', '');
+                        var count = mutation.target.textContent.match(/\d+/)[0];
                         updateButtonCount(tableName, count);
                     }
                 });
@@ -508,22 +642,22 @@
         });
 
         function saveToggleStates() {
-            const states = {};
-            document.querySelectorAll('.table-button').forEach(button => {
+            var states = {};
+            document.querySelectorAll('.table-button').forEach(function(button) {
                 states[button.dataset.table] = button.classList.contains('active');
             });
             localStorage.setItem('tableToggleStates', JSON.stringify(states));
         }
 
         function loadToggleStates() {
-            const savedStates = localStorage.getItem('tableToggleStates');
+            var savedStates = localStorage.getItem('tableToggleStates');
             if (savedStates) {
-                const states = JSON.parse(savedStates);
-                document.querySelectorAll('.table-button').forEach(button => {
-                    const tableName = button.dataset.table;
+                var states = JSON.parse(savedStates);
+                document.querySelectorAll('.table-button').forEach(function(button) {
+                    var tableName = button.dataset.table;
                     if (states[tableName]) {
                         button.classList.add('active');
-                        const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+                        var tableSection = document.querySelector('.table-section[data-table-name="' + tableName + '"]');
                         tableSection.classList.add('visible');
                         tableSection.style.display = 'block';
                     }

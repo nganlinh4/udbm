@@ -1,4 +1,4 @@
-/* Global scrollbar styles */
+/* Global scrollbar styles - default styling */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -9,6 +9,7 @@
     margin: 4px;
 }
 
+/* Default scrollbar thumb style - will be overridden by more specific styles */
 ::-webkit-scrollbar-thumb {
     background: #cdcdcd;
     border-radius: 4px;
@@ -17,6 +18,8 @@
 ::-webkit-scrollbar-thumb:hover {
     background: #bdbdbd;
 }
+
+/* Table-specific scrollbar styles are in theme.css with higher specificity */
 
 :root {
     /* Material Design 3 Light Theme */
@@ -32,16 +35,7 @@
     --table-header-bg: #ffffff; /* Light theme table header background */
     --toggle-button-bg: #e0e0e0; /* Light theme toggle button background */
     --toggle-button-text: #000000; /* Light theme toggle button text */
-    /* Define colors for theme-1 */
-    --theme-1-color: #FFC107; /* Amber */
-    --theme-1-darker: #FFA000;
-    /* Define colors for theme-2 */
-    --theme-2-color: #03A9F4; /* Light Blue */
-    --theme-2-darker: #0288D1;
-    /* Define colors for theme-3 */
-    --theme-3-color: #4CAF50; /* Green */
-    --theme-3-darker: #388E3C;
-    /* Add more themes as needed */
+
 }
 
 :root {

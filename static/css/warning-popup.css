@@ -1,0 +1,41 @@
+.warning-popup {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    background: #323232;
+    color: white;
+    padding: 16px 32px;
+    border-radius: 8px;
+    font-size: 1em;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    min-width: 300px;
+    max-width: 80vw;
+    will-change: transform,
+        opacity;
+}
+
+.warning-popup.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
+    z-index: 10000;
+}
+
+.warning-popup .warning-icon {
+    margin-right: 12px;
+    font-size: 1.2em;
+    display: inline-block;
+}
+
+#warningPopup .warning-icon {
+    color: #ff5252;
+}
+
+#deletePopup .warning-icon {
+    color: #4caf50;
+}

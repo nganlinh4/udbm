@@ -1,0 +1,123 @@
+/* Logo controls styles */
+.logo-controls {
+    padding: 0px 12px 12px 12px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.logo-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.logo-switch .switch-label {
+    font-size: 0.9em;
+    color: var(--md-sys-color-on-surface);
+}
+
+.logo-upload .upload-button {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 24px;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.logo-upload .upload-button:hover {
+    background: var(--md-sys-color-surface-variant);
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .logo-upload .upload-button {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+/* Title container and logo styles */
+.title-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+}
+
+.page-logo {
+    position: relative;
+    max-width: 1000px;
+    min-width: 20px;
+    height: auto;
+    cursor: move;
+}
+
+.page-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.page-logo .resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--md-sys-color-primary);
+    border-radius: 50%;
+    right: -5px;
+    bottom: -5px;
+    cursor: se-resize;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.page-logo:hover .resize-handle {
+    opacity: 1;
+}
+
+.page-logo.resizing {
+    user-select: none;
+    pointer-events: none;
+}
+
+.page-logo.resizing .resize-handle {
+    opacity: 1;
+}
+
+[data-theme="dark"] .page-logo .resize-handle {
+    background: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 2px var(--md-sys-color-surface);
+}
+
+#pageTitle {
+    margin: 0;
+    flex: 1;
+}
+
+/* Hide logo controls when db form is present */
+.db-list:has(.db-form) ~ .logo-controls {
+    display: none !important;
+}
+
+.db-menu.show .db-form ~ .logo-controls {
+    display: none !important;
+}
+
+.db-menu:has(.db-form) .logo-controls {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Hide when database form is present */
+.db-menu:has(.db-form) .logo-controls,
+.db-form ~ .logo-controls,
+#dbMenu:has(.db-form) .logo-controls {
+    display: none !important;
+}

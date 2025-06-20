@@ -1,3 +1,6 @@
+import { getTextWidth } from './utils.js';
+import { adjustColumnWidths } from './table.js';
+
 // Constants
 const ROWS_PER_LOAD = 50;
 const baseUrl = window.location.origin;
@@ -778,6 +781,27 @@ document.addEventListener('DOMContentLoaded', () => {
         setCookie('preferred_theme', isDarkMode ? 'dark' : 'light', 365);
     });
 
+    // Initialize admin toggle state
+    const adminToggle = document.getElementById('adminToggle');
+    if (adminToggle) {
+        // Load saved state from localStorage
+        const savedAdminState = localStorage.getItem('adminToggleState');
+        
+        // Set the checkbox state based on saved value
+        adminToggle.checked = savedAdminState === 'true';
+        
+        // Update body class to match the toggle state
+        document.body.classList.toggle('admin-mode', adminToggle.checked);
+
+        adminToggle.addEventListener('change', () => {
+            // Save the current state to localStorage
+            localStorage.setItem('adminToggleState', adminToggle.checked.toString());
+            
+            // Update body class when toggle changes
+            document.body.classList.toggle('admin-mode', adminToggle.checked);
+        });
+    }
+
     startMonitoring();
     updateClockAnimation();
 });
@@ -874,48 +898,9 @@ function toggleTable(tableName) {
 
 // Add a function to adjust column widths to fit content
 function adjustColumnWidths(table) {
-    const columns = Array.from(table.querySelectorAll('th'));
-    columns.forEach((th, index) => {
-        // Reset any existing widths
-        th.style.width = '';
-
-        // Calculate the max width needed for this column
-        const cells = Array.from(table.querySelectorAll(`td:nth-child(${index + 1})`));
-        const allCells = [th, ...cells];
-        let maxWidth = 0;
-
-        allCells.forEach(cell => {
-            const cellText = cell.innerText || cell.textContent;
-            const cellFont = window.getComputedStyle(cell).font;
-            const cellWidth = getTextWidth(cellText, cellFont);
-            if (cellWidth > maxWidth) {
-                maxWidth = cellWidth;
-            }
-        });
-
-        // Apply the width to the header and cells (add padding as needed)
-        let finalWidth = maxWidth + 24; // Add padding
-
-        // Add extra width to the final column for the delete button
-        if (index === columns.length - 1) {
-            finalWidth += 30; // Extra width for the 'x' button
-        }
-
-        th.style.width = `${finalWidth}px`;
-
-        cells.forEach(cell => {
-            cell.style.width = `${finalWidth}px`;
-        });
-    });
-}
-
-// Utility function to get text width in pixels
-function getTextWidth(text, font) {
-    // Reuse canvas object for better performance
-    const canvas = getTextWidth.canvas || (getTextWidth.canvas = document.createElement('canvas'));
-    const context = canvas.getContext('2d');
-    context.font = font || '16px Arial';
-    return context.measureText(text).width;
+    // Simply use the improved version from table.js
+    const tableClass = window.require('./table.js');
+    tableClass.adjustColumnWidths(table);
 }
 
 // Add new function to update language display
@@ -1278,6 +1263,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Always set both the dropdown value and the actual interval to 10000ms
     dropdown.value = '10000';
     monitorInterval = 10000;
+
+    // Initialize admin toggle state
+    const adminToggle = document.getElementById('adminToggle');
+    if (adminToggle) {
+        // Load saved state and apply it immediately
+        const initialState = localStorage.getItem('adminToggleState');
+        if (initialState === 'true') {
+            // Trigger a change event to properly initialize admin mode
+            adminToggle.checked = true;
+            adminToggle.dispatchEvent(new Event('change'));
+        }
+
+        adminToggle.addEventListener('change', () => {
+            const isChecked = adminToggle.checked;
+            document.body.classList.toggle('admin-mode', isChecked);
+            localStorage.setItem('adminToggleState', isChecked);
+        });
+    }
     
     // Initialize danger class based on current value
     updateDropdownDangerState(monitorInterval);

@@ -1,7 +1,8 @@
-from flask import Flask, render_template, jsonify, request, make_response
+from flask import Flask, render_template, jsonify, request, make_response, url_for, send_file
 from flask_cors import CORS
 import mysql.connector
 import psycopg2
+import graphviz
 import psycopg2.extras
 import time
 import logging
@@ -848,46 +849,12 @@ def update_cell(table_name, row_id, column):
     finally:
         if 'connection' in locals():
             connection.close()
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor()
-
-        if current_db_config.get('db_type') == 'postgresql':
-            try:
-                # Disable foreign key checks
-                cursor.execute("SET session_replication_role = 'replica';")
-                # Delete the row
-                cursor.execute(f'DELETE FROM "{table_name}" WHERE id = %s', (row_id,))
-                # Re-enable foreign key checks
-                cursor.execute("SET session_replication_role = 'origin';")
-            except psycopg2.Error as e:
-                return jsonify({'error': str(e)}), 500
-        else:
-            # MySQL
-            try:
-                # Disable foreign key checks
-                cursor.execute("SET FOREIGN_KEY_CHECKS=0")
-                # Delete the row
-                cursor.execute(f"DELETE FROM {table_name} WHERE id = %s", (row_id,))
-                # Re-enable foreign key checks
-                cursor.execute("SET FOREIGN_KEY_CHECKS=1")
-            except mysql.connector.Error as e:
-                return jsonify({'error': str(e)}), 500
-
-        connection.commit()
-        return jsonify({'success': True})
-
-    except Exception as e:
-        logger.error(f"Error deleting row from {table_name}: {e}")
-        return jsonify({'error': str(e)}), 500
-    finally:
-        if 'connection' in locals():
-            connection.close()
 
 # Update schema endpoint without referrer check
 @app.route('/schema')
 def get_schema():
     try:
+        schema_type = request.args.get('type', 'mermaid')
         global current_db_config
         
         if not current_db_config:
@@ -1059,8 +1026,103 @@ def get_schema():
             '#D7CCC8',  # theme-8 (Brown)
             '#CFD8DC',  # theme-9 (Blue Grey)
         ]
+        if schema_type == 'graphviz':
+            # Create graphviz diagram
+            theme = request.args.get('theme', 'light')
+            is_dark = theme == 'dark'
+            
+            # Define theme colors
+            if is_dark:
+                text_color = '#ffffff'
+                edge_color = '#cccccc'
+                # Darker theme colors with better contrast
+                theme_colors = [
+                    '#4B6BBF',  # Dark Indigo
+                    '#3B8C84',  # Dark Teal
+                    '#C75B79',  # Dark Pink
+                    '#D4823B',  # Dark Orange
+                    '#4B9B4F',  # Dark Green
+                    '#9B67A0',  # Dark Purple
+                    '#4B91BF',  # Dark Light Blue
+                    '#BFB04B',  # Dark Yellow
+                    '#8B7355',  # Dark Brown
+                    '#546E7A',  # Dark Blue Grey
+                ]
+            else:
+                text_color = '#000000'
+                edge_color = '#666666'
+                # Keep original light theme colors
 
-        # Return the schema data for mermaid.js
+            dot = graphviz.Digraph(comment='Database Schema')
+            dot.attr(rankdir='TB')
+            dot.attr('node', shape='record', fontsize='10', color=edge_color, fontcolor=text_color)
+            dot.attr(bgcolor='transparent')  # Set transparent background through graph attribute
+            dot.attr(splines='ortho')
+            dot.attr(dpi='300')
+            
+            # Update edge attributes for better label positioning
+            dot.attr('edge', 
+                    arrowhead='normal', 
+                    fontsize='8',
+                    color=edge_color,
+                    fontcolor=text_color,
+                    labeldistance='1.0', 
+                    labelangle='0', 
+                    labelloc='c')
+            
+            # Graph-level attributes
+            dot.attr(nodesep='0.4')
+            dot.attr(ranksep='0.8')
+            
+            # Add tables with colored headers
+            for idx, (table_name, columns) in enumerate(tables.items()):
+                if table_name not in IGNORED_TABLES:
+                    color = theme_colors[idx % len(theme_colors)]
+                    
+                    # Format columns without COLLATE info
+                    column_strs = []
+                    for col in columns:
+                        type_str = str(col['type']).split('COLLATE')[0].strip()
+                        col_str = f"{col['name']} ({type_str})"
+                        if col['is_primary']:
+                            col_str = f"<b>{col_str}</b>"
+                        column_strs.append(col_str)
+                    
+                    # Create HTML-like label
+                    label = f'''<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+                        <TR><TD BGCOLOR="{color}">{table_name}</TD></TR>
+                        <TR><TD ALIGN="LEFT">{('<BR/>' + '  ').join(column_strs)}</TD></TR>
+                    </TABLE>>'''
+                    
+                    dot.node(table_name, label, shape='none')
+            
+            # Add relationships with improved label positioning
+            for rel in relationships:
+                from_table = rel['from']['table']
+                to_table = rel['to']['table']
+                if from_table not in IGNORED_TABLES and to_table not in IGNORED_TABLES:
+                    label = f"{rel['from']['column']} → {rel['to']['column']}"
+                    # Use headlabel/taillabel instead of edge label for better positioning
+                    if len(label) > 20:  # Long labels might drift more
+                        # For longer labels, use separate head/tail labels
+                        dot.edge(from_table, to_table, 
+                               headlabel=rel['to']['column'], 
+                               taillabel=rel['from']['column'],
+                               labeldistance='2.0',
+                               labelangle='25')
+                    else:
+                        # For shorter labels, keep them centered
+                        dot.edge(from_table, to_table, label=label)
+            
+            # Save and return image path
+            schema_path = os.path.join(app.static_folder, 'schema.png')
+            dot.format = 'png'
+            dot.render(schema_path[:-4], format='png', cleanup=True)
+            dot.attr(layout='dot')
+            
+            return jsonify({'schema_url': url_for('static', filename='schema.png')})
+
+        # Default: Return mermaid.js format
         return jsonify({
             'tables': tables,
             'relationships': relationships,
@@ -1081,6 +1143,201 @@ def after_request(response):
     return response
 
 # Add custom query endpoint
+@app.route('/download/xlsx', methods=['POST'])
+def download_xlsx():
+    try:
+        data = request.json
+        if not data or not data.get('data') or not data.get('filename'):
+            return jsonify({'error': 'Invalid request data'}), 400
+
+        # Convert JSON data to pandas DataFrame
+        df = pd.DataFrame(data['data'])
+        
+        # Process DataFrame before converting to Excel
+        for column in df.columns:
+            # Convert JSON objects in cells to strings
+            df[column] = df[column].apply(lambda x: 
+                json.dumps(x, ensure_ascii=False) if isinstance(x, dict) else x
+            )
+
+        # Create a BytesIO object to store the Excel file
+        excel_file = io.BytesIO()
+        
+        # Write to Excel file
+        df.to_excel(excel_file, index=False, engine='openpyxl')
+        excel_file.seek(0)
+        
+        return send_file(
+            excel_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=data['filename']
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+@app.route('/download/<table_name>/csv')
+def download_table_csv(table_name):
+    try:
+        connection = get_db_connection()
+        cursor = None
+        
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor = connection.cursor()
+        else:
+            cursor = connection.cursor(dictionary=True)
+
+        # Get column names
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
+            columns = [desc[0] for desc in cursor.description]
+            cursor.fetchall()  # Fetch (and discard) results before closing
+        else:
+            cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
+            columns = [desc[0] for desc in cursor.description]
+            cursor.fetchall()  # Fetch (and discard) results before closing
+        
+        # Close and create new cursor to avoid unread results
+        cursor.close()
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor = connection.cursor()
+        else:
+            cursor = connection.cursor(dictionary=True)
+
+        # Create in-memory file
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(columns)
+
+        # Fetch and write data in chunks with proper cursor handling
+        chunk_size = 5000
+        offset = 0
+
+        while True:
+            if current_db_config.get('db_type') == 'postgresql':
+                query = f'SELECT * FROM "{table_name}" ORDER BY "{columns[0]}" LIMIT %s OFFSET %s'
+            else:
+                query = f"SELECT * FROM {table_name} ORDER BY `{columns[0]}` LIMIT %s OFFSET %s"
+            
+            cursor.execute(query, (chunk_size, offset))
+            rows = cursor.fetchall()
+            if not rows:
+                break
+
+            for row in rows:
+                if current_db_config.get('db_type') == 'postgresql':
+                    processed_row = []
+                    for value in row:
+                        processed_row.append(json.dumps(value) if isinstance(value, (dict, list)) 
+                                          else (str(value) if value is not None else ''))
+                else:
+                    processed_row = []
+                    for col in columns:
+                        value = row[col] if isinstance(row, dict) else row[columns.index(col)]
+                        processed_row.append(json.dumps(value) if isinstance(value, (dict, list))
+                                          else (str(value) if value is not None else ''))
+                writer.writerow(processed_row)
+
+            offset += chunk_size
+            connection.commit()  # Clear any pending results
+
+        # Prepare response
+        output.seek(0)
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8')),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'{table_name}_{time.strftime("%Y%m%d_%H%M%S")}.csv'
+        )
+
+    except Exception as e:
+        logger.error(f"Error downloading CSV for table {table_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
+@app.route('/download/<table_name>/xlsx')
+def download_table_xlsx(table_name):
+    try:
+        connection = get_db_connection()
+        cursor = None
+
+        # First get column names
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor = connection.cursor()
+            cursor.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
+        else:
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
+        cursor.fetchall()  # Fetch (and discard) results before closing
+
+        columns = [desc[0] for desc in cursor.description]
+        cursor.close()
+
+        # Create a new cursor for data fetching
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor = connection.cursor()
+        else:
+            cursor = connection.cursor(dictionary=True)
+
+        # Create Excel file in memory
+        output = io.BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        workbook = writer.book
+        worksheet = workbook.add_worksheet(table_name)
+
+        # Write headers
+        for col_num, column in enumerate(columns):
+            worksheet.write(0, col_num, column)
+
+        # Fetch and write data in chunks
+        chunk_size = 5000
+        offset = 0
+        row_num = 1
+
+        while True:
+            if current_db_config.get('db_type') == 'postgresql':
+                query = f'SELECT * FROM "{table_name}" ORDER BY "{columns[0]}" LIMIT %s OFFSET %s'
+            else:
+                query = f"SELECT * FROM {table_name} ORDER BY `{columns[0]}` LIMIT %s OFFSET %s"
+
+            cursor.execute(query, (chunk_size, offset))
+            rows = cursor.fetchall()
+            if not rows:
+                break
+
+            for row in rows:
+                for col_num, value in enumerate(row if isinstance(row, (list, tuple)) else [row[col] for col in columns]):
+                    if isinstance(value, (dict, list)):
+                        worksheet.write(row_num, col_num, json.dumps(value, ensure_ascii=False))
+                    else:
+                        worksheet.write(row_num, col_num, str(value) if value is not None else '')
+                row_num += 1
+
+            offset += chunk_size
+            connection.commit()  # Clear any pending results
+
+        writer.close()
+        output.seek(0)
+
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'{table_name}_{time.strftime("%Y%m%d_%H%M%S")}.xlsx'
+        )
+
+    except Exception as e:
+        logger.error(f"Error downloading XLSX for table {table_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
 @app.route('/execute_query', methods=['POST'])
 def execute_query():
     if not current_db_config:

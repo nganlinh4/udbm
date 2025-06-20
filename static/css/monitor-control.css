@@ -1,0 +1,294 @@
+.monitor-control {
+    position: absolute;
+    left: 20px;
+    top: 38px;
+    padding: 4px 10px 4px 10px;
+    border-radius: 36px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    height: 35px;
+}
+
+/* Update the hover effect to target only monitor-control elements that don't contain db-switcher */
+.monitor-control > *:not(.db-switcher):hover + .monitor-control {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.dropdown-container {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Reduced from 12px */
+    background: white;
+    padding: 4px 0px;
+    border-radius: 12px;
+    height: 100%;
+}
+
+.monitor-dropdown {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 82px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 36px;
+    background-color: white;
+    color: #1f1f1f !important;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy transition */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    box-shadow: var(--md-elevation-level1);
+    transform-origin: top;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ripple effect on hover */
+.monitor-dropdown:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(26, 115, 232, 0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+    z-index: -1;
+}
+
+.monitor-dropdown:hover:before {
+    width: 150px;
+    height: 150px;
+}
+
+.monitor-dropdown:hover {
+    box-shadow: var(--md-elevation-level2);
+    transform: translateY(-2px) scale(1.03);
+}
+
+.monitor-dropdown:focus {
+    outline: none;
+    border: none;
+    box-shadow: var(--md-elevation-level3);
+}
+
+/* Arrow rotation animation */
+.monitor-dropdown:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 15l6-6 6 6'/%3E%3C/svg%3E");
+    animation: dropdownPulse 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Styling for dropdown options with material design feel */
+.monitor-dropdown option {
+    background-color: white;
+    color: #1f1f1f;
+    padding: 12px;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+/* Animation for dropdown options container */
+select.monitor-dropdown[size]:not([size="1"]) {
+    animation: optionsReveal 0.9s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+}
+
+/* Pulse animation with slight glow effect */
+@keyframes dropdownPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: var(--md-elevation-level1);
+    }
+    10% {
+        transform: scale(1.05);
+    }
+    20% {
+        transform: scale(0.97);
+        box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+    }
+    30% {
+        transform: scale(1.03);
+    }
+    40% {
+        transform: scale(0.99);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+}
+
+/* Options reveal with staggered effect */
+@keyframes optionsReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scaleY(0.7);
+        transform-origin: top;
+        clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+    }
+    30% {
+        opacity: 0.8;
+        transform: translateY(-5px) scaleY(0.85);
+        clip-path: polygon(0 0, 100% 0, 100% 30%, 0 30%);
+    }
+    60% {
+        transform: translateY(-3px) scaleY(0.95);
+        clip-path: polygon(0 0, 100% 0, 100% 60%, 0 60%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scaleY(1);
+        transform-origin: top;
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    }
+}
+
+/* Closing animation - add this class with JavaScript when closing */
+.monitor-dropdown-closing {
+    animation: dropdownClose 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes dropdownClose {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    30% {
+        transform: scale(1.03);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+}
+
+/* Individual option reveal animation - requires JS to add classes to options */
+.monitor-dropdown option.reveal {
+    animation: optionFadeIn 0.4s ease forwards;
+    opacity: 0;
+}
+
+@keyframes optionFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Optional: Adding glowing border effect when focused */
+.monitor-dropdown:focus {
+    animation: glowingBorder 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes glowingBorder {
+    0% {
+        box-shadow: 0 0 5px rgba(26, 115, 232, 0.5), 0 0 10px rgba(26, 115, 232, 0.2);
+    }
+    100% {
+        box-shadow: 0 0 8px rgba(26, 115, 232, 0.7), 0 0 15px rgba(26, 115, 232, 0.3);
+    }
+}
+
+.monitor-dropdown option {
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .monitor-dropdown option {
+    color: var(--md-sys-color-on-surface);
+    background-color: var(--md-sys-color-surface-variant);
+}
+
+.monitor-dropdown:hover {
+    background-color: #fafafa;
+    border-color: #1a73e8;
+}
+
+.monitor-dropdown:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+}
+
+.monitor-dropdown.danger {
+    color: #d32f2f;
+    border-color: #d32f2f;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d32f2f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    box-shadow: 0 0 0 1px #d32f2f;
+}
+
+.monitor-dropdown.danger:hover {
+    background-color: #fff5f5;
+}
+
+.monitor-dropdown.danger:focus {
+    box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
+}
+
+.monitor-value {
+    min-width: 30px;
+    font-size: 0.9em;
+    color: #666666;
+    padding: 8px 0;
+}
+
+.monitor-slider.danger {
+    background: linear-gradient(to right, #ffebee, #ffcdd2);
+}
+
+.monitor-slider.danger::-webkit-slider-thumb {
+    background: #f44336 !important;
+    box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
+}
+
+.monitor-slider.danger::-moz-range-thumb {
+    background: #f44336 !important;
+    box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
+}
+
+.refresh-rate-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.75em;  /* Slightly increased for better readability */
+    line-height: 1;     /* Tightened line height */
+    letter-spacing: -0.02em;
+    color: var(--md-sys-color-on-surface);
+    opacity: 0.8;
+    min-width: fit-content;
+    margin-right: 4px;
+    margin-top: 4px;
+}
+
+.refresh-rate-label .lang-ko,
+.refresh-rate-label .lang-en {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;  /* Added small gap between lines */
+}
+
+.refresh-rate-label span span {
+    line-height: 1.3;
+    text-align: center;
+    display: block;     /* Ensure each word is on its own line */
+    white-space: nowrap; /* Prevent word wrapping */
+}
