@@ -7,3 +7,4 @@ SQLAlchemy>=1.4.0
 pandas
 openpyxl
 graphviz
+xlsxwriter
