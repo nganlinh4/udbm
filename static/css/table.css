@@ -425,6 +425,264 @@ tr {
     display: table-row !important;
 }
 
+/* Header content layout */
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 4px;
+}
+
+.header-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Filter button styles */
+.filter-btn {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    opacity: 0.7;
+    font-weight: bold;
+}
+
+.filter-btn:hover {
+    background: var(--md-sys-color-surface-variant);
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.filter-btn:active {
+    transform: scale(0.95);
+}
+
+.filter-btn.active {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-primary);
+    opacity: 1;
+    font-weight: bold;
+}
+
+/* Dark theme support for filter buttons */
+[data-theme="dark"] .filter-btn {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+[data-theme="dark"] .filter-btn:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+[data-theme="dark"] .filter-btn.active {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-primary);
+}
+
+/* Sort button styles */
+.sort-btn {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    opacity: 0.7;
+    font-weight: bold;
+    margin-right: 2px;
+}
+
+.sort-btn:hover {
+    background: var(--md-sys-color-surface-variant);
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.sort-btn:active {
+    transform: scale(0.95);
+}
+
+.sort-btn.active {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-secondary);
+    opacity: 1;
+    font-weight: bold;
+}
+
+/* Dark theme support for sort buttons */
+[data-theme="dark"] .sort-btn {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+[data-theme="dark"] .sort-btn:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+[data-theme="dark"] .sort-btn.active {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-secondary);
+}
+
+/* Filter dropdown styles */
+.filter-dropdown {
+    position: fixed;
+    min-width: 200px;
+    max-width: 300px;
+    background: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    max-height: 300px;
+    overflow: hidden;
+    display: none;
+    transform: translateY(4px);
+}
+
+/* Ensure dropdown appears above everything */
+.filter-dropdown.show {
+    display: block;
+    animation: fadeInScale 0.15s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(4px) scale(1);
+    }
+}
+
+
+
+.filter-dropdown-header {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-variant);
+    font-size: 0.85em;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.filter-dropdown-content {
+    max-height: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--md-sys-color-outline-variant) transparent;
+}
+
+.filter-dropdown-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.filter-dropdown-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.filter-dropdown-content::-webkit-scrollbar-thumb {
+    background: var(--md-sys-color-outline-variant);
+    border-radius: 3px;
+}
+
+.filter-dropdown-content::-webkit-scrollbar-thumb:hover {
+    background: var(--md-sys-color-outline);
+}
+
+.filter-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    transition: background-color 0.15s ease;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-option:last-child {
+    border-bottom: none;
+}
+
+.filter-option:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+.filter-option.selected {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.filter-option-checkbox {
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.filter-option.selected .filter-option-checkbox {
+    background: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.filter-option.selected .filter-option-checkbox::after {
+    content: '✓';
+}
+
+/* Dark theme support for dropdown */
+[data-theme="dark"] .filter-dropdown {
+    background: var(--md-sys-color-surface);
+    border-color: var(--md-sys-color-outline);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .filter-dropdown-header {
+    background: var(--md-sys-color-surface-variant);
+    border-color: var(--md-sys-color-outline-variant);
+}
+
+[data-theme="dark"] .filter-option {
+    border-color: var(--md-sys-color-outline-variant);
+}
+
+[data-theme="dark"] .filter-option:hover {
+    background: var(--md-sys-color-surface-variant);
+}
+
+/* Filtered out rows */
+.filtered-out {
+    display: none !important;
+}
+
 .table-section:hover,
 .toggle-button:hover,
 .connection-status:hover {

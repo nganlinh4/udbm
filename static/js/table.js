@@ -1158,6 +1158,19 @@ function updateTableRows(tbody, tableData, columns) {
             noDataCell.classList.add('focused');
         }
     }
+
+    // Reapply filters after updating rows (only if not already filtered by database)
+    const table = tbody.closest('table');
+    if (table && table.querySelectorAll('.filter-btn').length > 0) {
+        const container = table.closest('.table-container');
+        const tableId = container ? container.id : 'default-table';
+        const allFilters = tableFilters.get(tableId) || {};
+
+        // Only apply frontend filtering if no database filters are active
+        if (Object.keys(allFilters).length === 0) {
+            filterTableFrontend(table);
+        }
+    }
 }
 
 export function createNewTable(tableDiv, tableData, columns, baseUrl) {
@@ -1171,11 +1184,37 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
 
     // Create header row
     const headerRow = document.createElement('tr');
-    columns.forEach(col => {
+    columns.forEach((col, index) => {
         const th = document.createElement('th');
+
+        // Header content container
+        const headerContent = document.createElement('div');
+        headerContent.className = 'header-content';
+
         const span = document.createElement('span');
         span.textContent = col;
-        th.appendChild(span);
+        span.className = 'header-text';
+        headerContent.appendChild(span);
+
+        // Sort button
+        const sortBtn = document.createElement('button');
+        sortBtn.className = 'sort-btn';
+        sortBtn.setAttribute('data-column', col);
+        sortBtn.setAttribute('data-column-index', index);
+        sortBtn.innerHTML = '↕'; // Up-down arrow for unsorted
+        sortBtn.title = `Sort ${col}`;
+        headerContent.appendChild(sortBtn);
+
+        // Filter button
+        const filterBtn = document.createElement('button');
+        filterBtn.className = 'filter-btn';
+        filterBtn.setAttribute('data-column', col);
+        filterBtn.setAttribute('data-column-index', index);
+        filterBtn.innerHTML = '⋮'; // Three dots filter icon
+        filterBtn.title = `Filter ${col}`;
+        headerContent.appendChild(filterBtn);
+
+        th.appendChild(headerContent);
 
         const resizer = document.createElement('div');
         resizer.className = 'resizer';
@@ -1197,6 +1236,9 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
     wrapper.addEventListener('scroll', function () {
         handleTableScroll(this, tableDiv.id);
     });
+
+    // Add filter functionality
+    addFilterListeners(table, columns);
 
     if (!tableData || !tableData.length) {
         const noDataRow = document.createElement('tr');
@@ -1392,15 +1434,24 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
 
 // Helper functions
 function addResizerListeners(table, columns) {
-    const thElements = table.querySelectorAll('th');
+    // Only get header cells from the first row (not filter row)
+    const headerRow = table.querySelector('thead tr:first-child');
+    const thElements = headerRow.querySelectorAll('th');
+
     thElements.forEach((th, index) => {
         const resizer = th.querySelector('.resizer');
+
+        // Skip if no resizer found
+        if (!resizer) return;
+
         let startX, startWidth;
         let currentWidth;
 
         const initialWidth = th.offsetWidth;
         th.style.width = `${initialWidth}px`;
         th.style.minWidth = `${initialWidth}px`;
+
+
 
         table.querySelectorAll(`td:nth-child(${index + 1})`).forEach(td => {
             td.style.width = `${initialWidth}px`;
@@ -1414,6 +1465,8 @@ function addResizerListeners(table, columns) {
             currentWidth = Math.max(30, startWidth + deltaX);
             th.style.width = `${currentWidth}px`;
             th.style.minWidth = `${currentWidth}px`;
+
+
 
             table.querySelectorAll(`td:nth-child(${index + 1})`).forEach(cell => {
                 cell.style.width = `${currentWidth}px`;
@@ -1516,7 +1569,28 @@ export function fetchTableData(tableName, append = false, baseUrl, translations,
     }
 
     const offset = append ? tableChunks[tableName].end : tableChunks[tableName].start;
-    const url = `${baseUrl}/data/${tableName}?limit=${ROWS_PER_LOAD}&offset=${offset}`;
+
+    // Build URL with filter parameters if filters are active
+    const filterParams = new URLSearchParams();
+    filterParams.append('limit', ROWS_PER_LOAD.toString());
+    filterParams.append('offset', offset.toString());
+
+    // Get active filters for this table
+    const allFilters = tableFilters.get(tableName) || {};
+    Object.entries(allFilters).forEach(([columnName, selectedValues]) => {
+        if (columnName && selectedValues.length > 0) {
+            filterParams.append(`filter_${columnName}`, selectedValues.join(','));
+        }
+    });
+
+    // Get active sort for this table
+    const sortState = getTableSort(tableName);
+    if (sortState.column) {
+        filterParams.append('sort_column', sortState.column);
+        filterParams.append('sort_direction', sortState.direction);
+    }
+
+    const url = `${baseUrl}/data/${tableName}?${filterParams.toString()}`;
 
     return fetch(url)
         .then(response => {
@@ -2151,6 +2225,691 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     };
 }
 
+// Add filter and sort functionality to table
+function addFilterListeners(table, columns) {
+    const filterBtns = table.querySelectorAll('.filter-btn');
+    const sortBtns = table.querySelectorAll('.sort-btn');
+
+    // Filter button listeners
+    filterBtns.forEach((btn, columnIndex) => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            const columnName = btn.getAttribute('data-column');
+            await toggleFilterDropdown(table, btn, columnName, columnIndex);
+        });
+
+        // Prevent admin mode interactions
+        btn.addEventListener('keydown', function(e) {
+            e.stopPropagation();
+        });
+    });
+
+    // Sort button listeners
+    sortBtns.forEach((btn) => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            const columnName = btn.getAttribute('data-column');
+            await toggleSort(table, columnName);
+        });
+
+        btn.addEventListener('mouseenter', function() {
+            btn.style.opacity = '1';
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-btn')) {
+            closeAllFilterDropdowns();
+        }
+    });
+
+    // Close dropdowns on page scroll (but not dropdown internal scroll)
+    let scrollTimeout;
+    window.addEventListener('scroll', function(e) {
+        // Don't close if scrolling inside a dropdown
+        if (e.target.closest('.filter-dropdown-content')) {
+            return;
+        }
+
+        // Debounce scroll events to avoid excessive closing
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            closeAllFilterDropdowns();
+        }, 100);
+    }, true);
+
+    // Close dropdowns on window resize
+    window.addEventListener('resize', function() {
+        closeAllFilterDropdowns();
+    });
+}
+
+// Toggle filter dropdown for a column
+async function toggleFilterDropdown(table, btn, columnName, columnIndex) {
+    // Close other dropdowns first
+    closeAllFilterDropdowns();
+
+    // Check if this dropdown is already open for this button
+    if (btn.hasAttribute('data-dropdown-open')) {
+        return; // Already closed by closeAllFilterDropdowns
+    }
+
+    // Create and show dropdown (no need to pause monitoring anymore!)
+    const dropdown = await createFilterDropdown(table, columnName, columnIndex);
+
+    // Append to body to avoid clipping issues
+    document.body.appendChild(dropdown);
+
+    // Store reference to the button that opened this dropdown
+    dropdown.setAttribute('data-source-button', btn.getAttribute('data-column-index'));
+    btn.setAttribute('data-dropdown-open', 'true');
+
+    // Position dropdown
+    positionDropdown(dropdown, btn);
+
+    // Show dropdown
+    setTimeout(() => {
+        dropdown.classList.add('show');
+    }, 10);
+
+    // Mark button as active
+    btn.classList.add('active');
+}
+
+// Create filter dropdown with unique values
+async function createFilterDropdown(table, columnName, columnIndex) {
+    const dropdown = document.createElement('div');
+    dropdown.className = 'filter-dropdown';
+
+    // Prevent dropdown interactions from closing it
+    dropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    dropdown.addEventListener('scroll', function(e) {
+        e.stopPropagation();
+    });
+
+    dropdown.addEventListener('wheel', function(e) {
+        e.stopPropagation();
+    });
+
+    // Handle keyboard events
+    dropdown.addEventListener('keydown', function(e) {
+        e.stopPropagation();
+
+        // Close on Escape
+        if (e.key === 'Escape') {
+            closeAllFilterDropdowns();
+        }
+    });
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'filter-dropdown-header';
+    header.textContent = `Filter: ${columnName}`;
+    dropdown.appendChild(header);
+
+    // Content container
+    const content = document.createElement('div');
+    content.className = 'filter-dropdown-content';
+
+    // Prevent scroll events from bubbling up
+    content.addEventListener('scroll', function(e) {
+        e.stopPropagation();
+    });
+
+    // Prevent wheel events from bubbling up
+    content.addEventListener('wheel', function(e) {
+        e.stopPropagation();
+    });
+
+    dropdown.appendChild(content);
+
+    // Show loading state
+    content.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--md-sys-color-on-surface-variant);">Loading...</div>';
+
+    // Get unique values for this column
+    try {
+        const uniqueValues = await getUniqueColumnValues(table, columnName);
+        const currentFilters = getColumnFilters(table, columnIndex);
+
+        // Clear loading and create virtualized list
+        content.innerHTML = '';
+        createVirtualizedList(content, uniqueValues, currentFilters, async (selectedValues) => {
+            setColumnFilter(table, columnIndex, selectedValues);
+            updateFilterButton(table, columnIndex);
+            await applyDatabaseFilter(table);
+        });
+    } catch (error) {
+        content.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--md-sys-color-error);">Error loading values</div>';
+        console.error('Error creating filter dropdown:', error);
+    }
+
+    return dropdown;
+}
+
+// Get unique values from a column via API
+async function getUniqueColumnValues(table, columnName) {
+    try {
+        const tableContainer = table.closest('.table-container');
+        const tableName = tableContainer ? tableContainer.id : 'unknown';
+
+        const response = await fetch(`/data/${tableName}/column/${columnName}/values`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.values || [];
+    } catch (error) {
+        console.error('Error fetching column values:', error);
+        // Fallback to frontend filtering if API fails
+        return getFallbackColumnValues(table, columnName);
+    }
+}
+
+// Fallback function to get values from current table data
+function getFallbackColumnValues(table, columnName) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const values = new Set();
+
+    // Find column index
+    const headers = Array.from(table.querySelectorAll('thead tr:first-child th'));
+    const columnIndex = headers.findIndex(th => th.textContent.trim() === columnName);
+
+    if (columnIndex === -1) return [];
+
+    rows.forEach(row => {
+        if (row.querySelector('.no-data-message')) return;
+
+        const cells = row.querySelectorAll('td');
+        const cell = cells[columnIndex];
+        if (cell) {
+            const value = cell.textContent.trim();
+            if (value !== '') {
+                values.add(value);
+            }
+        }
+    });
+
+    return Array.from(values).sort();
+}
+
+// Create virtualized list for filter options
+function createVirtualizedList(container, values, selectedValues, onSelectionChange) {
+    const ITEM_HEIGHT = 32;
+    const MAX_VISIBLE_ITEMS = 8;
+    const containerHeight = Math.min(values.length * ITEM_HEIGHT, MAX_VISIBLE_ITEMS * ITEM_HEIGHT);
+
+    container.style.height = `${containerHeight}px`;
+    container.style.overflowY = 'auto';
+
+    // Add "All" option
+    const allOption = createFilterOption('(All)', selectedValues.length === 0, async (checked) => {
+        if (checked) {
+            // Clear all selections for this column
+            await onSelectionChange([]);
+        }
+    });
+    container.appendChild(allOption);
+
+    // Add separator
+    const separator = document.createElement('div');
+    separator.style.borderTop = '1px solid var(--md-sys-color-outline-variant)';
+    separator.style.margin = '4px 0';
+    container.appendChild(separator);
+
+    // Add individual options
+    values.forEach(value => {
+        const isSelected = selectedValues.includes(value);
+        const option = createFilterOption(value, isSelected, async (checked) => {
+            let newSelection = [...selectedValues];
+            if (checked) {
+                if (!newSelection.includes(value)) {
+                    newSelection.push(value);
+                }
+            } else {
+                newSelection = newSelection.filter(v => v !== value);
+            }
+            await onSelectionChange(newSelection);
+        });
+        container.appendChild(option);
+    });
+}
+
+// Create individual filter option
+function createFilterOption(value, isSelected, onChange) {
+    const option = document.createElement('div');
+    option.className = `filter-option ${isSelected ? 'selected' : ''}`;
+
+    const checkbox = document.createElement('div');
+    checkbox.className = 'filter-option-checkbox';
+    option.appendChild(checkbox);
+
+    const label = document.createElement('span');
+    label.textContent = value;
+    label.style.flex = '1';
+    label.style.overflow = 'hidden';
+    label.style.textOverflow = 'ellipsis';
+    label.style.whiteSpace = 'nowrap';
+    option.appendChild(label);
+
+    option.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const wasSelected = option.classList.contains('selected');
+
+        if (wasSelected) {
+            option.classList.remove('selected');
+        } else {
+            option.classList.add('selected');
+        }
+
+        await onChange(!wasSelected);
+    });
+
+    return option;
+}
+
+// Filter management functions
+const tableFilters = new Map(); // Store filters per table
+
+// Sort management functions
+const tableSorts = new Map(); // Store sort state per table
+
+// Helper function to check if a table has active filters
+function hasActiveFilters(tableName) {
+    return tableFilters.has(tableName) && Object.keys(tableFilters.get(tableName) || {}).length > 0;
+}
+
+function getColumnFilters(table, columnIndex) {
+    const container = table.closest('.table-container');
+    const tableId = container ? container.id : 'default-table';
+    const filters = tableFilters.get(tableId) || {};
+
+    // Get column name from filter button
+    const filterBtn = table.querySelector(`[data-column-index="${columnIndex}"]`);
+    const columnName = filterBtn ? filterBtn.getAttribute('data-column') : columnIndex.toString();
+
+    return filters[columnName] || [];
+}
+
+function setColumnFilter(table, columnIndex, selectedValues) {
+    const container = table.closest('.table-container');
+    const tableId = container ? container.id : 'default-table';
+    const filters = tableFilters.get(tableId) || {};
+
+    // Get column name from filter button
+    const filterBtn = table.querySelector(`[data-column-index="${columnIndex}"]`);
+    const columnName = filterBtn ? filterBtn.getAttribute('data-column') : columnIndex.toString();
+
+    if (selectedValues.length === 0) {
+        delete filters[columnName];
+    } else {
+        filters[columnName] = selectedValues;
+    }
+
+    tableFilters.set(tableId, filters);
+}
+
+// Sort management functions
+function getTableSort(tableName) {
+    return tableSorts.get(tableName) || { column: null, direction: null };
+}
+
+function setTableSort(tableName, column, direction) {
+    tableSorts.set(tableName, { column, direction });
+}
+
+function clearTableSort(tableName) {
+    tableSorts.delete(tableName);
+}
+
+function updateFilterButton(table, columnIndex) {
+    const btn = table.querySelector(`[data-column-index="${columnIndex}"].filter-btn`);
+    if (!btn) return;
+
+    const filters = getColumnFilters(table, columnIndex);
+
+    if (filters.length > 0) {
+        btn.classList.add('active');
+        btn.innerHTML = '⋯'; // Horizontal ellipsis for active filter
+    } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '⋮'; // Vertical ellipsis for inactive filter
+    }
+}
+
+function updateSortButton(table, columnName) {
+    const container = table.closest('.table-container');
+    const tableName = container ? container.id : 'default-table';
+    const sortState = getTableSort(tableName);
+
+    // Update all sort buttons
+    const sortBtns = table.querySelectorAll('.sort-btn');
+    sortBtns.forEach(btn => {
+        const btnColumn = btn.getAttribute('data-column');
+        if (btnColumn === sortState.column) {
+            btn.classList.add('active');
+            btn.innerHTML = sortState.direction === 'asc' ? '↑' : '↓';
+        } else {
+            btn.classList.remove('active');
+            btn.innerHTML = '↕'; // Up-down arrow for unsorted
+        }
+    });
+}
+
+// Toggle sort for a column
+async function toggleSort(table, columnName) {
+    const container = table.closest('.table-container');
+    const tableName = container ? container.id : 'default-table';
+    const currentSort = getTableSort(tableName);
+
+    let newDirection;
+    if (currentSort.column === columnName) {
+        // Same column - toggle direction
+        newDirection = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        // Different column - start with descending
+        newDirection = 'desc';
+    }
+
+    // Update sort state
+    setTableSort(tableName, columnName, newDirection);
+
+    // Update button appearance
+    updateSortButton(table, columnName);
+
+    // Apply database-level sorting
+    await applyDatabaseSort(table);
+}
+
+// Apply database-level sorting
+async function applyDatabaseSort(table) {
+    const container = table.closest('.table-container');
+    const tableId = container ? container.id : 'default-table';
+    const allFilters = tableFilters.get(tableId) || {};
+    const sortState = getTableSort(tableId);
+
+    try {
+        // Build parameters for the API
+        const params = new URLSearchParams();
+        params.append('limit', '50');
+        params.append('offset', '0');
+
+        // Add filter parameters
+        Object.entries(allFilters).forEach(([columnName, selectedValues]) => {
+            if (columnName && selectedValues.length > 0) {
+                params.append(`filter_${columnName}`, selectedValues.join(','));
+            }
+        });
+
+        // Add sort parameters
+        if (sortState.column) {
+            params.append('sort_column', sortState.column);
+            params.append('sort_direction', sortState.direction);
+        }
+
+        // Fetch sorted data
+        const response = await fetch(`/data/${tableId}?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Update table with sorted data
+        if (data.data) {
+            const tbody = table.querySelector('tbody');
+            updateTableRows(tbody, data.data, data.columns);
+
+            // Reset chunk tracking for sorted data
+            if (typeof tableChunks !== 'undefined' && tableChunks[tableId]) {
+                tableChunks[tableId] = {
+                    start: 0,
+                    end: data.data.length,
+                    isFiltered: Object.keys(allFilters).length > 0,
+                    isSorted: sortState.column !== null
+                };
+            }
+        }
+
+    } catch (error) {
+        console.error('Error applying database sort:', error);
+    }
+}
+
+// Close all filter dropdowns
+function closeAllFilterDropdowns() {
+    const dropdowns = document.querySelectorAll('.filter-dropdown');
+    dropdowns.forEach(dropdown => {
+        // Find and clean up the source button
+        const sourceButtonIndex = dropdown.getAttribute('data-source-button');
+        if (sourceButtonIndex) {
+            const sourceButton = document.querySelector(`[data-column-index="${sourceButtonIndex}"][data-dropdown-open]`);
+            if (sourceButton) {
+                sourceButton.removeAttribute('data-dropdown-open');
+
+                // Only remove active class if no filters are applied
+                const table = sourceButton.closest('table');
+                if (table) {
+                    const filters = getColumnFilters(table, parseInt(sourceButtonIndex));
+                    if (filters.length === 0) {
+                        sourceButton.classList.remove('active');
+                    }
+                }
+            }
+        }
+
+        dropdown.remove();
+    });
+}
+
+// Position dropdown relative to button
+function positionDropdown(dropdown, btn) {
+    const btnRect = btn.getBoundingClientRect();
+    const thRect = btn.closest('th').getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Calculate position
+    let left = thRect.left;
+    let top = thRect.bottom + 4;
+
+    // Ensure dropdown doesn't go off-screen horizontally
+    const dropdownWidth = 250; // Approximate width
+    if (left + dropdownWidth > viewportWidth) {
+        left = viewportWidth - dropdownWidth - 10;
+    }
+    if (left < 10) {
+        left = 10;
+    }
+
+    // Ensure dropdown doesn't go off-screen vertically
+    const dropdownHeight = 300; // Max height
+    if (top + dropdownHeight > viewportHeight) {
+        top = thRect.top - dropdownHeight - 4; // Show above instead
+    }
+
+    // Apply positioning
+    dropdown.style.left = `${left}px`;
+    dropdown.style.top = `${top}px`;
+    dropdown.style.width = `${Math.min(dropdownWidth, thRect.width * 2)}px`;
+}
+
+// Pause monitoring for filtering operations
+async function pauseMonitoringForFiltering() {
+    // Check if monitoring is currently active
+    const isCurrentlyMonitoring = (typeof window.isMonitoringPaused !== 'undefined' && !window.isMonitoringPaused) ||
+                                  (typeof window.isMonitoringPaused === 'undefined');
+
+    if (isCurrentlyMonitoring) {
+        console.log('Pausing monitoring for filtering operation...');
+
+        // Use the global toggle function if available
+        if (typeof window.toggleMonitoring === 'function') {
+            window.toggleMonitoring();
+        } else if (typeof toggleMonitoring === 'function') {
+            toggleMonitoring();
+        } else {
+            // Fallback: set the global variable directly
+            if (typeof window.isMonitoringPaused !== 'undefined') {
+                window.isMonitoringPaused = true;
+            }
+        }
+
+        // Also notify the backend
+        try {
+            const response = await fetch('/monitoring/state', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ paused: true })
+            });
+
+            if (!response.ok) {
+                console.warn('Failed to notify backend of monitoring pause');
+            }
+        } catch (error) {
+            console.error('Error setting monitoring state:', error);
+        }
+
+        // Update pause button visual state if it exists
+        const pauseButton = document.getElementById('pauseButton');
+        if (pauseButton && !pauseButton.classList.contains('paused')) {
+            pauseButton.click(); // Trigger the pause button
+        }
+
+        // Add visual indicator that filtering is active
+        addFilteringIndicator();
+    }
+}
+
+
+
+
+
+// Apply database-level filtering
+async function applyDatabaseFilter(table) {
+    const container = table.closest('.table-container');
+    const tableId = container ? container.id : 'default-table';
+    const allFilters = tableFilters.get(tableId) || {};
+
+    try {
+        // Build filter parameters for the API
+        const filterParams = new URLSearchParams();
+        filterParams.append('limit', '50');
+        filterParams.append('offset', '0');
+
+        // Add filter parameters
+        Object.entries(allFilters).forEach(([columnName, selectedValues]) => {
+            if (columnName && selectedValues.length > 0) {
+                filterParams.append(`filter_${columnName}`, selectedValues.join(','));
+            }
+        });
+
+        // Fetch filtered data
+        const response = await fetch(`/data/${tableId}?${filterParams.toString()}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Update table with filtered data
+        if (data.data) {
+            const tbody = table.querySelector('tbody');
+            updateTableRows(tbody, data.data, data.columns);
+
+            // Reset chunk tracking for filtered data
+            if (typeof tableChunks !== 'undefined' && tableChunks[tableId]) {
+                tableChunks[tableId] = {
+                    start: 0,
+                    end: data.data.length,
+                    isFiltered: Object.keys(allFilters).length > 0
+                };
+            }
+        }
+
+    } catch (error) {
+        console.error('Error applying database filter:', error);
+        // Fallback to frontend filtering
+        filterTableFrontend(table);
+    }
+}
+
+// Frontend filtering fallback (original function)
+function filterTableFrontend(table) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const container = table.closest('.table-container');
+    const tableId = container ? container.id : 'default-table';
+    const allFilters = tableFilters.get(tableId) || {};
+
+    // Check if any filters are active
+    const hasActiveFilters = Object.keys(allFilters).length > 0;
+
+    if (!hasActiveFilters) {
+        // Show all rows if no filters
+        rows.forEach(row => {
+            row.style.display = '';
+            row.classList.remove('filtered-out');
+        });
+        return;
+    }
+
+    // Get column headers for mapping
+    const headers = Array.from(table.querySelectorAll('thead tr:first-child th'));
+    const columnMap = {};
+    headers.forEach((th, index) => {
+        const filterBtn = th.querySelector('.filter-btn');
+        if (filterBtn) {
+            const columnName = filterBtn.getAttribute('data-column');
+            if (columnName) {
+                columnMap[columnName] = index;
+            }
+        }
+    });
+
+    rows.forEach(row => {
+        if (row.querySelector('.no-data-message')) {
+            // Don't filter the "no data" message row
+            return;
+        }
+
+        let shouldShow = true;
+        const cells = Array.from(row.querySelectorAll('td'));
+
+        shouldShow = Object.entries(allFilters).every(([columnName, selectedValues]) => {
+            const columnIndex = columnMap[columnName];
+            if (columnIndex === undefined) return true;
+
+            const cell = cells[columnIndex];
+            if (!cell) return true;
+
+            const cellText = cell.textContent.trim();
+            return selectedValues.includes(cellText);
+        });
+
+        if (shouldShow) {
+            row.style.display = '';
+            row.classList.remove('filtered-out');
+        } else {
+            row.style.display = 'none';
+            row.classList.add('filtered-out');
+        }
+    });
+}
+
+
+
 export function adjustColumnWidths(table) {
     const columns = Array.from(table.querySelectorAll('th'));
     const PADDING = 20;
@@ -2295,8 +3054,10 @@ export function handleTableScroll(wrapper, tableName) {
         fetchTableData(tableName, true, baseUrl, translations, currentLang, updateSingleTable);
     }
     
-    // Resume monitoring if table is hidden or at top
-    if ((atTop || isHidden) && window.isMonitoringPaused) {
+    // Resume monitoring if table is hidden or at top (but not if filters are active)
+    const tableHasActiveFilters = hasActiveFilters(tableName);
+
+    if ((atTop || isHidden) && window.isMonitoringPaused && !tableHasActiveFilters) {
         autoScrolling = true;
         if (!isHidden) {
             wrapper.scrollTo({
@@ -2304,7 +3065,7 @@ export function handleTableScroll(wrapper, tableName) {
                 behavior: 'smooth'
             });
         }
-        
+
         setTimeout(() => {
             if (window.toggleMonitoring) {
                 window.toggleMonitoring();

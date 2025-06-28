@@ -1,0 +1,37 @@
+// Database Schema
+digraph {
+	rankdir=TB
+	node [color="#666666" fontcolor="#000000" fontsize=10 shape=record]
+	bgcolor=transparent
+	splines=ortho
+	dpi=300
+	edge [arrowhead=normal color="#666666" fontcolor="#000000" fontsize=8 labelangle=0 labeldistance=1.0 labelloc=c]
+	nodesep=0.4
+	ranksep=0.8
+	classification_types [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+                        <TR><TD BGCOLOR="#C5CAE9">classification_types</TD></TR>
+                        <TR><TD ALIGN="LEFT"><b>id (int)</b><BR/>  type_name (varchar(50))<BR/>  description (text)</TD></TR>
+                    </TABLE>> shape=none]
+	currencies [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+                        <TR><TD BGCOLOR="#B2DFDB">currencies</TD></TR>
+                        <TR><TD ALIGN="LEFT"><b>id (int)</b><BR/>  currency_name (varchar(255))<BR/>  total_images (int)<BR/>  classified_images (int)<BR/>  created_at (timestamp)</TD></TR>
+                    </TABLE>> shape=none]
+	images [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+                        <TR><TD BGCOLOR="#F8BBD0">images</TD></TR>
+                        <TR><TD ALIGN="LEFT"><b>id (int)</b><BR/>  filename (varchar(255))<BR/>  currency_id (int)<BR/>  full_path (varchar(500))<BR/>  classification_id (int)<BR/>  created_at (timestamp)</TD></TR>
+                    </TABLE>> shape=none]
+	v_classification_summary [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+                        <TR><TD BGCOLOR="#FFE0B2">v_classification_summary</TD></TR>
+                        <TR><TD ALIGN="LEFT">type_name (varchar(50))<BR/>  description (text)<BR/>  image_count (bigint)<BR/>  percentage (decimal(26,2))</TD></TR>
+                    </TABLE>> shape=none]
+	v_currency_summary [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+                        <TR><TD BGCOLOR="#C8E6C9">v_currency_summary</TD></TR>
+                        <TR><TD ALIGN="LEFT">currency_name (varchar(255))<BR/>  total_images (int)<BR/>  classified_images (int)<BR/>  coverage_percentage (decimal(16,2))</TD></TR>
+                    </TABLE>> shape=none]
+	v_database_stats [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+                        <TR><TD BGCOLOR="#E1BEE7">v_database_stats</TD></TR>
+                        <TR><TD ALIGN="LEFT">metric (varchar(19))<BR/>  value (varchar(60))</TD></TR>
+                    </TABLE>> shape=none]
+	images -> currencies [label="currency_id → id"]
+	images -> classification_types [headlabel=id labelangle=25 labeldistance=2.0 taillabel=classification_id]
+}

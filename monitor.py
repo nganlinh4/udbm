@@ -225,6 +225,50 @@ def handle_database():
 IGNORED_TABLES = {'SequelizeMeta'}
 
 # Modify get_table_names() to include primary key info
+def build_where_clause(filters, db_type='mysql'):
+    """Build WHERE clause from filters dictionary"""
+    if not filters:
+        return "", []
+
+    where_conditions = []
+    params = []
+
+    for column, values in filters.items():
+        if not values:
+            continue
+
+        # Escape column name based on database type
+        if db_type == 'postgresql':
+            escaped_column = f'"{column}"'
+        else:
+            escaped_column = f'`{column}`'
+
+        if len(values) == 1:
+            where_conditions.append(f"{escaped_column} = %s")
+            params.append(values[0])
+        else:
+            # Multiple values - use IN clause
+            placeholders = ', '.join(['%s'] * len(values))
+            where_conditions.append(f"{escaped_column} IN ({placeholders})")
+            params.extend(values)
+
+    where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+    return where_clause, params
+
+def build_order_clause(sort_column, sort_direction, db_type='mysql'):
+    """Build ORDER BY clause from sort parameters"""
+    if not sort_column:
+        return ""
+
+    # Escape column name based on database type
+    if db_type == 'postgresql':
+        escaped_column = f'"{sort_column}"'
+    else:
+        escaped_column = f'`{sort_column}`'
+
+    direction = "ASC" if sort_direction == 'asc' else "DESC"
+    return f" ORDER BY {escaped_column} {direction}"
+
 def get_table_names():
     """Get table names with better connection handling and retries"""
     max_retries = 3
@@ -410,20 +454,85 @@ def set_monitoring_state():
         logger.error(f"Error setting monitoring state: {e}")
         return jsonify({'error': str(e)}), 500
 
+# Add endpoint to get unique values for a column
+@app.route('/data/<table_name>/column/<column_name>/values')
+def get_column_values(table_name, column_name):
+    if table_name in IGNORED_TABLES:
+        return jsonify({'error': 'Table is ignored'}), 400
+
+    try:
+        connection = get_db_connection()
+
+        if current_db_config.get('db_type') == 'postgresql':
+            cursor = connection.cursor()
+            # Verify column exists
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = %s AND column_name = %s
+            """, (table_name, column_name))
+            if not cursor.fetchone():
+                return jsonify({'error': f'Column {column_name} does not exist in table {table_name}'}), 404
+
+            # Get unique values (limit to reasonable number)
+            query = f'SELECT DISTINCT "{column_name}" FROM "{table_name}" WHERE "{column_name}" IS NOT NULL ORDER BY "{column_name}" LIMIT 1000'
+            cursor.execute(query)
+            results = cursor.fetchall()
+            values = [row[0] for row in results if row[0] is not None]
+        else:
+            cursor = connection.cursor(dictionary=True)
+            # Verify column exists
+            cursor.execute(f"SHOW COLUMNS FROM {table_name} LIKE %s", (column_name,))
+            if not cursor.fetchone():
+                return jsonify({'error': f'Column {column_name} does not exist in table {table_name}'}), 404
+
+            # Get unique values (limit to reasonable number)
+            query = f"SELECT DISTINCT `{column_name}` FROM {table_name} WHERE `{column_name}` IS NOT NULL ORDER BY `{column_name}` LIMIT 1000"
+            cursor.execute(query)
+            results = cursor.fetchall()
+            values = [row[column_name] for row in results if row[column_name] is not None]
+
+        return jsonify({'values': values})
+    except (mysql.connector.Error, psycopg2.Error) as e:
+        logger.error(f"Error getting column values for {table_name}.{column_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        logger.error(f"Error getting column values for {table_name}.{column_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
 # Update data endpoint without referrer check
 @app.route('/data/<table_name>')
 def data_table(table_name):
     global is_monitoring_paused
-    
+
     # If monitoring is paused and this is not an explicit data request (no limit param)
     if is_monitoring_paused and 'limit' not in request.args:
         return jsonify({'paused': True}), 202
-        
+
     if table_name in IGNORED_TABLES:
         return jsonify({'error': 'Table is ignored'}), 400
     try:
         limit = request.args.get('limit', default=50, type=int)
         offset = request.args.get('offset', default=0, type=int)
+
+        # Get filter parameters
+        filters = {}
+        for key, value in request.args.items():
+            if key.startswith('filter_'):
+                column_name = key[7:]  # Remove 'filter_' prefix
+                if value:  # Only add non-empty filters
+                    # Parse multiple values separated by commas
+                    filter_values = [v.strip() for v in value.split(',') if v.strip()]
+                    if filter_values:
+                        filters[column_name] = filter_values
+
+        # Get sort parameters
+        sort_column = request.args.get('sort_column')
+        sort_direction = request.args.get('sort_direction', 'desc').lower()
+        if sort_direction not in ['asc', 'desc']:
+            sort_direction = 'desc'
 
         connection = get_db_connection()
         if current_db_config.get('db_type') == 'postgresql':
@@ -465,9 +574,13 @@ def data_table(table_name):
         # Get row count
         if current_db_config.get('db_type') == 'postgresql':
             try:
+                # Build WHERE clause for filters
+                where_clause, filter_params = build_where_clause(filters, 'postgresql')
+
                 # Get count with better error handling
                 try:
-                    cursor.execute(f'SELECT COUNT(*) as count FROM "{table_name}"')
+                    count_query = f'SELECT COUNT(*) as count FROM "{table_name}"{where_clause}'
+                    cursor.execute(count_query, filter_params)
                     result = cursor.fetchone()
                     row_count = result['count'] if isinstance(result, dict) else result[0]
                 except psycopg2.Error as e:
@@ -503,14 +616,25 @@ def data_table(table_name):
                 # Fetch data only if a non-zero limit is specified
                 if limit > 0:
                     try:
-                        # Always use descending order on first column with error handling
+                        # Use provided sort column or default to first column
                         if not columns:
                             raise ValueError("No columns available for sorting")
-                        
-                        sort_column = columns[0]
-                        query = f'SELECT * FROM "{table_name}" ORDER BY "{sort_column}" DESC LIMIT %s OFFSET %s'
-                        
-                        cursor.execute(query, (limit, offset))
+
+                        # Use provided sort column or default to first column
+                        if sort_column and sort_column in columns:
+                            effective_sort_column = sort_column
+                        else:
+                            effective_sort_column = columns[0]
+                            if not sort_column:
+                                sort_direction = 'desc'  # Default to desc for first column
+
+                        # Build ORDER BY clause
+                        order_clause = build_order_clause(effective_sort_column, sort_direction, 'postgresql')
+                        query = f'SELECT * FROM "{table_name}"{where_clause}{order_clause} LIMIT %s OFFSET %s'
+
+                        # Combine filter params with limit/offset params
+                        query_params = filter_params + [limit, offset]
+                        cursor.execute(query, query_params)
                         rows = cursor.fetchall()
                         # RealDictCursor already returns dict-like objects, process for JSON serialization
                         response['data'] = process_database_rows(rows)
@@ -522,14 +646,17 @@ def data_table(table_name):
                 logger.error(f"PostgreSQL specific error for {table_name}: {str(e)}")
                 raise
         else:
-            # MySQL logic remains the same
-            cursor.execute(f"SELECT COUNT(*) as count FROM {table_name}")
+            # MySQL logic with filters
+            where_clause, filter_params = build_where_clause(filters, 'mysql')
+
+            count_query = f"SELECT COUNT(*) as count FROM {table_name}{where_clause}"
+            cursor.execute(count_query, filter_params)
             row_count = cursor.fetchone()['count']
-            
+
             cursor.execute(f"SHOW COLUMNS FROM {table_name}")
             columns_info = cursor.fetchall()
             columns = [col['Field'] for col in columns_info]
-            
+
             # Always initialize data array in response
             response = {
                 'count': row_count,
@@ -537,14 +664,22 @@ def data_table(table_name):
                 'limited': False,
                 'data': []  # Initialize empty data array for both paths
             }
-            
+
             # Only fetch data if a positive limit is specified
             if limit and limit > 0:
-                sort_column = columns[0]
-                cursor.execute(
-                    f"SELECT * FROM {table_name} ORDER BY `{sort_column}` DESC LIMIT %s OFFSET %s",
-                    (limit, offset)
-                )
+                # Use provided sort column or default to first column
+                if sort_column and sort_column in columns:
+                    effective_sort_column = sort_column
+                else:
+                    effective_sort_column = columns[0]
+                    if not sort_column:
+                        sort_direction = 'desc'  # Default to desc for first column
+
+                # Build ORDER BY clause
+                order_clause = build_order_clause(effective_sort_column, sort_direction, 'mysql')
+                data_query = f"SELECT * FROM {table_name}{where_clause}{order_clause} LIMIT %s OFFSET %s"
+                query_params = filter_params + [limit, offset]
+                cursor.execute(data_query, query_params)
                 rows = cursor.fetchall()
                 response['data'] = process_database_rows(rows)
                 response['limited'] = offset + limit < row_count

@@ -180,18 +180,25 @@ function createNewTable(tableDiv, tableData, columns) {
         
         // Handle return to top - clear historical state and resume monitoring
         if (isAtTop && tablesWithHistoricalData.has(tableName)) {
-            // Reset the table's data when returning to top
-            tableChunks[tableName] = {
-                start: 0,
-                end: ROWS_PER_LOAD,
-                isHistorical: false
-            };
-            tablesWithHistoricalData.delete(tableName);
-            fetchTableData(tableName, false);
-            
-            // Resume monitoring if no tables have historical data
-            if (tablesWithHistoricalData.size === 0 && isMonitoringPaused) {
-                updateMonitoringState(false);
+            // Check if filters are active for this table
+            const hasActiveFilters = typeof tableFilters !== 'undefined' &&
+                                   tableFilters.has(tableName) &&
+                                   Object.keys(tableFilters.get(tableName) || {}).length > 0;
+
+            // Reset the table's data when returning to top (only if no filters)
+            if (!hasActiveFilters) {
+                tableChunks[tableName] = {
+                    start: 0,
+                    end: ROWS_PER_LOAD,
+                    isHistorical: false
+                };
+                tablesWithHistoricalData.delete(tableName);
+                fetchTableData(tableName, false);
+
+                // Resume monitoring if no tables have historical data and no filters
+                if (tablesWithHistoricalData.size === 0 && isMonitoringPaused) {
+                    updateMonitoringState(false);
+                }
             }
         }
     });
@@ -442,7 +449,32 @@ function fetchTableData(tableName, append = false) {
     }
 
     const offset = append ? tableChunks[tableName].end : tableChunks[tableName].start;
-    const url = `${baseUrl}/data/${tableName}?limit=${ROWS_PER_LOAD}&offset=${offset}`;
+
+    // Build URL with filter parameters if filters are active
+    const filterParams = new URLSearchParams();
+    filterParams.append('limit', ROWS_PER_LOAD.toString());
+    filterParams.append('offset', offset.toString());
+
+    // Get active filters for this table (if tableFilters is available from table.js)
+    if (typeof tableFilters !== 'undefined') {
+        const allFilters = tableFilters.get(tableName) || {};
+        Object.entries(allFilters).forEach(([columnName, selectedValues]) => {
+            if (columnName && selectedValues.length > 0) {
+                filterParams.append(`filter_${columnName}`, selectedValues.join(','));
+            }
+        });
+    }
+
+    // Get active sort for this table (if tableSorts is available from table.js)
+    if (typeof tableSorts !== 'undefined') {
+        const sortState = tableSorts.get(tableName) || { column: null, direction: null };
+        if (sortState.column) {
+            filterParams.append('sort_column', sortState.column);
+            filterParams.append('sort_direction', sortState.direction);
+        }
+    }
+
+    const url = `${baseUrl}/data/${tableName}?${filterParams.toString()}`;
 
     return fetch(url, {
         method: 'GET',
@@ -1047,8 +1079,33 @@ function startMonitoring() {
             if (!container.classList.contains('hidden-table') && tableChunks[tableName]) {
                 const offset = tableChunks[tableName].start;
                 const limit = tableChunks[tableName].end - tableChunks[tableName].start;
-                const url = `${baseUrl}/data/${tableName}?limit=${limit}&offset=${offset}`;
-                
+
+                // Build URL with filter parameters if filters are active
+                const filterParams = new URLSearchParams();
+                filterParams.append('limit', limit.toString());
+                filterParams.append('offset', offset.toString());
+
+                // Get active filters for this table (if tableFilters is available from table.js)
+                if (typeof tableFilters !== 'undefined') {
+                    const allFilters = tableFilters.get(tableName) || {};
+                    Object.entries(allFilters).forEach(([columnName, selectedValues]) => {
+                        if (columnName && selectedValues.length > 0) {
+                            filterParams.append(`filter_${columnName}`, selectedValues.join(','));
+                        }
+                    });
+                }
+
+                // Get active sort for this table (if tableSorts is available from table.js)
+                if (typeof tableSorts !== 'undefined') {
+                    const sortState = tableSorts.get(tableName) || { column: null, direction: null };
+                    if (sortState.column) {
+                        filterParams.append('sort_column', sortState.column);
+                        filterParams.append('sort_direction', sortState.direction);
+                    }
+                }
+
+                const url = `${baseUrl}/data/${tableName}?${filterParams.toString()}`;
+
                 if (!isLoading[tableName]) {
                     fetch(url, {
                         method: 'GET',
