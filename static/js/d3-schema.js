@@ -586,14 +586,9 @@ class D3SchemaRenderer {
     }
 
     createCurvedPath(d) {
-        const sourceX = d.source.x;
-        const sourceY = d.source.y;
-        const targetX = d.target.x;
-        const targetY = d.target.y;
-
-        // Calculate connection points on table edges
-        const sourcePoint = this.getConnectionPoint(d.source, targetX, targetY);
-        const targetPoint = this.getConnectionPoint(d.target, sourceX, sourceY);
+        // Calculate connection points with proper offset for arrow visibility
+        const sourcePoint = this.getConnectionPoint(d.source, d.target.x, d.target.y, true);
+        const targetPoint = this.getConnectionPoint(d.target, d.source.x, d.source.y, false);
 
         // Create curved path using quadratic Bezier curve
         const midX = (sourcePoint.x + targetPoint.x) / 2;
@@ -615,37 +610,68 @@ class D3SchemaRenderer {
     }
 
     createElbowPath(d) {
-        const sourceX = d.source.x;
-        const sourceY = d.source.y;
-        const targetX = d.target.x;
-        const targetY = d.target.y;
+        // Calculate connection points
+        const sourcePoint = this.getConnectionPoint(d.source, d.target.x, d.target.y, true);
+        const targetPoint = this.getConnectionPoint(d.target, d.source.x, d.source.y, false);
 
-        // Calculate connection points on table edges
-        const sourcePoint = this.getConnectionPoint(d.source, targetX, targetY);
-        const targetPoint = this.getConnectionPoint(d.target, sourceX, sourceY);
+        const cornerRadius = 12;
+        const dx = targetPoint.x - sourcePoint.x;
+        const dy = targetPoint.y - sourcePoint.y;
 
-        // Create elbow path with rounded corners
-        const midX = (sourcePoint.x + targetPoint.x) / 2;
-        const cornerRadius = 8;
-
-        if (Math.abs(sourcePoint.y - targetPoint.y) < 20) {
-            // Horizontal connection
+        if (Math.abs(dx) < cornerRadius * 2 && Math.abs(dy) < cornerRadius * 2) {
+            // Too close for elbow, use straight line
             return `M ${sourcePoint.x} ${sourcePoint.y} L ${targetPoint.x} ${targetPoint.y}`;
+        }
+
+        // Determine which side the target is on to ensure perpendicular approach
+        const targetCenterX = d.target.x;
+        const targetCenterY = d.target.y;
+        const targetDx = targetPoint.x - targetCenterX;
+        const targetDy = targetPoint.y - targetCenterY;
+
+        // Check if target is on left/right side (vertical edge) or top/bottom side (horizontal edge)
+        const isTargetOnVerticalEdge = Math.abs(targetDx) > Math.abs(targetDy);
+
+        if (isTargetOnVerticalEdge) {
+            // Target is on left/right edge - final approach must be HORIZONTAL (perpendicular to vertical edge)
+            const elbowX = sourcePoint.x;
+            const elbowY = targetPoint.y;
+
+            if (Math.abs(dx) > cornerRadius * 2 && Math.abs(dy) > cornerRadius * 2) {
+                const cornerX = elbowX + (targetPoint.x > sourcePoint.x ? cornerRadius : -cornerRadius);
+                const cornerY = elbowY + (targetPoint.y > sourcePoint.y ? -cornerRadius : cornerRadius);
+
+                return `
+                    M ${sourcePoint.x} ${sourcePoint.y}
+                    L ${sourcePoint.x} ${cornerY}
+                    Q ${elbowX} ${elbowY} ${cornerX} ${elbowY}
+                    L ${targetPoint.x} ${targetPoint.y}
+                `.replace(/\s+/g, ' ').trim();
+            } else {
+                return `M ${sourcePoint.x} ${sourcePoint.y} L ${elbowX} ${elbowY} L ${targetPoint.x} ${targetPoint.y}`;
+            }
         } else {
-            // Elbow connection with rounded corners
-            const path = `
-                M ${sourcePoint.x} ${sourcePoint.y}
-                L ${midX - cornerRadius} ${sourcePoint.y}
-                Q ${midX} ${sourcePoint.y} ${midX} ${sourcePoint.y + (sourcePoint.y < targetPoint.y ? cornerRadius : -cornerRadius)}
-                L ${midX} ${targetPoint.y + (targetPoint.y > sourcePoint.y ? -cornerRadius : cornerRadius)}
-                Q ${midX} ${targetPoint.y} ${midX + cornerRadius} ${targetPoint.y}
-                L ${targetPoint.x} ${targetPoint.y}
-            `;
-            return path.replace(/\s+/g, ' ').trim();
+            // Target is on top/bottom edge - final approach must be VERTICAL (perpendicular to horizontal edge)
+            const elbowX = targetPoint.x;
+            const elbowY = sourcePoint.y;
+
+            if (Math.abs(dx) > cornerRadius * 2 && Math.abs(dy) > cornerRadius * 2) {
+                const cornerX = elbowX + (targetPoint.x > sourcePoint.x ? -cornerRadius : cornerRadius);
+                const cornerY = elbowY + (targetPoint.y > sourcePoint.y ? cornerRadius : -cornerRadius);
+
+                return `
+                    M ${sourcePoint.x} ${sourcePoint.y}
+                    L ${cornerX} ${sourcePoint.y}
+                    Q ${elbowX} ${elbowY} ${elbowX} ${cornerY}
+                    L ${targetPoint.x} ${targetPoint.y}
+                `.replace(/\s+/g, ' ').trim();
+            } else {
+                return `M ${sourcePoint.x} ${sourcePoint.y} L ${elbowX} ${elbowY} L ${targetPoint.x} ${targetPoint.y}`;
+            }
         }
     }
 
-    getConnectionPoint(node, otherX, otherY) {
+    getConnectionPoint(node, otherX, otherY, isSource = true) {
         const centerX = node.x;
         const centerY = node.y;
         const width = node.width || 200;
@@ -655,15 +681,20 @@ class D3SchemaRenderer {
         const dx = otherX - centerX;
         const dy = otherY - centerY;
 
-        if (Math.abs(dx) > Math.abs(dy)) {
+        // Use a threshold to prefer horizontal/vertical connections
+        const threshold = 1.2; // Bias towards horizontal connections
+
+        if (Math.abs(dx) > Math.abs(dy) * threshold) {
             // Connect to left or right side
-            const x = centerX + (dx > 0 ? width / 2 : -width / 2);
-            const y = centerY;
+            const side = dx > 0 ? 1 : -1;
+            const x = centerX + side * (width / 2);
+            const y = centerY + Math.max(-height/3, Math.min(height/3, dy * 0.3)); // Slight vertical offset for better distribution
             return { x, y };
         } else {
             // Connect to top or bottom side
-            const x = centerX;
-            const y = centerY + (dy > 0 ? height / 2 : -height / 2);
+            const side = dy > 0 ? 1 : -1;
+            const x = centerX + Math.max(-width/3, Math.min(width/3, dx * 0.3)); // Slight horizontal offset for better distribution
+            const y = centerY + side * (height / 2);
             return { x, y };
         }
     }
