@@ -252,13 +252,14 @@ class D3SchemaRenderer {
             };
         });
 
-        // Create links
-        this.links = relationships.map(rel => ({
+        // Create links array
+        this.links = relationships.map((rel, index) => ({
             source: rel.from.table,
             target: rel.to.table,
             sourceColumn: rel.from.column,
             targetColumn: rel.to.column,
-            type: 'foreign_key'
+            type: 'foreign_key',
+            index: index
         }));
 
         console.log(`D3 Schema: ${this.nodes.length} tables, ${this.links.length} relationships`);
@@ -548,15 +549,70 @@ class D3SchemaRenderer {
         this.linkElements.selectAll('.link-path')
             .attr('d', d => this.createPath(d));
 
-        // Update link labels position
+        // Update link labels position to follow the elbow path
         this.linkElements.selectAll('.link-label')
-            .attr('x', d => (d.source.x + d.target.x) / 2)
-            .attr('y', d => (d.source.y + d.target.y) / 2 - 5);
+            .attr('x', d => this.getLabelPosition(d).x)
+            .attr('y', d => this.getLabelPosition(d).y);
 
         // Update node positions
         this.nodeElements.attr('transform', d =>
             `translate(${d.x - d.width / 2}, ${d.y - d.height / 2})`
         );
+    }
+
+    getLabelPosition(d) {
+        // Position label along the elbow path to avoid overlap
+        const sourcePoint = this.getConnectionPoint(d.source, d.target.x, d.target.y, true);
+        const targetPoint = this.getConnectionPoint(d.target, d.source.x, d.source.y, false);
+
+        // Calculate how many relationships exist between the same two tables
+        const sameTableLinks = this.links.filter(link =>
+            (link.source.id === d.source.id && link.target.id === d.target.id) ||
+            (link.source.id === d.target.id && link.target.id === d.source.id)
+        );
+
+        // Find the position of this link among same-table relationships
+        const linkPosition = sameTableLinks.findIndex(link => link.index === d.index);
+
+        // Use larger spacing and handle more than 3 relationships
+        const labelOffset = linkPosition * 18; // Increased spacing from 15 to 18
+
+        if (this.arrowType === 'straight') {
+            // For straight arrows, use midpoint with staggered offset
+            return {
+                x: (sourcePoint.x + targetPoint.x) / 2 + labelOffset,
+                y: (sourcePoint.y + targetPoint.y) / 2 - 5 - (linkPosition * 12)
+            };
+        } else if (this.arrowType === 'curved') {
+            // For curved arrows, position at curve peak with offset
+            const midX = (sourcePoint.x + targetPoint.x) / 2;
+            const midY = (sourcePoint.y + targetPoint.y) / 2;
+            return {
+                x: midX + labelOffset,
+                y: midY - 10 - (linkPosition * 12)
+            };
+        } else {
+            // For elbow arrows, position at the elbow corner with staggered placement
+            const targetCenterX = d.target.x;
+            const targetCenterY = d.target.y;
+            const targetDx = targetPoint.x - targetCenterX;
+            const targetDy = targetPoint.y - targetCenterY;
+            const isTargetOnVerticalEdge = Math.abs(targetDx) > Math.abs(targetDy);
+
+            if (isTargetOnVerticalEdge) {
+                // Target on left/right edge - label at HORIZONTAL part of elbow with VERTICAL staggering
+                return {
+                    x: (sourcePoint.x + targetPoint.x) / 2,
+                    y: targetPoint.y - 5 - (linkPosition * 12)  // Vertical staggering based on link position for horizontal connections
+                };
+            } else {
+                // Target on top/bottom edge - label at horizontal part of elbow with HORIZONTAL and VERTICAL staggering
+                return {
+                    x: (sourcePoint.x + targetPoint.x) / 2 + labelOffset,  // Horizontal staggering for vertical connections
+                    y: sourcePoint.y - 5 - (linkPosition * 12)  // Vertical staggering based on link position to prevent overlap
+                };
+            }
+        }
     }
 
     setArrowType(type) {
@@ -581,12 +637,15 @@ class D3SchemaRenderer {
     }
 
     createStraightPath(d) {
-        // Simple straight line from center to center
-        return `M ${d.source.x} ${d.source.y} L ${d.target.x} ${d.target.y}`;
+        // Calculate connection points
+        const sourcePoint = this.getConnectionPoint(d.source, d.target.x, d.target.y, true);
+        const targetPoint = this.getConnectionPoint(d.target, d.source.x, d.source.y, false);
+
+        return `M ${sourcePoint.x} ${sourcePoint.y} L ${targetPoint.x} ${targetPoint.y}`;
     }
 
     createCurvedPath(d) {
-        // Calculate connection points with proper offset for arrow visibility
+        // Calculate connection points
         const sourcePoint = this.getConnectionPoint(d.source, d.target.x, d.target.y, true);
         const targetPoint = this.getConnectionPoint(d.target, d.source.x, d.source.y, false);
 
@@ -688,12 +747,12 @@ class D3SchemaRenderer {
             // Connect to left or right side
             const side = dx > 0 ? 1 : -1;
             const x = centerX + side * (width / 2);
-            const y = centerY + Math.max(-height/3, Math.min(height/3, dy * 0.3)); // Slight vertical offset for better distribution
+            const y = centerY + Math.max(-height/3, Math.min(height/3, dy * 0.3));
             return { x, y };
         } else {
             // Connect to top or bottom side
             const side = dy > 0 ? 1 : -1;
-            const x = centerX + Math.max(-width/3, Math.min(width/3, dx * 0.3)); // Slight horizontal offset for better distribution
+            const x = centerX + Math.max(-width/3, Math.min(width/3, dx * 0.3));
             const y = centerY + side * (height / 2);
             return { x, y };
         }
