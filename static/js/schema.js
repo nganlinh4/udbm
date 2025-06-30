@@ -1,11 +1,9 @@
 let currentData = null;
 let schemaData = null;
-let useGraphviz = true;
+let useGraphviz = true; // Keep for backward compatibility
+let schemaType = 'graphviz'; // New: 'graphviz', 'mermaid', 'd3'
 let lastGraphvizTheme = null;
 let lastGraphvizResult = null;
-let isResizing = false;
-let originalWidth, originalHeight;
-let originalMouseX, originalMouseY;
 
 function showSuccessPopup(message) {
     const popup = document.createElement('div');
@@ -411,6 +409,51 @@ async function renderMermaidSchema(container, data) {
     }
 }
 
+// Global D3 renderer instance
+let d3Renderer = null;
+
+async function renderD3Schema(container, data) {
+    try {
+        console.log('Rendering D3 force-directed schema...');
+
+        if (!window.D3SchemaRenderer) {
+            throw new Error('D3SchemaRenderer module not loaded');
+        }
+
+        // Clean up previous renderer
+        if (d3Renderer) {
+            d3Renderer.destroy();
+        }
+
+        // Create new renderer instance with the main container (like GraphViz and Mermaid)
+        d3Renderer = new window.D3SchemaRenderer(container);
+
+        // Render the schema
+        await d3Renderer.render(data);
+
+        // Initialize zoom/pan after D3 rendering is complete
+        setTimeout(() => {
+            const svgElement = container.querySelector('#d3-schema-svg');
+            if (svgElement) {
+                console.log('Initializing zoom/pan for D3 SVG...');
+                initializeZoomPan(container, svgElement);
+            } else {
+                console.warn('SVG element not found for zoom initialization');
+            }
+        }, 300);
+
+        console.log('D3 force-directed schema rendered successfully');
+
+    } catch (error) {
+        console.error('Error rendering D3 schema:', error);
+        // Create error message in main container
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'color: red; padding: 20px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);';
+        errorDiv.textContent = `Failed to render D3 diagram: ${error.message}`;
+        container.appendChild(errorDiv);
+    }
+}
+
 export function initializeSchema(schemaButton, modal, loading, error, container) {
     console.log('Initializing schema functionality...');
     
@@ -423,10 +466,30 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
 
     // Load saved schema type preference and set initial state
     const savedSchemaType = localStorage.getItem('preferredSchemaType');
-    if (savedSchemaType === null || savedSchemaType === 'graphviz') { // Default to GraphViz unless Mermaid is explicitly saved
+
+    // Migrate old preferences and set defaults
+    if (savedSchemaType === null || savedSchemaType === 'graphviz') {
+        schemaType = 'graphviz';
         useGraphviz = true;
-        const toggle = document.getElementById('schemaTypeToggle');
-        if (toggle) toggle.checked = false;
+    } else if (savedSchemaType === 'mermaid') {
+        schemaType = 'mermaid';
+        useGraphviz = false;
+    } else if (savedSchemaType === 'd3') {
+        schemaType = 'd3';
+        useGraphviz = false;
+    } else {
+        // Default fallback
+        schemaType = 'graphviz';
+        useGraphviz = true;
+    }
+
+    // Set initial UI state
+    document.querySelectorAll('.schema-option').forEach(option => {
+        option.classList.remove('active');
+    });
+    const activeOption = document.querySelector(`[data-type="${schemaType}"]`);
+    if (activeOption) {
+        activeOption.classList.add('active');
     }
 
     // Setup the resize observer for responsive content
@@ -517,35 +580,132 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         });
     }
 
-    // Add schema type toggle handler
-    document.getElementById('schemaTypeToggle').addEventListener('change', function(e) {
-        useGraphviz = !e.target.checked;
-        localStorage.setItem('preferredSchemaType', useGraphviz ? 'graphviz' : 'mermaid');
+    // Add schema type selector handlers
+    function switchSchemaType(newType) {
+        console.log('Switching schema type to:', newType);
+        schemaType = newType;
+
+        // Update backward compatibility flag
+        useGraphviz = (newType === 'graphviz');
+
+        // Save preference
+        localStorage.setItem('preferredSchemaType', newType);
+
+        // Update UI - remove active class from all options
+        document.querySelectorAll('.schema-option').forEach(option => {
+            option.classList.remove('active');
+        });
+
+        // Add active class to selected option
+        document.querySelector(`[data-type="${newType}"]`).classList.add('active');
 
         // Reset zoom initialization flags
         container.querySelector('#graphvizContent')?.removeAttribute('data-zoom-initialized');
         container.querySelector('.mermaid')?.removeAttribute('data-zoom-initialized');
-        
-        if (currentData) { 
-            // Reset GraphViz cache when switching
+        container.querySelector('#d3Content')?.removeAttribute('data-zoom-initialized');
+
+        if (currentData) {
+            // Hide all containers and clean up D3
+            document.querySelector('.mermaid').style.display = 'none';
+            document.getElementById('graphvizContent').style.display = 'none';
+
+            // Clean up D3 when switching away from it
+            if (d3Renderer) {
+                d3Renderer.destroy();
+                d3Renderer = null;
+            }
+
+            // Remove D3 active class when switching away from D3
+            container.classList.remove('d3-active');
+
+            // Reset caches when switching
             lastGraphvizTheme = null;
             lastGraphvizResult = null;
-            
-            if (useGraphviz) {
-                document.querySelector('.mermaid').style.display = 'none';
+
+            // Show and render appropriate container
+            if (newType === 'graphviz') {
                 document.getElementById('graphvizContent').style.display = 'block';
                 document.getElementById('graphvizContent').style.pointerEvents = 'auto';
                 renderGraphvizSchema(container, currentData);
-            } else {
+            } else if (newType === 'mermaid') {
                 document.querySelector('.mermaid').style.display = 'block';
-                document.getElementById('graphvizContent').style.display = 'none';
                 renderMermaidSchema(container, currentData);
+            } else if (newType === 'd3') {
+                renderD3Schema(container, currentData);
             }
-            
-            // Initialize appropriate zoom/pan
-            const targetElement = useGraphviz ? container.querySelector('#graphvizContent') : container.querySelector('.mermaid img, .mermaid svg');
-            initializeZoomPan(container, targetElement);
         }
+    }
+
+    // Add click handlers to schema option buttons
+    document.querySelectorAll('.schema-option').forEach(option => {
+        option.addEventListener('click', function() {
+            const newType = this.dataset.type;
+            switchSchemaType(newType);
+
+            // Show/hide D3 controls based on selection
+            updateD3ControlsVisibility(newType);
+        });
+    });
+
+    // Function to update D3 controls visibility
+    function updateD3ControlsVisibility(schemaType) {
+        const d3Controls = document.querySelector('.d3-controls');
+        if (d3Controls) {
+            d3Controls.style.display = schemaType === 'd3' ? 'flex' : 'none';
+        }
+    }
+
+    // Check initial schema type and show D3 controls if needed
+    const activeSchemaOption = document.querySelector('.schema-option.active');
+    if (activeSchemaOption) {
+        const initialSchemaType = activeSchemaOption.dataset.type;
+        updateD3ControlsVisibility(initialSchemaType);
+    }
+
+    // Add D3 control handlers
+    const clumpingSlider = document.getElementById('clumpingSlider');
+    const resetLayoutBtn = document.getElementById('resetLayout');
+    const pauseSimulationBtn = document.getElementById('pauseSimulation');
+
+    if (clumpingSlider) {
+        clumpingSlider.addEventListener('input', (e) => {
+            if (d3Renderer) {
+                d3Renderer.updateLayoutSpacing(parseInt(e.target.value));
+            }
+        });
+    }
+
+    if (resetLayoutBtn) {
+        resetLayoutBtn.addEventListener('click', () => {
+            if (d3Renderer) {
+                d3Renderer.resetLayout();
+            }
+        });
+    }
+
+    if (pauseSimulationBtn) {
+        pauseSimulationBtn.addEventListener('click', () => {
+            if (d3Renderer) {
+                const isPaused = d3Renderer.pauseSimulation();
+                pauseSimulationBtn.textContent = isPaused ? 'Resume' : 'Pause';
+                pauseSimulationBtn.classList.toggle('active', isPaused);
+            }
+        });
+    }
+
+    // Add arrow type control handlers
+    document.querySelectorAll('.arrow-option').forEach(option => {
+        option.addEventListener('click', function() {
+            // Remove active class from all arrow options
+            document.querySelectorAll('.arrow-option').forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked option
+            this.classList.add('active');
+
+            const arrowType = this.dataset.arrow;
+            if (d3Renderer) {
+                d3Renderer.setArrowType(arrowType);
+            }
+        });
     });
 
     if (typeof mermaid === 'undefined') {
@@ -569,12 +729,7 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
             console.log('Mermaid loaded successfully');
 
             const schemaContent = modal.querySelector('.schema-content');
-            
-            // Store initial computed dimensions
-            const computed = window.getComputedStyle(schemaContent);
-            originalWidth = parseInt(computed.width, 10);
-            originalHeight = parseInt(computed.height, 10);
-            
+
             // Set display before loading dimensions so computed styles work correctly
             modal.style.display = 'block';
             
@@ -596,21 +751,33 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
             setTimeout(() => modal.classList.add('visible'), 10);
             const showSchema = () => {
                 const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-                // Reset GraphViz theme cache if theme has changed
-                if (useGraphviz && lastGraphvizTheme !== currentTheme) {
+
+                // Reset caches if theme has changed
+                if (schemaType === 'graphviz' && lastGraphvizTheme !== currentTheme) {
                     lastGraphvizTheme = null;
                     lastGraphvizResult = null;
                 }
+
                 loading.style.display = 'none';
                 currentData = schemaData;
-                if (useGraphviz) {
-                    document.querySelector('.mermaid').style.display = 'none';
+
+                // Show D3 controls if D3 is the active schema type
+                updateD3ControlsVisibility(schemaType);
+
+                // Hide all containers
+                document.querySelector('.mermaid').style.display = 'none';
+                document.getElementById('graphvizContent').style.display = 'none';
+                document.getElementById('d3Content').style.display = 'none';
+
+                // Show and render appropriate container
+                if (schemaType === 'graphviz') {
                     document.getElementById('graphvizContent').style.display = 'block';
                     renderGraphvizSchema(container, currentData);
-                } else {
+                } else if (schemaType === 'mermaid') {
                     document.querySelector('.mermaid').style.display = 'block';
-                    document.getElementById('graphvizContent').style.display = 'none';
                     renderMermaidSchema(container, currentData);
+                } else if (schemaType === 'd3') {
+                    renderD3Schema(container, currentData);
                 }
             };
 

@@ -988,6 +988,54 @@ def update_cell(table_name, row_id, column):
         if 'connection' in locals():
             connection.close()
 
+def calculate_d3_metadata(tables, relationships):
+    """Calculate metadata for D3 force-directed layout optimization"""
+
+    # Count relationships per table to identify hub tables
+    node_weights = {}
+    for table_name in tables.keys():
+        if table_name not in IGNORED_TABLES:
+            node_weights[table_name] = 0
+
+    # Count incoming and outgoing relationships
+    for rel in relationships:
+        from_table = rel['from']['table']
+        to_table = rel['to']['table']
+
+        if from_table not in IGNORED_TABLES:
+            node_weights[from_table] = node_weights.get(from_table, 0) + 1
+        if to_table not in IGNORED_TABLES:
+            node_weights[to_table] = node_weights.get(to_table, 0) + 1
+
+    # Identify primary tables (high relationship count)
+    max_weight = max(node_weights.values()) if node_weights else 0
+    primary_tables = [table for table, weight in node_weights.items()
+                     if weight >= max_weight * 0.7 and weight > 2]
+
+    # Generate cluster hints based on table naming patterns
+    cluster_hints = {}
+    for table_name in tables.keys():
+        if table_name not in IGNORED_TABLES:
+            # Simple clustering based on common prefixes/suffixes
+            if any(keyword in table_name.lower() for keyword in ['user', 'account', 'auth']):
+                cluster_hints[table_name] = 'user_management'
+            elif any(keyword in table_name.lower() for keyword in ['order', 'payment', 'transaction']):
+                cluster_hints[table_name] = 'commerce'
+            elif any(keyword in table_name.lower() for keyword in ['product', 'item', 'catalog']):
+                cluster_hints[table_name] = 'catalog'
+            elif any(keyword in table_name.lower() for keyword in ['log', 'audit', 'history']):
+                cluster_hints[table_name] = 'logging'
+            else:
+                cluster_hints[table_name] = 'general'
+
+    return {
+        'node_weights': node_weights,
+        'primary_tables': primary_tables,
+        'cluster_hints': cluster_hints,
+        'total_tables': len([t for t in tables.keys() if t not in IGNORED_TABLES]),
+        'total_relationships': len(relationships)
+    }
+
 # Update schema endpoint without referrer check
 @app.route('/schema')
 def get_schema():
@@ -1259,6 +1307,18 @@ def get_schema():
             dot.attr(layout='dot')
             
             return jsonify({'schema_url': url_for('static', filename='schema.png')})
+
+        # Handle D3 force-directed format
+        if schema_type == 'd3':
+            # Calculate metadata for D3 force-directed layout
+            d3_metadata = calculate_d3_metadata(tables, relationships)
+
+            return jsonify({
+                'tables': tables,
+                'relationships': relationships,
+                'theme_colors': theme_colors,
+                'd3_metadata': d3_metadata
+            })
 
         # Default: Return mermaid.js format
         return jsonify({

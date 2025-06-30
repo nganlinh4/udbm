@@ -18,6 +18,8 @@
     <script src="{{ url_for('static', filename='js/icon-morph.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logo.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="{{ url_for('static', filename='js/d3-schema.js') }}"></script>
     <script>
         // Get saved language preference
         function getCookie(name) {
@@ -467,17 +469,40 @@
 
                 <div class="mermaid" style="display: none;"></div>
                 <img id="graphvizContent">
+                <div id="d3Content" style="display: none;"></div>
                 
                 <!-- Schema controls -->
                 <div class="schema-controls">
-                    <div class="schema-switch">
-                        <span class="switch-label">GraphViz</span>
-                        <label class="switch schema-type-switch">
-                            <input type="checkbox" id="schemaTypeToggle">
-                            <span class="switch-slider"></span>
-                        </label>
-                        <span class="switch-label">Mermaid</span>
+                    <div class="schema-type-selector">
+                        <button class="schema-option active" data-type="graphviz">GraphViz</button>
+                        <button class="schema-option" data-type="mermaid">Mermaid</button>
+                        <button class="schema-option" data-type="d3">Interactive</button>
                     </div>
+
+                    <!-- D3 Interactive Controls -->
+                    <div class="d3-controls" style="display: none;">
+                        <div class="control-group">
+                            <label for="clumpingSlider">Layout Spacing:</label>
+                            <div class="slider-container">
+                                <span class="slider-label">Tight</span>
+                                <input type="range" id="clumpingSlider" min="0" max="100" value="50" class="layout-slider">
+                                <span class="slider-label">Spread</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="arrowType">Arrow Style:</label>
+                            <div class="arrow-type-selector">
+                                <button class="arrow-option active" data-arrow="elbow">Elbow</button>
+                                <button class="arrow-option" data-arrow="straight">Straight</button>
+                                <button class="arrow-option" data-arrow="curved">Curved</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <button id="resetLayout" class="control-button">Reset Layout</button>
+                            <button id="pauseSimulation" class="control-button">Pause</button>
+                        </div>
+                    </div>
+
                     <button class="copy-button" title="Copy schema to clipboard">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.242a2 2 0 0 0-.602-1.43L16.083 2.57A2 2 0 0 0 14.685 2H10a2 2 0 0 0-2 2z"></path><path d="M16 18v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2"></path></svg>
                     </button>

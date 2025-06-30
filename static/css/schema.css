@@ -176,6 +176,61 @@
     color: var(--md-sys-color-primary);
 }
 
+/* Schema type selector (three-option) */
+.schema-type-selector {
+    display: flex;
+    background: var(--md-sys-color-surface-variant);
+    border-radius: 24px;
+    padding: 4px;
+    gap: 2px;
+    box-shadow: var(--md-elevation-level1);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+[data-theme="dark"] .schema-type-selector {
+    background: var(--md-sys-color-surface-variant);
+    border-color: var(--md-sys-color-outline);
+}
+
+.schema-option {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 0.9em;
+    font-weight: 500;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    font-family: inherit;
+}
+
+.schema-option:hover {
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+}
+
+.schema-option.active {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    box-shadow: var(--md-elevation-level2);
+}
+
+[data-theme="dark"] .schema-option {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+[data-theme="dark"] .schema-option:hover {
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .schema-option.active {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
 /* Control buttons */
 .download-button, .copy-button {
     margin-left: 4px;
@@ -224,6 +279,179 @@
 
 [data-theme="dark"] .download-button:hover, [data-theme="dark"] .copy-button:hover {
     background: var(--md-sys-color-surface-container-highest);
+}
+
+/* D3 Interactive Controls */
+.d3-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--md-sys-color-surface-container-high);
+    padding: 12px 16px;
+    border-radius: 16px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    box-shadow: var(--md-elevation-level1);
+    min-width: 280px;
+}
+
+[data-theme="dark"] .d3-controls {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.control-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    white-space: nowrap;
+    min-width: 100px;
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.slider-label {
+    font-size: 0.75rem;
+    color: var(--md-sys-color-on-surface-variant);
+    font-weight: 500;
+    min-width: 35px;
+    text-align: center;
+}
+
+.layout-slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--md-sys-color-surface-variant);
+    outline: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+
+.layout-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.layout-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.layout-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.control-button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 16px;
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 70px;
+}
+
+.control-button:hover {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.control-button.active {
+    background: var(--md-sys-color-secondary);
+    color: var(--md-sys-color-on-secondary);
+}
+
+[data-theme="dark"] .control-button {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+[data-theme="dark"] .control-button:hover {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+/* Arrow type selector */
+.arrow-type-selector {
+    display: flex;
+    background: var(--md-sys-color-surface-variant);
+    border-radius: 16px;
+    padding: 2px;
+    gap: 1px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+[data-theme="dark"] .arrow-type-selector {
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
+}
+
+.arrow-option {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 60px;
+    text-align: center;
+}
+
+.arrow-option:hover {
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+}
+
+.arrow-option.active {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    font-weight: 600;
+}
+
+[data-theme="dark"] .arrow-option {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+[data-theme="dark"] .arrow-option:hover {
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .arrow-option.active {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
 }
 
 /* Zoom controls and buttons */
@@ -314,8 +542,8 @@
     border-radius: 16px;
     box-shadow: var(--md-elevation-level1);
     border: 1px solid var(--md-sys-color-outline-variant);
-    width: 90vw;
-    height: 80vh;
+    width: 115vw;
+    height: 110vh;
     min-width: 800px;
     min-height: 600px;
     max-width: 115vw;
@@ -364,6 +592,11 @@
     resize: both;
     overflow: hidden;
     position: relative;
+}
+
+/* Allow D3 content to extend beyond container boundaries */
+.schema-modal.visible .schema-content.d3-active {
+    overflow: visible;
 }
 
 /* Schema close button */

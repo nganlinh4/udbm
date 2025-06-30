@@ -702,11 +702,23 @@ function hasRelations(tableName) {
 async function loadSchemaData() {
     try {
         const response = await fetch(`${window.location.origin}/schema`);
-        if (!response.ok) throw new Error('Failed to fetch schema');
-        schemaData = await response.json();
+        if (!response.ok) {
+            // If no database is configured, that's expected - just log it quietly
+            if (response.status === 400) {
+                console.log('Schema data not available (no database configured)');
+                return;
+            }
+            throw new Error(`Failed to fetch schema: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.error) {
+            console.log('Schema data not available:', data.error);
+            return;
+        }
+        schemaData = data;
         console.log('Schema data loaded:', schemaData);
     } catch (error) {
-        console.error('Error loading schema:', error);
+        console.log('Schema data not available:', error.message);
     }
 }
 
