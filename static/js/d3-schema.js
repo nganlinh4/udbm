@@ -265,12 +265,12 @@ class D3SchemaRenderer {
     }
 
     createForceSimulation() {
-        // Default values for medium spacing (slider value 50)
+        // Default values for spread layout (slider value 100, was max)
         this.layoutSettings = {
-            linkDistance: 200,
-            linkStrength: 0.7,
-            chargeStrength: -1000,
-            collisionRadius: 100
+            linkDistance: 480,
+            linkStrength: 0.3,
+            chargeStrength: -2000,
+            collisionRadius: 200
         };
 
         this.simulation = d3.forceSimulation(this.nodes)
@@ -283,15 +283,15 @@ class D3SchemaRenderer {
     }
 
     updateLayoutSpacing(sliderValue) {
-        // Convert slider value (0-100) to layout parameters
-        // 0 = tight clustering, 100 = spread out
-        const factor = sliderValue / 50; // 0-2 range, 1 = default
+        // Convert slider value (0-150) to layout parameters
+        // 0 = tight clustering, 100 = old max spread, 150 = ultra spread
+        const factor = sliderValue / 50; // 0-3 range, 2 = old default
 
         this.layoutSettings = {
-            linkDistance: 120 + (factor * 180), // 120-480 range
-            linkStrength: Math.max(0.3, 0.9 - (factor * 0.4)), // 0.9-0.3 range (stronger = tighter)
-            chargeStrength: -600 - (factor * 1400), // -600 to -2000 range (more negative = more repulsion)
-            collisionRadius: 80 + (factor * 60) // 80-200 range
+            linkDistance: 120 + (factor * 240), // 120-840 range (extended from 480)
+            linkStrength: Math.max(0.1, 0.9 - (factor * 0.27)), // 0.9-0.1 range (weaker links for ultra spread)
+            chargeStrength: -600 - (factor * 1800), // -600 to -6000 range (much stronger repulsion)
+            collisionRadius: 80 + (factor * 80) // 80-320 range (larger collision zones)
         };
 
         // Update the simulation forces
@@ -384,16 +384,23 @@ class D3SchemaRenderer {
     }
 
     renderTableBoxes() {
-        // Calculate dynamic table dimensions
+        // Calculate dynamic table dimensions based on ALL columns
         this.nodeElements.each(function(d) {
-            const maxColumns = 8; // Show more columns
-            const visibleColumns = Math.min(d.columns.length, maxColumns);
+            const allColumns = d.columns.length; // Show ALL columns
             const headerHeight = 30;
             const columnHeight = 16;
             const padding = 10;
-            
-            d.width = Math.max(200, d.name.length * 8 + 40);
-            d.height = headerHeight + (visibleColumns * columnHeight) + padding * 2;
+
+            // Calculate width based on longest column name + type
+            let maxWidth = d.name.length * 8 + 40; // Table name width
+            d.columns.forEach(col => {
+                const columnText = `${col.name}: ${col.type}`;
+                const columnWidth = columnText.length * 7 + 40; // Estimate width
+                maxWidth = Math.max(maxWidth, columnWidth);
+            });
+
+            d.width = Math.max(200, maxWidth);
+            d.height = headerHeight + (allColumns * columnHeight) + padding * 2;
         });
 
         // Add table rectangles with enhanced styling
@@ -433,17 +440,14 @@ class D3SchemaRenderer {
             .attr('fill', d => d.isPrimary ? this.colors.onPrimaryContainer : this.colors.onSurfaceVariant)
             .text(d => d.name);
 
-        // Add column information with icons and types
+        // Add column information with icons and types - SHOW ALL COLUMNS
         const colors = this.colors; // Capture colors reference for use in callbacks
         this.nodeElements.each(function(d) {
             const nodeGroup = d3.select(this);
-            const maxColumns = 8;
             let yOffset = 45;
 
-            // Show primary keys first
-            d.primaryKeys.slice(0, maxColumns).forEach((column, i) => {
-                if (yOffset > d.height - 20) return;
-
+            // Show ALL primary keys first
+            d.primaryKeys.forEach((column) => {
                 nodeGroup.append('text')
                     .attr('x', 8)
                     .attr('y', yOffset)
@@ -455,11 +459,9 @@ class D3SchemaRenderer {
 
                 yOffset += 16;
             });
-            
-            // Show foreign keys
-            d.foreignKeys.slice(0, maxColumns - d.primaryKeys.length).forEach((column, i) => {
-                if (yOffset > d.height - 20) return;
 
+            // Show ALL foreign keys
+            d.foreignKeys.forEach((column) => {
                 nodeGroup.append('text')
                     .attr('x', 8)
                     .attr('y', yOffset)
@@ -471,11 +473,8 @@ class D3SchemaRenderer {
                 yOffset += 16;
             });
 
-            // Show regular columns
-            const remainingSpace = maxColumns - d.primaryKeys.length - d.foreignKeys.length;
-            d.regularColumns.slice(0, remainingSpace).forEach((column, i) => {
-                if (yOffset > d.height - 20) return;
-
+            // Show ALL regular columns
+            d.regularColumns.forEach((column) => {
                 nodeGroup.append('text')
                     .attr('x', 8)
                     .attr('y', yOffset)
@@ -488,18 +487,7 @@ class D3SchemaRenderer {
                 yOffset += 16;
             });
 
-            // Show "more columns" indicator
-            const totalShown = d.primaryKeys.length + d.foreignKeys.length + Math.max(0, remainingSpace);
-            if (d.columns.length > totalShown) {
-                nodeGroup.append('text')
-                    .attr('x', 8)
-                    .attr('y', yOffset)
-                    .attr('font-family', 'system-ui, -apple-system, sans-serif')
-                    .attr('font-size', '10px')
-                    .attr('fill', d.isPrimary ? colors.onPrimaryContainer : colors.onSurfaceVariant)
-                    .attr('opacity', 0.6)
-                    .text(`... +${d.columns.length - totalShown} more columns`);
-            }
+            // No more "more columns" indicator - we show everything!
         });
     }
 
