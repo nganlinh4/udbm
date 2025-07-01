@@ -14,6 +14,309 @@ class D3SchemaRenderer {
         this.height = 600;
         this.svgId = 'd3-schema-svg'; // Unique ID for the SVG
         this.arrowType = 'elbow'; // Default arrow type: 'elbow', 'straight', 'curved'
+        this.themeObserver = null;
+        this.setupThemeObserver();
+    }
+
+    setupThemeObserver() {
+        // Set up observer to watch for theme changes
+        this.themeObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'data-theme') {
+                    this.onThemeChange();
+                }
+            });
+        });
+
+        this.themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme']
+        });
+    }
+
+    onThemeChange() {
+        // Update colors when theme changes
+        if (this.svg) {
+            console.log('Theme changed, updating D3 schema colors...');
+            this.colors = this.getThemeColors();
+            this.updateThemeColors();
+        }
+    }
+
+    updateThemeColors() {
+        // Update SVG background
+        this.svg.style('background', this.colors.surface);
+
+        // Update arrow markers
+        this.svg.select('#arrowhead path')
+            .attr('fill', this.colors.outline);
+
+        this.svg.select('#arrowhead-highlight path')
+            .attr('fill', this.colors.primary);
+
+        // Update table rectangles
+        this.nodeElements.selectAll('.table-rect')
+            .attr('fill', d => d.isPrimary ? this.colors.primaryContainer : this.colors.surfaceVariant)
+            .attr('stroke', d => d.isPrimary ? this.colors.primary : this.colors.outline);
+
+        // Update header lines
+        this.nodeElements.selectAll('.header-line')
+            .attr('stroke', d => d.isPrimary ? this.colors.primary : this.colors.outline);
+
+        // Update table names
+        this.nodeElements.selectAll('.table-name')
+            .attr('fill', d => d.isPrimary ? this.colors.onPrimaryContainer : this.colors.onSurfaceVariant);
+
+        // Update column text colors based on their classes
+        this.nodeElements.selectAll('.primary-key')
+            .attr('fill', this.colors.primary);
+
+        this.nodeElements.selectAll('.foreign-key')
+            .attr('fill', this.colors.secondary);
+
+        this.nodeElements.selectAll('.regular-column')
+            .attr('fill', this.colors.onSurfaceVariant);
+
+        // Update link colors
+        this.linkElements.selectAll('.link-path')
+            .attr('stroke', this.colors.outline);
+
+        // Update link labels
+        this.linkElements.selectAll('.link-label')
+            .attr('fill', this.colors.onSurfaceVariant);
+    }
+
+    destroy() {
+        // Clean up observer when renderer is destroyed
+        if (this.themeObserver) {
+            this.themeObserver.disconnect();
+            this.themeObserver = null;
+        }
+    }
+
+    /**
+     * Convert the D3 SVG to a PNG blob for copy/download functionality
+     * Captures the actual visible content with proper bounds and transforms
+     * @param {number} scale - Scale factor for the output image (default: 2 for high DPI)
+     * @returns {Promise<Blob>} PNG blob of the schema
+     */
+    async toPngBlob(scale = 2) {
+        if (!this.svg) {
+            throw new Error('No SVG available to convert');
+        }
+
+        return new Promise((resolve, reject) => {
+            try {
+                const svgElement = this.svg.node();
+
+                // Calculate the actual bounds of all visible content
+                const bounds = this.calculateContentBounds();
+                console.log('Content bounds:', bounds);
+
+                // Add padding around the content
+                const padding = 40;
+                const contentWidth = bounds.width + (padding * 2);
+                const contentHeight = bounds.height + (padding * 2);
+
+                // Create a new SVG with the content properly positioned
+                const exportSvg = this.createExportSvg(bounds, padding);
+
+                // Create canvas for conversion
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Set canvas size with scale factor
+                canvas.width = contentWidth * scale;
+                canvas.height = contentHeight * scale;
+
+                // Scale the context
+                ctx.scale(scale, scale);
+
+                // Set background color based on theme
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                ctx.fillStyle = isDark ? '#191c1e' : '#fafcff';
+                ctx.fillRect(0, 0, contentWidth, contentHeight);
+
+                // Convert the export SVG to string
+                const svgData = new XMLSerializer().serializeToString(exportSvg);
+
+                // Create image from SVG
+                const img = new Image();
+                const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+
+                img.onload = () => {
+                    try {
+                        // Draw the SVG image onto canvas
+                        ctx.drawImage(img, 0, 0, contentWidth, contentHeight);
+
+                        // Convert canvas to blob
+                        canvas.toBlob((blob) => {
+                            URL.revokeObjectURL(url);
+                            if (blob) {
+                                resolve(blob);
+                            } else {
+                                reject(new Error('Failed to create PNG blob'));
+                            }
+                        }, 'image/png', 0.95);
+                    } catch (error) {
+                        URL.revokeObjectURL(url);
+                        reject(error);
+                    }
+                };
+
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Failed to load SVG image'));
+                };
+
+                img.src = url;
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    /**
+     * Calculate the bounding box of all visible content in the SVG
+     * @returns {Object} Bounds object with x, y, width, height
+     */
+    calculateContentBounds() {
+        const svgElement = this.svg.node();
+
+        // Get all visible elements (nodes and links)
+        const allElements = svgElement.querySelectorAll('.table-node, .link-group');
+
+        if (allElements.length === 0) {
+            // Fallback to SVG dimensions
+            return {
+                x: 0,
+                y: 0,
+                width: this.width,
+                height: this.height
+            };
+        }
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        // Calculate bounds of all elements
+        allElements.forEach(element => {
+            try {
+                const bbox = element.getBBox();
+                const transform = element.getAttribute('transform');
+
+                let x = bbox.x;
+                let y = bbox.y;
+
+                // Parse transform if present
+                if (transform) {
+                    const translateMatch = transform.match(/translate\(([^,]+),([^)]+)\)/);
+                    if (translateMatch) {
+                        x += parseFloat(translateMatch[1]);
+                        y += parseFloat(translateMatch[2]);
+                    }
+                }
+
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x + bbox.width);
+                maxY = Math.max(maxY, y + bbox.height);
+            } catch (error) {
+                console.warn('Error calculating bounds for element:', element, error);
+            }
+        });
+
+        // Ensure we have valid bounds
+        if (minX === Infinity) {
+            return {
+                x: 0,
+                y: 0,
+                width: this.width,
+                height: this.height
+            };
+        }
+
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }
+
+    /**
+     * Create a clean SVG for export with proper positioning and styling
+     * @param {Object} bounds - Content bounds
+     * @param {number} padding - Padding around content
+     * @returns {SVGElement} Clean SVG element for export
+     */
+    createExportSvg(bounds, padding) {
+        const contentWidth = bounds.width + (padding * 2);
+        const contentHeight = bounds.height + (padding * 2);
+
+        // Create new SVG element
+        const exportSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        exportSvg.setAttribute('width', contentWidth);
+        exportSvg.setAttribute('height', contentHeight);
+        exportSvg.setAttribute('viewBox', `0 0 ${contentWidth} ${contentHeight}`);
+        exportSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+        // Add background
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bgRect.setAttribute('width', '100%');
+        bgRect.setAttribute('height', '100%');
+        bgRect.setAttribute('fill', isDark ? '#191c1e' : '#fafcff');
+        exportSvg.appendChild(bgRect);
+
+        // Copy defs (markers, etc.)
+        const originalDefs = this.svg.select('defs').node();
+        if (originalDefs) {
+            const exportDefs = originalDefs.cloneNode(true);
+            exportSvg.appendChild(exportDefs);
+        }
+
+        // Create main group with transform to center content
+        const mainGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const translateX = padding - bounds.x;
+        const translateY = padding - bounds.y;
+        mainGroup.setAttribute('transform', `translate(${translateX}, ${translateY})`);
+
+        // Copy all table nodes
+        const tableNodes = this.svg.selectAll('.table-node').nodes();
+        tableNodes.forEach(node => {
+            const clonedNode = node.cloneNode(true);
+            mainGroup.appendChild(clonedNode);
+        });
+
+        // Copy all link groups
+        const linkGroups = this.svg.selectAll('.link-group').nodes();
+        linkGroups.forEach(link => {
+            const clonedLink = link.cloneNode(true);
+            mainGroup.appendChild(clonedLink);
+        });
+
+        exportSvg.appendChild(mainGroup);
+
+        return exportSvg;
+    }
+
+    /**
+     * Get a data URL of the schema as PNG
+     * @param {number} scale - Scale factor for the output image
+     * @returns {Promise<string>} Data URL of the PNG image
+     */
+    async toPngDataUrl(scale = 2) {
+        const blob = await this.toPngBlob(scale);
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
     }
 
     async render(data) {
@@ -86,49 +389,56 @@ class D3SchemaRenderer {
         const computedStyle = getComputedStyle(tempDiv);
 
         const colors = {
-            surface: computedStyle.getPropertyValue('--md-sys-color-surface').trim() || '#fef7ff',
-            surfaceVariant: computedStyle.getPropertyValue('--md-sys-color-surface-variant').trim() || '#e7e0ec',
-            primaryContainer: computedStyle.getPropertyValue('--md-sys-color-primary-container').trim() || '#eaddff',
-            primary: computedStyle.getPropertyValue('--md-sys-color-primary').trim() || '#6750a4',
-            secondary: computedStyle.getPropertyValue('--md-sys-color-secondary').trim() || '#625b71',
-            outline: computedStyle.getPropertyValue('--md-sys-color-outline').trim() || '#79747e',
-            onSurface: computedStyle.getPropertyValue('--md-sys-color-on-surface').trim() || '#1d1b20',
-            onSurfaceVariant: computedStyle.getPropertyValue('--md-sys-color-on-surface-variant').trim() || '#49454f',
-            onPrimaryContainer: computedStyle.getPropertyValue('--md-sys-color-on-primary-container').trim() || '#21005d',
-            onPrimary: computedStyle.getPropertyValue('--md-sys-color-on-primary').trim() || '#ffffff'
+            surface: computedStyle.getPropertyValue('--md-sys-color-surface').trim(),
+            surfaceContainer: computedStyle.getPropertyValue('--md-sys-color-surface-container').trim(),
+            surfaceVariant: computedStyle.getPropertyValue('--md-sys-color-surface-variant').trim(),
+            primaryContainer: computedStyle.getPropertyValue('--md-sys-color-primary-container').trim(),
+            primary: computedStyle.getPropertyValue('--md-sys-color-primary').trim(),
+            secondary: computedStyle.getPropertyValue('--md-sys-color-secondary').trim(),
+            outline: computedStyle.getPropertyValue('--md-sys-color-outline').trim(),
+            onSurface: computedStyle.getPropertyValue('--md-sys-color-on-surface').trim(),
+            onSurfaceVariant: computedStyle.getPropertyValue('--md-sys-color-on-surface-variant').trim(),
+            onPrimaryContainer: computedStyle.getPropertyValue('--md-sys-color-on-primary-container').trim(),
+            onPrimary: computedStyle.getPropertyValue('--md-sys-color-on-primary').trim()
         };
 
         document.body.removeChild(tempDiv);
 
-        // Fallback to theme-appropriate colors if CSS variables are empty
+        // Determine if we're in dark mode
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        if (!colors.surface || colors.surface === '') {
-            if (isDark) {
-                colors.surface = '#141218';
-                colors.surfaceVariant = '#49454f';
-                colors.primaryContainer = '#4f378b';
-                colors.primary = '#d0bcff';
-                colors.secondary = '#ccc2dc';
-                colors.outline = '#938f99';
-                colors.onSurface = '#e6e0e9';
-                colors.onSurfaceVariant = '#cac4d0';
-                colors.onPrimaryContainer = '#eaddff';
-                colors.onPrimary = '#381e72';
-            } else {
-                colors.surface = '#fef7ff';
-                colors.surfaceVariant = '#e7e0ec';
-                colors.primaryContainer = '#eaddff';
-                colors.primary = '#6750a4';
-                colors.secondary = '#625b71';
-                colors.outline = '#79747e';
-                colors.onSurface = '#1d1b20';
-                colors.onSurfaceVariant = '#49454f';
-                colors.onPrimaryContainer = '#21005d';
-                colors.onPrimary = '#ffffff';
-            }
-        }
 
-        return colors;
+        // Use Material Design 3 colors that match the application's theme
+        if (isDark) {
+            // Dark theme colors from theme.css
+            return {
+                surface: colors.surface || '#191c1e',
+                surfaceContainer: colors.surfaceContainer || '#1f2328',
+                surfaceVariant: colors.surfaceVariant || '#43474e',
+                primaryContainer: colors.primaryContainer || '#003450',
+                primary: colors.primary || '#8dcdff',
+                secondary: colors.secondary || '#8d9199',
+                outline: colors.outline || '#8d9199',
+                onSurface: colors.onSurface || '#e2e2e5',
+                onSurfaceVariant: colors.onSurfaceVariant || '#c4c7cf',
+                onPrimaryContainer: colors.onPrimaryContainer || '#8dcdff',
+                onPrimary: colors.onPrimary || '#003450'
+            };
+        } else {
+            // Light theme colors from base.css
+            return {
+                surface: colors.surface || '#fafcff',
+                surfaceContainer: colors.surfaceContainer || '#f3f5f8',
+                surfaceVariant: colors.surfaceVariant || '#dfe2eb',
+                primaryContainer: colors.primaryContainer || '#d6e3ff',
+                primary: colors.primary || '#1e6fd9',
+                secondary: colors.secondary || '#73777f',
+                outline: colors.outline || '#73777f',
+                onSurface: colors.onSurface || '#191c1e',
+                onSurfaceVariant: colors.onSurfaceVariant || '#43474e',
+                onPrimaryContainer: colors.onPrimaryContainer || '#001d36',
+                onPrimary: colors.onPrimary || '#ffffff'
+            };
+        }
     }
 
     setupSVG() {
@@ -175,7 +485,7 @@ class D3SchemaRenderer {
 
     setupMarkers() {
         const defs = this.svg.append('defs');
-        
+
         // Standard arrowhead
         defs.append('marker')
             .attr('id', 'arrowhead')
@@ -899,7 +1209,7 @@ class D3SchemaRenderer {
             .attr('fill', d => d.isPrimary ? this.colors.primaryContainer : this.colors.surfaceVariant)
             .attr('stroke', d => d.isPrimary ? this.colors.primary : this.colors.outline)
             .attr('stroke-width', d => d.isPrimary ? 2 : 1)
-            .attr('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))');
+            .attr('filter', this.getShadowFilter());
 
         // Add header separator line
         this.nodeElements.append('line')
@@ -911,6 +1221,12 @@ class D3SchemaRenderer {
             .attr('stroke', d => d.isPrimary ? this.colors.primary : this.colors.outline)
             .attr('stroke-width', 1)
             .attr('opacity', 0.5);
+    }
+
+    getShadowFilter() {
+        // Adjust shadow opacity based on theme
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        return isDark ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))';
     }
 
     renderTableContent() {
@@ -935,6 +1251,7 @@ class D3SchemaRenderer {
             // Show ALL primary keys first
             d.primaryKeys.forEach((column) => {
                 nodeGroup.append('text')
+                    .attr('class', 'column-text primary-key')
                     .attr('x', 8)
                     .attr('y', yOffset)
                     .attr('font-family', 'system-ui, -apple-system, sans-serif')
@@ -949,6 +1266,7 @@ class D3SchemaRenderer {
             // Show ALL foreign keys
             d.foreignKeys.forEach((column) => {
                 nodeGroup.append('text')
+                    .attr('class', 'column-text foreign-key')
                     .attr('x', 8)
                     .attr('y', yOffset)
                     .attr('font-family', 'system-ui, -apple-system, sans-serif')
@@ -962,6 +1280,7 @@ class D3SchemaRenderer {
             // Show ALL regular columns
             d.regularColumns.forEach((column) => {
                 nodeGroup.append('text')
+                    .attr('class', 'column-text regular-column')
                     .attr('x', 8)
                     .attr('y', yOffset)
                     .attr('font-family', 'system-ui, -apple-system, sans-serif')
@@ -989,9 +1308,12 @@ class D3SchemaRenderer {
 
     onNodeHover(event, d) {
         // Highlight the hovered table
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const hoverShadow = isDark ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))';
+
         d3.select(event.currentTarget).select('.table-rect')
             .attr('stroke-width', 3)
-            .attr('filter', 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))');
+            .attr('filter', hoverShadow);
 
         // Highlight connected links with elbow paths
         this.linkElements.selectAll('.link-path')
@@ -1016,7 +1338,7 @@ class D3SchemaRenderer {
         // Reset table styling
         d3.select(event.currentTarget).select('.table-rect')
             .attr('stroke-width', d => d.isPrimary ? 2 : 1)
-            .attr('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))');
+            .attr('filter', this.getShadowFilter());
 
         // Reset link styles
         this.linkElements.selectAll('.link-path')

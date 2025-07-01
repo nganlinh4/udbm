@@ -23,6 +23,98 @@ function showSuccessPopup(message) {
     }, 2000);
 }
 
+function showErrorPopup(message) {
+    const popup = document.createElement('div');
+    popup.className = 'warning-popup';
+    popup.style.fontFamily = 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif';
+    popup.innerHTML = `
+        <span class="warning-icon" style="color: #ff5252;">⚠</span>
+        ${message}
+    `;
+    document.body.appendChild(popup);
+    setTimeout(() => {
+        popup.classList.add('show');
+    }, 10);
+    setTimeout(() => {
+        popup.classList.remove('show');
+        setTimeout(() => popup.remove(), 300);
+    }, 2000);
+}
+
+// Helper function to copy blob to clipboard - MUST WORK, NO FALLBACKS
+async function copyBlobToClipboard(blob) {
+    console.log('Copying image to clipboard...');
+
+    // Ensure we have the required APIs
+    if (!navigator.clipboard) {
+        throw new Error('Clipboard API not available. Please use HTTPS or localhost.');
+    }
+
+    if (typeof ClipboardItem === 'undefined') {
+        throw new Error('ClipboardItem not supported in this browser version.');
+    }
+
+    if (!window.isSecureContext) {
+        throw new Error('Clipboard requires secure context (HTTPS). Current page is not secure.');
+    }
+
+    try {
+        // Create ClipboardItem with the PNG blob
+        const clipboardItem = new ClipboardItem({
+            'image/png': blob
+        });
+
+        // Write to clipboard
+        await navigator.clipboard.write([clipboardItem]);
+
+        console.log('✅ Image successfully copied to clipboard');
+        return { success: true, method: 'ClipboardItem' };
+
+    } catch (error) {
+        console.error('Clipboard write failed:', error);
+
+        // Provide specific error messages based on the error type
+        if (error.name === 'NotAllowedError') {
+            throw new Error('Clipboard access denied. Please allow clipboard permissions for this site.');
+        } else if (error.name === 'DataError') {
+            throw new Error('Invalid image data. Please try regenerating the schema.');
+        } else if (error.name === 'SecurityError') {
+            throw new Error('Security error. Please ensure you are on HTTPS or localhost.');
+        } else {
+            throw new Error(`Clipboard error: ${error.message}`);
+        }
+    }
+}
+
+// Function to check clipboard requirements and provide user guidance
+function checkClipboardSupport() {
+    const issues = [];
+
+    if (!window.isSecureContext) {
+        issues.push('Page must be served over HTTPS or localhost');
+    }
+
+    if (!navigator.clipboard) {
+        issues.push('Clipboard API not available in this browser');
+    }
+
+    if (typeof ClipboardItem === 'undefined') {
+        issues.push('ClipboardItem not supported in this browser version');
+    }
+
+    return {
+        supported: issues.length === 0,
+        issues: issues,
+        guidance: issues.length > 0 ?
+            `To enable clipboard functionality: ${issues.join(', ')}` :
+            'Clipboard functionality is available'
+    };
+}
+
+
+
+
+
 
 function initializeZoomPan(container, targetElement) {
     if (!targetElement || targetElement.dataset.zoomInitialized === 'true') return;
@@ -597,28 +689,52 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         `;
         copyButton.addEventListener('click', async () => {
             try {
+                let blob;
+                let schemaName = 'Schema';
+
+                // Generate the appropriate blob based on schema type
                 if (useGraphviz) {
                     const img = container.querySelector('#graphvizContent');
-                    const response = await fetch(img.src);
-                    const blob = await response.blob();
-                    const item = new ClipboardItem({ 'image/png': blob });
-                        showSuccessPopup('Schema copied to clipboard successfully!');
-
-                    await navigator.clipboard.write([item]);
-                } else {
-                    const img = container.querySelector('.mermaid img');
-                    if (img) {
-                        const response = await fetch(img.src);
-                        const blob = await response.blob();
-                        const item = new ClipboardItem({ 'image/png': blob });
-                        await navigator.clipboard.write([item]);
-                        showSuccessPopup('Schema copied to clipboard successfully!');
-
-                        console.log('Copied Mermaid PNG to clipboard');
+                    if (!img || !img.src) {
+                        throw new Error('GraphViz image not found');
                     }
+                    const response = await fetch(img.src);
+                    blob = await response.blob();
+                    schemaName = 'GraphViz schema';
+                } else if (schemaType === 'd3') {
+                    // Handle D3 copy
+                    if (!d3Renderer) {
+                        throw new Error('D3 renderer not available. Please render the schema first.');
+                    }
+                    blob = await d3Renderer.toPngBlob();
+                    schemaName = 'D3 schema';
+                    console.log(`Generated D3 schema PNG blob: ${blob.size} bytes`);
+                } else {
+                    // Handle Mermaid copy
+                    const img = container.querySelector('.mermaid img');
+                    if (!img || !img.src) {
+                        throw new Error('Mermaid image not found');
+                    }
+                    const response = await fetch(img.src);
+                    blob = await response.blob();
+                    schemaName = 'Mermaid schema';
                 }
+
+                // Validate the blob
+                if (!blob || blob.size === 0) {
+                    throw new Error('Generated image is empty or invalid');
+                }
+
+                // Copy to clipboard - MUST WORK
+                await copyBlobToClipboard(blob);
+
+                // Success!
+                showSuccessPopup(`${schemaName} copied to clipboard successfully!`);
+                console.log(`✅ ${schemaName} copied to clipboard successfully`);
+
             } catch (error) {
-                console.error('Failed to copy schema:', error);
+                console.error('❌ Copy failed:', error);
+                showErrorPopup(`Copy failed: ${error.message}`);
             }
         });
     }
@@ -645,6 +761,20 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                     link.download = 'schema.png';
                     link.click();
                     window.URL.revokeObjectURL(url);
+                } else if (schemaType === 'd3') {
+                    // Handle D3 download
+                    if (d3Renderer) {
+                        const blob = await d3Renderer.toPngBlob();
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'schema-d3.png';
+                        link.click();
+                        window.URL.revokeObjectURL(url);
+                        console.log('Downloaded D3 schema as PNG');
+                    } else {
+                        throw new Error('D3 renderer not available');
+                    }
                 } else {
                     // Handle Mermaid download
                     const img = container.querySelector('.mermaid img');
@@ -657,6 +787,7 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                 }
             } catch (error) {
                 console.error('Failed to download schema:', error);
+                showErrorPopup('Failed to download schema');
             }
         });
     }
