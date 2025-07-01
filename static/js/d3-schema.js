@@ -65,7 +65,8 @@ class D3SchemaRenderer {
             this.setupInteractions();
 
             // Zoom/pan will be initialized by the main schema.js after rendering
-            
+            // SVG will be made visible after zoom/pan initialization
+
             this.container.style.opacity = '1';
             console.log('D3 force-directed schema rendered successfully');
             
@@ -154,7 +155,8 @@ class D3SchemaRenderer {
             .style('cursor', 'grab')
             .style('user-select', 'none')
             .style('z-index', '1')
-            .style('overflow', 'visible'); // Allow content to extend beyond boundaries
+            .style('overflow', 'visible') // Allow content to extend beyond boundaries
+            .style('opacity', '0'); // Start invisible to prevent flicker
 
         // Add background rectangle for zoom/pan events
         this.svg.append('rect')
@@ -205,7 +207,7 @@ class D3SchemaRenderer {
         const tables = d3Data.tables || {};
         const relationships = d3Data.relationships || [];
         const metadata = d3Data.d3_metadata || {};
-        
+
         // Create nodes with enhanced information
         this.nodes = Object.keys(tables).map(tableName => {
             const table = tables[tableName];
@@ -227,7 +229,7 @@ class D3SchemaRenderer {
             const primaryKeys = columns.filter(col => col.is_primary === true);
             const foreignKeys = columns.filter(col => foreignKeyColumns.has(col.name));
             const regularColumns = columns.filter(col => !col.is_primary && !foreignKeyColumns.has(col.name));
-            
+
             // Debug logging
             console.log(`Table ${tableName}:`, {
                 totalColumns: columns.length,
@@ -261,6 +263,9 @@ class D3SchemaRenderer {
             type: 'foreign_key',
             index: index
         }));
+
+        // Apply TSP-based initial positioning to minimize intersections
+        this.optimizeInitialLayout();
 
         console.log(`D3 Schema: ${this.nodes.length} tables, ${this.links.length} relationships`);
     }
@@ -316,13 +321,8 @@ class D3SchemaRenderer {
     }
 
     resetLayout() {
-        // Reset all nodes to random positions around center
-        this.nodes.forEach(node => {
-            node.x = this.width / 2 + (Math.random() - 0.5) * 200;
-            node.y = this.height / 2 + (Math.random() - 0.5) * 200;
-            node.fx = null;
-            node.fy = null;
-        });
+        // Reset all nodes to optimized positions
+        this.optimizeInitialLayout();
 
         if (this.simulation) {
             this.simulation.alpha(1).restart();
@@ -340,6 +340,491 @@ class D3SchemaRenderer {
             }
         }
         return false;
+    }
+
+    /**
+     * TSP-based optimization for initial table positioning
+     * Minimizes connector intersections and table hindering
+     * Generates different solutions each time it's called
+     */
+    optimizeInitialLayout() {
+        console.log('Generating new optimized layout using TSP-based algorithm...');
+
+        if (this.nodes.length === 0) {
+            console.log('No nodes to optimize');
+            return;
+        }
+
+        // Calculate table dimensions first
+        this.calculateTableDimensions();
+        console.log(`Calculated dimensions for ${this.nodes.length} tables`);
+
+        // Build adjacency graph for connected tables
+        const adjacencyGraph = this.buildAdjacencyGraph();
+        console.log(`Built adjacency graph with ${adjacencyGraph.size} nodes and ${this.links.length} connections`);
+
+        // Generate multiple layout solutions and pick the best one
+        const bestLayout = this.generateBestLayout(adjacencyGraph);
+        console.log(`Generated optimized layout with score: ${bestLayout.score}`);
+
+        // Apply positions to nodes
+        this.applyOptimizedPositions(bestLayout.positions);
+
+        console.log('New optimized layout applied - tables positioned to minimize intersections');
+    }
+
+    /**
+     * Pre-calculate table dimensions for layout optimization
+     */
+    calculateTableDimensions() {
+        this.nodes.forEach(node => {
+            const allColumns = node.columns.length;
+            const headerHeight = 30;
+            const columnHeight = 16;
+            const padding = 10;
+
+            // Calculate width based on longest column name + type
+            let maxWidth = node.name.length * 8 + 40;
+            node.columns.forEach(col => {
+                const columnText = `${col.name}: ${col.type}`;
+                const columnWidth = columnText.length * 7 + 40;
+                maxWidth = Math.max(maxWidth, columnWidth);
+            });
+
+            node.width = Math.max(200, maxWidth);
+            node.height = headerHeight + (allColumns * columnHeight) + padding * 2;
+        });
+    }
+
+    /**
+     * Build adjacency graph with connection weights
+     */
+    buildAdjacencyGraph() {
+        const graph = new Map();
+
+        // Initialize graph with all nodes
+        this.nodes.forEach(node => {
+            graph.set(node.id, new Map());
+        });
+
+        // Add weighted connections
+        this.links.forEach(link => {
+            const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+            const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+
+            if (graph.has(sourceId) && graph.has(targetId)) {
+                // Weight connections by relationship strength
+                const currentWeight = graph.get(sourceId).get(targetId) || 0;
+                graph.get(sourceId).set(targetId, currentWeight + 1);
+                graph.get(targetId).set(sourceId, currentWeight + 1);
+            }
+        });
+
+        return graph;
+    }
+
+    /**
+     * Generate multiple layout solutions and return the best one
+     * This ensures each optimization produces a different result
+     */
+    generateBestLayout(adjacencyGraph) {
+        const solutions = [];
+        const maxAttempts = Math.min(8, Math.max(3, this.nodes.length)); // 3-8 attempts based on complexity
+
+        console.log(`Generating ${maxAttempts} layout solutions...`);
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            // Use different random seeds and strategies for each attempt
+            const strategy = this.getLayoutStrategy(attempt, maxAttempts);
+            const positions = this.calculateOptimalPositions(adjacencyGraph, strategy);
+            const score = this.evaluateLayoutQuality(positions, adjacencyGraph);
+
+            solutions.push({
+                positions: new Map(positions), // Clone the positions
+                score: score,
+                strategy: strategy
+            });
+
+            console.log(`Solution ${attempt + 1}: score ${score.toFixed(2)} (${strategy.name})`);
+        }
+
+        // Sort by score (lower is better) and return the best
+        solutions.sort((a, b) => a.score - b.score);
+        const bestSolution = solutions[0];
+
+        console.log(`Selected best solution: ${bestSolution.strategy.name} with score ${bestSolution.score.toFixed(2)}`);
+        return bestSolution;
+    }
+
+    /**
+     * Get different layout strategies for variety
+     */
+    getLayoutStrategy(attempt, maxAttempts) {
+        const strategies = [
+            { name: 'Hub-Centric', hubWeight: 1.0, randomness: 0.1, circularBias: 0.8 },
+            { name: 'Distributed', hubWeight: 0.5, randomness: 0.3, circularBias: 0.6 },
+            { name: 'Clustered', hubWeight: 0.7, randomness: 0.2, circularBias: 0.9 },
+            { name: 'Organic', hubWeight: 0.3, randomness: 0.5, circularBias: 0.4 },
+            { name: 'Balanced', hubWeight: 0.6, randomness: 0.25, circularBias: 0.7 },
+            { name: 'Spread', hubWeight: 0.4, randomness: 0.4, circularBias: 0.5 },
+            { name: 'Compact', hubWeight: 0.8, randomness: 0.15, circularBias: 0.95 },
+            { name: 'Random-Optimized', hubWeight: Math.random(), randomness: Math.random() * 0.6, circularBias: Math.random() }
+        ];
+
+        return strategies[attempt % strategies.length];
+    }
+
+    /**
+     * Apply sorting strategy with randomization for variety
+     */
+    applySortingStrategy(nodeIds, connectionCounts, strategy) {
+        // Base sort by connection count
+        let sortedNodes = nodeIds.sort((a, b) =>
+            connectionCounts.get(b) - connectionCounts.get(a)
+        );
+
+        // Apply strategy-based modifications
+        if (strategy.randomness > 0) {
+            // Introduce controlled randomness while preserving general order
+            const shuffleAmount = Math.floor(sortedNodes.length * strategy.randomness);
+            for (let i = 0; i < shuffleAmount; i++) {
+                const idx1 = Math.floor(Math.random() * sortedNodes.length);
+                const idx2 = Math.floor(Math.random() * sortedNodes.length);
+                [sortedNodes[idx1], sortedNodes[idx2]] = [sortedNodes[idx2], sortedNodes[idx1]];
+            }
+        }
+
+        // Apply hub weight strategy
+        if (strategy.hubWeight !== 1.0) {
+            sortedNodes = sortedNodes.sort((a, b) => {
+                const scoreA = connectionCounts.get(a) * strategy.hubWeight + Math.random() * (1 - strategy.hubWeight);
+                const scoreB = connectionCounts.get(b) * strategy.hubWeight + Math.random() * (1 - strategy.hubWeight);
+                return scoreB - scoreA;
+            });
+        }
+
+        return sortedNodes;
+    }
+
+    /**
+     * Evaluate the quality of a layout (lower score is better)
+     */
+    evaluateLayoutQuality(positions, adjacencyGraph) {
+        let score = 0;
+        const allConnections = [];
+
+        // Collect all connections with their positions
+        for (const [nodeId, connections] of adjacencyGraph) {
+            for (const [connectedId, weight] of connections) {
+                if (positions.has(nodeId) && positions.has(connectedId)) {
+                    allConnections.push({
+                        from: positions.get(nodeId),
+                        to: positions.get(connectedId),
+                        weight: weight,
+                        fromId: nodeId,
+                        toId: connectedId
+                    });
+                }
+            }
+        }
+
+        // Score based on connector intersections (major penalty)
+        for (let i = 0; i < allConnections.length; i++) {
+            for (let j = i + 1; j < allConnections.length; j++) {
+                if (this.doLinesIntersect(
+                    allConnections[i].from, allConnections[i].to,
+                    allConnections[j].from, allConnections[j].to
+                )) {
+                    score += 100; // Heavy penalty for intersections
+                }
+            }
+        }
+
+        // Score based on connection length (prefer shorter connections)
+        allConnections.forEach(conn => {
+            const distance = Math.sqrt(
+                Math.pow(conn.to.x - conn.from.x, 2) +
+                Math.pow(conn.to.y - conn.from.y, 2)
+            );
+            score += distance * 0.01 * conn.weight;
+        });
+
+        // Score based on table spacing (prevent overcrowding)
+        const positionArray = Array.from(positions.values());
+        for (let i = 0; i < positionArray.length; i++) {
+            for (let j = i + 1; j < positionArray.length; j++) {
+                const distance = Math.sqrt(
+                    Math.pow(positionArray[j].x - positionArray[i].x, 2) +
+                    Math.pow(positionArray[j].y - positionArray[i].y, 2)
+                );
+                if (distance < 150) { // Too close
+                    score += (150 - distance) * 0.5;
+                }
+            }
+        }
+
+        return score;
+    }
+
+    /**
+     * Calculate optimal positions using modified TSP approach
+     * Focuses on minimizing connector intersections and table overlap
+     */
+    calculateOptimalPositions(adjacencyGraph, strategy = null) {
+        const positions = new Map();
+        const nodeIds = Array.from(adjacencyGraph.keys());
+
+        if (nodeIds.length === 0) return positions;
+
+        // Use default strategy if none provided
+        if (!strategy) {
+            strategy = { name: 'Default', hubWeight: 0.7, randomness: 0.2, circularBias: 0.8 };
+        }
+
+        // Find hub tables (highly connected) to place centrally
+        const connectionCounts = new Map();
+        nodeIds.forEach(nodeId => {
+            const connections = adjacencyGraph.get(nodeId);
+            connectionCounts.set(nodeId, connections.size);
+        });
+
+        // Sort nodes by connection count with strategy-based randomization
+        const sortedNodes = this.applySortingStrategy(nodeIds, connectionCounts, strategy);
+
+        // Use circular placement with intelligent spacing
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+
+        if (sortedNodes.length === 1) {
+            // Single table - place at center
+            positions.set(sortedNodes[0], { x: centerX, y: centerY });
+            return positions;
+        }
+
+        // Calculate optimal radius based on table sizes and count
+        const avgTableSize = this.nodes.reduce((sum, node) =>
+            sum + Math.max(node.width || 200, node.height || 100), 0) / this.nodes.length;
+        const baseRadius = Math.max(200, avgTableSize * 1.2);
+        const radiusIncrement = Math.max(120, avgTableSize * 0.8);
+
+        // Adjust for viewport size to prevent tables from going off-screen
+        const maxRadius = Math.min(this.width, this.height) * 0.4;
+        const adjustedBaseRadius = Math.min(baseRadius, maxRadius);
+        const adjustedRadiusIncrement = Math.min(radiusIncrement, maxRadius * 0.3);
+
+        // Place hub table(s) at center with strategy-based variation
+        const hubCount = Math.min(3, Math.ceil(sortedNodes.length * 0.1 * strategy.hubWeight));
+        const hubNodes = sortedNodes.slice(0, Math.max(1, hubCount));
+
+        if (hubNodes.length === 1) {
+            // Single hub with slight randomization
+            const offsetX = (Math.random() - 0.5) * 100 * strategy.randomness;
+            const offsetY = (Math.random() - 0.5) * 100 * strategy.randomness;
+            positions.set(hubNodes[0], {
+                x: centerX + offsetX,
+                y: centerY + offsetY
+            });
+        } else {
+            // Multiple hubs - small circle around center with strategy variation
+            hubNodes.forEach((nodeId, index) => {
+                const baseAngle = (index * 2 * Math.PI) / hubNodes.length;
+                const angleVariation = (Math.random() - 0.5) * Math.PI * 0.3 * strategy.randomness;
+                const angle = baseAngle + angleVariation;
+                const hubRadius = adjustedBaseRadius * (0.2 + 0.2 * strategy.circularBias);
+                positions.set(nodeId, {
+                    x: centerX + Math.cos(angle) * hubRadius,
+                    y: centerY + Math.sin(angle) * hubRadius
+                });
+            });
+        }
+
+        // Place remaining nodes in concentric circles
+        const remainingNodes = sortedNodes.slice(hubNodes.length);
+        this.placeNodesInConcentricCircles(remainingNodes, positions, adjacencyGraph,
+            centerX, centerY, adjustedBaseRadius, adjustedRadiusIncrement, strategy);
+
+        return positions;
+    }
+
+    /**
+     * Place nodes in concentric circles with intersection minimization
+     */
+    placeNodesInConcentricCircles(nodes, positions, adjacencyGraph, centerX, centerY, baseRadius, radiusIncrement, strategy) {
+        const maxNodesPerCircle = Math.floor(6 + 4 * strategy.circularBias); // 6-10 nodes per circle based on strategy
+        let currentRadius = baseRadius;
+        let nodeIndex = 0;
+
+        while (nodeIndex < nodes.length) {
+            const nodesInThisCircle = Math.min(maxNodesPerCircle, nodes.length - nodeIndex);
+            const circleNodes = nodes.slice(nodeIndex, nodeIndex + nodesInThisCircle);
+
+            // Calculate optimal angles for this circle to minimize intersections
+            const optimalAngles = this.calculateOptimalAngles(circleNodes, positions, adjacencyGraph, strategy);
+
+            circleNodes.forEach((nodeId, index) => {
+                const angle = optimalAngles[index];
+                // Add strategy-based radius variation
+                const radiusVariation = (Math.random() - 0.5) * radiusIncrement * 0.3 * strategy.randomness;
+                const finalRadius = currentRadius + radiusVariation;
+
+                positions.set(nodeId, {
+                    x: centerX + Math.cos(angle) * finalRadius,
+                    y: centerY + Math.sin(angle) * finalRadius
+                });
+            });
+
+            nodeIndex += nodesInThisCircle;
+            currentRadius += radiusIncrement * (0.8 + 0.4 * strategy.circularBias); // Strategy affects spacing
+        }
+    }
+
+    /**
+     * Calculate optimal angles for nodes in a circle to minimize connector intersections
+     */
+    calculateOptimalAngles(circleNodes, existingPositions, adjacencyGraph, strategy) {
+        const nodeCount = circleNodes.length;
+        const baseAngles = circleNodes.map((_, index) => (index * 2 * Math.PI) / nodeCount);
+
+        if (nodeCount <= 2) {
+            // Add small random variation even for simple cases
+            return baseAngles.map(angle =>
+                angle + (Math.random() - 0.5) * Math.PI * 0.1 * strategy.randomness
+            );
+        }
+
+        // Try different rotational offsets to find best arrangement
+        let bestAngles = [...baseAngles];
+        let bestScore = this.calculateIntersectionScore(circleNodes, baseAngles, existingPositions, adjacencyGraph);
+
+        const rotationSteps = Math.min(16, nodeCount * 2);
+        const randomRotationOffset = Math.random() * 2 * Math.PI * strategy.randomness;
+
+        for (let step = 1; step < rotationSteps; step++) {
+            const rotationOffset = (step * 2 * Math.PI) / rotationSteps + randomRotationOffset;
+            const rotatedAngles = baseAngles.map(angle => {
+                const baseRotated = angle + rotationOffset;
+                // Add individual angle variation based on strategy
+                const angleVariation = (Math.random() - 0.5) * Math.PI * 0.2 * strategy.randomness;
+                return baseRotated + angleVariation;
+            });
+
+            const score = this.calculateIntersectionScore(circleNodes, rotatedAngles, existingPositions, adjacencyGraph);
+            if (score < bestScore) {
+                bestScore = score;
+                bestAngles = [...rotatedAngles];
+            }
+        }
+
+        return bestAngles;
+    }
+
+    /**
+     * Calculate intersection score for a given arrangement
+     * Lower scores indicate fewer intersections and better layout
+     */
+    calculateIntersectionScore(circleNodes, angles, existingPositions, adjacencyGraph) {
+        let score = 0;
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+        const currentRadius = 300; // Approximate radius for scoring
+
+        // Create temporary positions for scoring
+        const tempPositions = new Map(existingPositions);
+        circleNodes.forEach((nodeId, index) => {
+            tempPositions.set(nodeId, {
+                x: centerX + Math.cos(angles[index]) * currentRadius,
+                y: centerY + Math.sin(angles[index]) * currentRadius
+            });
+        });
+
+        // Score based on connector intersections
+        const allConnections = [];
+        for (const [nodeId, connections] of adjacencyGraph) {
+            for (const [connectedId, weight] of connections) {
+                if (tempPositions.has(nodeId) && tempPositions.has(connectedId)) {
+                    allConnections.push({
+                        from: tempPositions.get(nodeId),
+                        to: tempPositions.get(connectedId),
+                        weight: weight
+                    });
+                }
+            }
+        }
+
+        // Count intersections between connectors
+        for (let i = 0; i < allConnections.length; i++) {
+            for (let j = i + 1; j < allConnections.length; j++) {
+                if (this.doLinesIntersect(
+                    allConnections[i].from, allConnections[i].to,
+                    allConnections[j].from, allConnections[j].to
+                )) {
+                    score += 10; // Penalty for intersection
+                }
+            }
+        }
+
+        // Score based on connector length (prefer shorter connections)
+        allConnections.forEach(conn => {
+            const distance = Math.sqrt(
+                Math.pow(conn.to.x - conn.from.x, 2) +
+                Math.pow(conn.to.y - conn.from.y, 2)
+            );
+            score += distance * 0.01 * conn.weight; // Weighted by connection strength
+        });
+
+        return score;
+    }
+
+    /**
+     * Check if two line segments intersect
+     */
+    doLinesIntersect(p1, q1, p2, q2) {
+        const orientation = (p, q, r) => {
+            const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+            if (val === 0) return 0; // Collinear
+            return val > 0 ? 1 : 2; // Clockwise or Counterclockwise
+        };
+
+        const onSegment = (p, q, r) => {
+            return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+                   q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
+        };
+
+        const o1 = orientation(p1, q1, p2);
+        const o2 = orientation(p1, q1, q2);
+        const o3 = orientation(p2, q2, p1);
+        const o4 = orientation(p2, q2, q1);
+
+        // General case
+        if (o1 !== o2 && o3 !== o4) return true;
+
+        // Special cases
+        if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+        if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+        if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+        if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+
+        return false;
+    }
+
+    /**
+     * Apply optimized positions to nodes
+     */
+    applyOptimizedPositions(positions) {
+        this.nodes.forEach(node => {
+            const pos = positions.get(node.id);
+            if (pos) {
+                node.x = pos.x;
+                node.y = pos.y;
+            } else {
+                // Fallback to random position if not in optimized set
+                node.x = this.width / 2 + (Math.random() - 0.5) * 200;
+                node.y = this.height / 2 + (Math.random() - 0.5) * 200;
+            }
+            // Clear any fixed positions
+            node.fx = null;
+            node.fy = null;
+        });
     }
 
     renderLinks() {

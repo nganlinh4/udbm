@@ -27,10 +27,28 @@ function showSuccessPopup(message) {
 function initializeZoomPan(container, targetElement) {
     if (!targetElement || targetElement.dataset.zoomInitialized === 'true') return;
 
+    // Check if element already has a transform applied (for D3 SVG)
+    const existingTransform = targetElement.style.transform;
+    let initialPanX = 0, initialPanY = 0, initialScale = 0.7;
+
+    if (existingTransform) {
+        // Parse existing transform values
+        const translateMatch = existingTransform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
+        const scaleMatch = existingTransform.match(/scale\(([^)]+)\)/);
+
+        if (translateMatch) {
+            initialPanX = parseFloat(translateMatch[1]);
+            initialPanY = parseFloat(translateMatch[2]);
+        }
+        if (scaleMatch) {
+            initialScale = parseFloat(scaleMatch[1]);
+        }
+    }
+
     const state = {
-        panX: 0,
-        panY: 0,
-        scale: 1,
+        panX: initialPanX,
+        panY: initialPanY,
+        scale: initialScale,
         isDragging: false,
         startX: 0,
         startY: 0
@@ -144,8 +162,46 @@ function initializeZoomPan(container, targetElement) {
     targetElement.addEventListener('mouseup', stopDragging);
     targetElement.addEventListener('mouseleave', stopDragging);
 
+    // Center the content initially (only for non-D3 SVG elements)
+    const centerContent = () => {
+        const containerRect = container.getBoundingClientRect();
+
+        // For D3 SVG, skip centering as it's already positioned correctly
+        if (targetElement.tagName === 'svg' && targetElement.id === 'd3-schema-svg') {
+            return; // D3 SVG is already positioned correctly
+        }
+
+        // For D3 SVG, use the viewBox dimensions
+        if (targetElement.tagName === 'svg') {
+            const viewBox = targetElement.getAttribute('viewBox');
+            if (viewBox) {
+                const [, , width, height] = viewBox.split(' ').map(Number);
+                const containerCenterX = containerRect.width / 2;
+                const containerCenterY = containerRect.height / 2;
+                const targetCenterX = (width * state.scale) / 2;
+                const targetCenterY = (height * state.scale) / 2;
+
+                state.panX = containerCenterX - targetCenterX;
+                state.panY = containerCenterY - targetCenterY;
+            }
+        } else {
+            // For images and other elements
+            const targetRect = targetElement.getBoundingClientRect();
+            const containerCenterX = containerRect.width / 2;
+            const containerCenterY = containerRect.height / 2;
+            const targetCenterX = (targetRect.width * state.scale) / 2;
+            const targetCenterY = (targetRect.height * state.scale) / 2;
+
+            state.panX = containerCenterX - targetCenterX;
+            state.panY = containerCenterY - targetCenterY;
+        }
+    };
+
+    // Apply centering and initial transform
+    centerContent();
+    updateTransform();
+
     targetElement.dataset.zoomInitialized = 'true';
-    updateTransform(); // Initial transform
 }
 
 function generateMermaidDefinition(data) {
@@ -436,6 +492,31 @@ async function renderD3Schema(container, data) {
             const svgElement = container.querySelector('#d3-schema-svg');
             if (svgElement) {
                 console.log('Initializing zoom/pan for D3 SVG...');
+
+                // Apply initial zoom and centering before making visible
+                const containerRect = container.getBoundingClientRect();
+                const viewBox = svgElement.getAttribute('viewBox');
+                const initialScale = 0.7;
+
+                if (viewBox) {
+                    const [, , width, height] = viewBox.split(' ').map(Number);
+                    const containerCenterX = containerRect.width / 2;
+                    const containerCenterY = containerRect.height / 2;
+                    const targetCenterX = (width * initialScale) / 2;
+                    const targetCenterY = (height * initialScale) / 2;
+
+                    const panX = containerCenterX - targetCenterX;
+                    const panY = containerCenterY - targetCenterY;
+
+                    // Apply the transform immediately
+                    svgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${initialScale})`;
+                    svgElement.style.transformOrigin = '0 0';
+                }
+
+                // Make SVG visible with the correct transform already applied
+                svgElement.style.opacity = '1';
+
+                // Initialize zoom/pan system
                 initializeZoomPan(container, svgElement);
             } else {
                 console.warn('SVG element not found for zoom initialization');
@@ -665,6 +746,7 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
     // Add D3 control handlers
     const clumpingSlider = document.getElementById('clumpingSlider');
     const resetLayoutBtn = document.getElementById('resetLayout');
+    const optimizeLayoutBtn = document.getElementById('optimizeLayout');
     const pauseSimulationBtn = document.getElementById('pauseSimulation');
 
     if (clumpingSlider) {
@@ -679,6 +761,32 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         resetLayoutBtn.addEventListener('click', () => {
             if (d3Renderer) {
                 d3Renderer.resetLayout();
+            }
+        });
+    }
+
+    if (optimizeLayoutBtn) {
+        optimizeLayoutBtn.addEventListener('click', () => {
+            if (d3Renderer) {
+                // Show loading state
+                const originalText = optimizeLayoutBtn.textContent;
+                optimizeLayoutBtn.textContent = 'Optimizing...';
+                optimizeLayoutBtn.disabled = true;
+
+                // Use setTimeout to allow UI to update before heavy computation
+                setTimeout(() => {
+                    try {
+                        d3Renderer.optimizeInitialLayout();
+                        // Restart simulation to apply the new positions
+                        if (d3Renderer.simulation) {
+                            d3Renderer.simulation.alpha(0.5).restart();
+                        }
+                    } finally {
+                        // Restore button state
+                        optimizeLayoutBtn.textContent = originalText;
+                        optimizeLayoutBtn.disabled = false;
+                    }
+                }, 50);
             }
         });
     }
