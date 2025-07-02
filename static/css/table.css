@@ -871,6 +871,209 @@ tr {
     display: none;
 }
 
+/* Full-view image modal styles */
+.image-fullview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+
+.image-fullview-modal.show {
+    display: flex;
+}
+
+.image-fullview-content {
+    position: relative;
+    width: 99vw;
+    height: 96vh;
+    min-width: 800px;
+    min-height: 600px;
+    max-width: 99vw;
+    max-height: 96vh;
+    background: var(--md-sys-color-surface-container);
+    border-radius: 16px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    box-shadow: var(--md-elevation-level5);
+    display: flex;
+    flex-direction: column;
+    resize: both;
+    overflow: hidden;
+}
+
+.image-fullview-content::-webkit-resizer {
+    display: none;
+}
+
+.image-fullview-image-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    overflow: hidden;
+    min-height: 400px;
+}
+
+.image-fullview-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s ease;
+}
+
+.image-fullview-info {
+    background: var(--md-sys-color-surface-container-high);
+    padding: 16px 20px;
+    color: var(--md-sys-color-on-surface);
+    font-size: 14px;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.image-fullview-path {
+    flex: 1;
+    min-width: 0;
+}
+
+.image-fullview-path-label {
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--md-sys-color-on-surface);
+}
+
+.image-fullview-path-value {
+    font-family: 'Roboto Mono', 'Consolas', monospace;
+    font-size: 13px;
+    color: var(--md-sys-color-on-surface-variant);
+    word-break: break-all;
+    line-height: 1.4;
+}
+
+.image-fullview-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    background: var(--md-sys-color-surface-container-highest);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--md-sys-color-on-surface);
+    transition: all 0.2s ease;
+    z-index: 10001;
+}
+
+.image-fullview-close:hover {
+    background: var(--md-sys-color-surface-container-high);
+    border-color: var(--md-sys-color-outline);
+    transform: scale(1.05);
+}
+
+.image-fullview-download {
+    background: var(--md-sys-color-primary-container);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    padding: 10px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    color: var(--md-sys-color-on-primary-container);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.image-fullview-download:hover {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-color: var(--md-sys-color-primary);
+    transform: translateY(-1px);
+    box-shadow: var(--md-elevation-level2);
+}
+
+.image-fullview-download svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+}
+
+/* Resize handle styling - mimic schema-content style */
+.image-fullview-content::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, transparent 50%, var(--md-sys-color-outline) 50%);
+    cursor: nwse-resize;
+    transition: all 0.2s ease;
+    z-index: 10;
+    border-bottom-right-radius: 16px;
+}
+
+.image-fullview-content:hover::after {
+    background: linear-gradient(135deg, transparent 50%, var(--md-sys-color-primary) 50%);
+}
+
+.image-fullview-content:active::after {
+    background: linear-gradient(135deg, transparent 50%, var(--md-sys-color-primary) 50%);
+    opacity: 0.8;
+}
+
+/* Dark mode specific styles */
+[data-theme="dark"] .image-fullview-modal {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+[data-theme="dark"] .image-fullview-content::after {
+    background: linear-gradient(135deg, transparent 50%, var(--md-sys-color-outline-variant) 50%);
+}
+
+[data-theme="dark"] .image-fullview-content:hover::after {
+    background: linear-gradient(135deg, transparent 50%, var(--md-sys-color-primary) 50%);
+}
+
+/* Make table images clickable */
+.table-image-container {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.table-image-container:hover {
+    transform: scale(1.05);
+}
+
+.table-image-container img {
+    transition: opacity 0.2s ease;
+}
+
+.table-image-container:hover img {
+    opacity: 0.8;
+}
+
 .switch-label {
     font-size: 14px;
     color: var(--md-sys-color-on-surface);

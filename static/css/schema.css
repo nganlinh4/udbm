@@ -652,8 +652,8 @@
 /* Schema close button */
 .schema-close {
     position: fixed;
-    top: calc(2vh + 12px);
-    right: calc(2vw + 12px);
+    top: 28px;
+    right: 25px;
     background: rgba(255, 255, 255, 0.9);
     border: none;
     font-size: 47px;

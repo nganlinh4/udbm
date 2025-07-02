@@ -353,6 +353,7 @@ function createImageElement(imagePath) {
     if (!urls || urls.length === 0) return null;
 
     const container = document.createElement('div');
+    container.className = 'table-image-container';
     container.style.display = 'inline-block';
     container.style.position = 'relative';
 
@@ -364,7 +365,7 @@ function createImageElement(imagePath) {
     img.style.borderRadius = '4px';
     img.style.display = 'block';
     img.alt = imagePath;
-    img.title = `Image: ${imagePath}`;
+    img.title = `Click to view full size: ${imagePath}`;
 
     let currentUrlIndex = 0;
     let hasLoaded = false;
@@ -400,6 +401,13 @@ function createImageElement(imagePath) {
         tryNextUrl();
     };
 
+    // Add click event for full-view modal
+    container.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openImageFullview(imagePath, img.src);
+    });
+
     container.appendChild(img);
     tryNextUrl(); // Start with first URL
 
@@ -407,7 +415,7 @@ function createImageElement(imagePath) {
 }
 
 // Open image settings modal
-export function openImageSettingsModal(tableName) {
+function openImageSettingsModal(tableName) {
     // Create modal if it doesn't exist
     let modal = document.getElementById('imageSettingsModal');
     if (!modal) {
@@ -548,24 +556,10 @@ function setupImageSettingsEventListeners(modal) {
     });
 
     // Apply button
-    modal.querySelector('#applyImageSettings').addEventListener('click', () => {
-        const toggle = modal.querySelector('#showImagesToggle');
-        imageSettings.showImages = toggle.checked;
-        saveImageSettings();
-
-        // Refresh the table to apply image settings
-        const tableName = modal.dataset.tableName;
-        if (tableName) {
-            refreshTableWithImageSettings(tableName);
-        }
-
-        modal.classList.remove('visible');
-    });
+    modal.querySelector('#applyImageSettings').addEventListener('click', applyImageSettings);
 
     // Cancel button
-    modal.querySelector('#cancelImageSettings').addEventListener('click', () => {
-        modal.classList.remove('visible');
-    });
+    modal.querySelector('#cancelImageSettings').addEventListener('click', closeImageSettingsModal);
 }
 
 // Refresh table with image settings applied
@@ -3636,3 +3630,193 @@ function arrangeAlphabetically() {
         });
     }, sortedNames.length * 50 + 300);
 }
+
+// Image settings modal functions
+function closeImageSettingsModal() {
+    const modal = document.getElementById('imageSettingsModal');
+    if (modal) {
+        modal.classList.remove('visible');
+    }
+}
+
+function applyImageSettings() {
+    const modal = document.getElementById('imageSettingsModal');
+    if (!modal) return;
+
+    const toggle = modal.querySelector('#showImagesToggle');
+    imageSettings.showImages = toggle.checked;
+    saveImageSettings();
+
+    // Refresh all tables to apply image settings
+    document.querySelectorAll('.table-section').forEach(section => {
+        refreshTableImages(section);
+    });
+
+    closeImageSettingsModal();
+}
+
+// Full-view image modal functions
+function openImageFullview(imagePath, imageUrl) {
+    const modal = document.getElementById('imageFullviewModal');
+    const image = document.getElementById('fullviewImage');
+    const pathElement = document.getElementById('fullviewPath');
+
+    if (!modal || !image || !pathElement) {
+        console.error('Full-view modal elements not found');
+        return;
+    }
+
+    // Set image source
+    image.src = imageUrl;
+    image.alt = imagePath;
+
+    // Set image path
+    const fullPath = imageSettings.prefix ? `${imageSettings.prefix}\\${imagePath}` : imagePath;
+    pathElement.textContent = fullPath;
+
+    // Store current image path for other functions
+    modal.dataset.imagePath = imagePath;
+    modal.dataset.imageUrl = imageUrl;
+    modal.dataset.fullPath = fullPath;
+
+    // Show modal
+    modal.classList.add('show');
+
+    // Initialize resize functionality
+    initializeImageModalResize(modal);
+
+    // Add escape key listener
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            closeImageFullview();
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+
+    // Add click outside to close (but not during resize)
+    const handleClickOutside = (e) => {
+        if (e.target === modal && !modal._isResizing) {
+            closeImageFullview();
+            modal.removeEventListener('click', handleClickOutside);
+        }
+    };
+    modal.addEventListener('click', handleClickOutside);
+
+    // Store resize state for click handler
+    modal._isResizing = false;
+    modal._handleClickOutside = handleClickOutside;
+}
+
+function closeImageFullview() {
+    const modal = document.getElementById('imageFullviewModal');
+    if (modal) {
+        modal.classList.remove('show');
+        // Clean up resize listeners
+        if (modal._cleanupResize) {
+            modal._cleanupResize();
+        }
+    }
+}
+
+// Initialize resize functionality for image modal
+function initializeImageModalResize(modal) {
+    const content = modal.querySelector('.image-fullview-content');
+    if (!content) return;
+
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight;
+
+    const onMouseDown = (e) => {
+        // Check if click is in the resize handle area (bottom-right 30x30px)
+        const rect = content.getBoundingClientRect();
+        const isInResizeArea = (
+            e.clientX >= rect.right - 30 &&
+            e.clientY >= rect.bottom - 30
+        );
+
+        if (!isInResizeArea) return;
+
+        isResizing = true;
+        modal._isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = parseInt(document.defaultView.getComputedStyle(content).width, 10);
+        startHeight = parseInt(document.defaultView.getComputedStyle(content).height, 10);
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = 'nwse-resize';
+        e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+        if (!isResizing) return;
+
+        const newWidth = startWidth + (e.clientX - startX);
+        const newHeight = startHeight + (e.clientY - startY);
+
+        // Apply min/max constraints
+        const minWidth = 800;
+        const minHeight = 600;
+        const maxWidth = window.innerWidth * 0.99;
+        const maxHeight = window.innerHeight * 0.96;
+
+        const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+        const constrainedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+
+        content.style.width = constrainedWidth + 'px';
+        content.style.height = constrainedHeight + 'px';
+    };
+
+    const onMouseUp = () => {
+        if (!isResizing) return;
+
+        isResizing = false;
+        setTimeout(() => {
+            modal._isResizing = false;
+        }, 100); // Small delay to prevent immediate click-outside close
+
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+    };
+
+    // Add event listener
+    content.addEventListener('mousedown', onMouseDown);
+
+    // Store cleanup function
+    modal._cleanupResize = () => {
+        content.removeEventListener('mousedown', onMouseDown);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+    };
+}
+
+function downloadFullviewImage() {
+    const modal = document.getElementById('imageFullviewModal');
+    const imageUrl = modal?.dataset.imageUrl;
+    const imagePath = modal?.dataset.imagePath;
+
+    if (!imageUrl || !imagePath) {
+        console.error('No image data available for download');
+        return;
+    }
+
+    // Create download link
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = imagePath.split(/[/\\]/).pop() || 'image.jpg'; // Get filename from path
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Make functions globally available
+window.openImageSettingsModal = openImageSettingsModal;
+window.closeImageSettingsModal = closeImageSettingsModal;
+window.applyImageSettings = applyImageSettings;
+window.openImageFullview = openImageFullview;
+window.closeImageFullview = closeImageFullview;
+window.downloadFullviewImage = downloadFullviewImage;
