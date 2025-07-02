@@ -1590,11 +1590,71 @@ def execute_query():
         logger.error(f"Error executing custom query: {e}")
         return jsonify({'error': str(e)}), 500
 
+# Local image serving endpoint
+@app.route('/api/local-image')
+def serve_local_image():
+    """
+    Serve local images for the image display feature.
+    Accepts a 'path' parameter with the full local file path.
+    """
+    try:
+        logger.info(f"Local image request received. Args: {request.args}")
+        image_path = request.args.get('path')
+        logger.info(f"Requested image path: {image_path}")
+
+        if not image_path:
+            logger.error("No path parameter provided")
+            return jsonify({'error': 'No path parameter provided'}), 400
+
+        # Security check: ensure the path exists and is a file
+        if not os.path.exists(image_path):
+            logger.error(f"File not found: {image_path}")
+            return jsonify({'error': 'File not found'}), 404
+
+        if not os.path.isfile(image_path):
+            logger.error(f"Path is not a file: {image_path}")
+            return jsonify({'error': 'Path is not a file'}), 400
+
+        # Check if it's an image file by extension
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'}
+        file_ext = os.path.splitext(image_path)[1].lower()
+        if file_ext not in image_extensions:
+            logger.error(f"File is not a supported image format: {image_path}")
+            return jsonify({'error': 'File is not a supported image format'}), 400
+
+        # Determine MIME type
+        mime_types = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.bmp': 'image/bmp',
+            '.webp': 'image/webp',
+            '.svg': 'image/svg+xml'
+        }
+
+        mime_type = mime_types.get(file_ext, 'application/octet-stream')
+        logger.info(f"Serving image: {image_path} with MIME type: {mime_type}")
+
+        # Serve the file
+        return send_file(
+            image_path,
+            mimetype=mime_type,
+            as_attachment=False,
+            download_name=os.path.basename(image_path)
+        )
+
+    except Exception as e:
+        logger.error(f"Error serving local image: {e}")
+        return jsonify({'error': f'Failed to serve image: {str(e)}'}), 500
+
 # Add error handlers
 @app.errorhandler(500)
 def handle_500(e):
     logger.error(f"Internal server error: {e}")
     return jsonify({"error": "Internal server error"}), 500
+
+
 
 @app.errorhandler(404)
 def handle_404(e):

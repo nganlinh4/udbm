@@ -21,6 +21,9 @@ import {
 // Constants
 const baseUrl = window.location.origin;
 
+// Make baseUrl available globally for other modules
+window.baseUrl = baseUrl;
+
 // Export it for use in other modules
 export { baseUrl };
 

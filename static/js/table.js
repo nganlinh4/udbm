@@ -211,7 +211,7 @@ export function addDownloadButtons() {
             // Setup click handlers
             csvButton.onclick = async () => {
                 try {
-                    const response = await fetch(`${baseUrl}/download/${tableName}/csv`);
+                    const response = await fetch(`${window.baseUrl}/download/${tableName}/csv`);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const blob = await response.blob();
                     downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`);
@@ -222,7 +222,7 @@ export function addDownloadButtons() {
 
             xlsxButton.onclick = async () => {
                 try {
-                    const response = await fetch(`${baseUrl}/download/${tableName}/xlsx`);
+                    const response = await fetch(`${window.baseUrl}/download/${tableName}/xlsx`);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const blob = await response.blob();
                     downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`);
@@ -231,8 +231,24 @@ export function addDownloadButtons() {
                 }
             };
 
+            // Create image settings button
+            const imageButton = document.createElement('button');
+            imageButton.className = 'download-button image-settings-button';
+            imageButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                </svg>
+                IMG
+            `;
+
+            // Setup image settings click handler
+            imageButton.onclick = () => {
+                openImageSettingsModal(tableName);
+            };
+
             downloadButtons.appendChild(csvButton);
             downloadButtons.appendChild(xlsxButton);
+            downloadButtons.appendChild(imageButton);
             dragHandle.insertAdjacentElement('afterend', downloadButtons);
         }
     });
@@ -247,6 +263,348 @@ function downloadBlob(blob, filename) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
+}
+
+// Image settings functionality
+export let imageSettings = {
+    showImages: false,
+    pathPrefixes: []
+};
+
+// Load image settings from localStorage
+function loadImageSettings() {
+    const saved = localStorage.getItem('imageSettings');
+    if (saved) {
+        try {
+            imageSettings = { ...imageSettings, ...JSON.parse(saved) };
+        } catch (e) {
+            console.warn('Failed to load image settings:', e);
+        }
+    }
+}
+
+// Save image settings to localStorage
+function saveImageSettings() {
+    localStorage.setItem('imageSettings', JSON.stringify(imageSettings));
+}
+
+// Check if a value looks like an image path
+function isImagePath(value) {
+    if (!value || typeof value !== 'string') return false;
+    const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i;
+    return imageExtensions.test(value.trim());
+}
+
+// Try to construct a valid image URL with prefixes
+function tryImageUrl(imagePath) {
+    if (!imagePath) return null;
+
+    const urls = [];
+
+    // Try the path as-is first (for web URLs)
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('/')) {
+        urls.push(imagePath);
+    }
+
+    // Try with each prefix
+    imageSettings.pathPrefixes.forEach(prefix => {
+        if (prefix) {
+            let fullPath;
+
+            // Check if prefix is a local file path (Windows or Unix style)
+            const isLocalPath = prefix.match(/^[A-Za-z]:\\/) || prefix.startsWith('/') || prefix.startsWith('./') || prefix.startsWith('../');
+
+            if (isLocalPath) {
+                // For local paths, construct the full path
+                const separator = prefix.includes('\\') ? '\\' : '/';
+                const cleanPrefix = prefix.endsWith(separator) ? prefix : prefix + separator;
+                const cleanPath = imagePath.startsWith(separator) ? imagePath.substring(1) : imagePath;
+                fullPath = cleanPrefix + cleanPath;
+
+                // Convert Windows paths to file:// URLs for local access
+                if (fullPath.match(/^[A-Za-z]:\\/)) {
+                    // Windows path - convert to file:// URL
+                    const fileUrl = 'file:///' + fullPath.replace(/\\/g, '/');
+                    urls.push(fileUrl);
+                } else {
+                    // Unix-style path
+                    urls.push('file://' + fullPath);
+                }
+
+                // Also try the backend endpoint (if available)
+                const encodedPath = encodeURIComponent(fullPath);
+                urls.push(`${window.baseUrl}/api/local-image?path=${encodedPath}`);
+            } else {
+                // For web URLs, handle normally
+                const cleanPrefix = prefix.endsWith('/') ? prefix : prefix + '/';
+                const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+                fullPath = cleanPrefix + cleanPath;
+                urls.push(fullPath);
+            }
+        }
+    });
+
+    return urls;
+}
+
+// Create image element with fallback
+function createImageElement(imagePath) {
+    const urls = tryImageUrl(imagePath);
+    if (!urls || urls.length === 0) return null;
+
+    const container = document.createElement('div');
+    container.style.display = 'inline-block';
+    container.style.position = 'relative';
+
+    const img = document.createElement('img');
+    img.style.maxWidth = '100px';
+    img.style.maxHeight = '100px';
+    img.style.objectFit = 'contain';
+    img.style.border = '1px solid var(--md-sys-color-outline-variant)';
+    img.style.borderRadius = '4px';
+    img.style.display = 'block';
+    img.alt = imagePath;
+    img.title = `Image: ${imagePath}`;
+
+    let currentUrlIndex = 0;
+    let hasLoaded = false;
+
+    const tryNextUrl = () => {
+        if (currentUrlIndex < urls.length && !hasLoaded) {
+            console.log(`Trying to load image: ${urls[currentUrlIndex]}`);
+            img.src = urls[currentUrlIndex];
+            currentUrlIndex++;
+        } else if (!hasLoaded) {
+            // All URLs failed, show error message
+            container.innerHTML = '';
+            const errorSpan = document.createElement('span');
+            errorSpan.textContent = '🖼️ ' + imagePath;
+            errorSpan.style.color = 'var(--md-sys-color-error)';
+            errorSpan.style.fontSize = '12px';
+            errorSpan.style.padding = '4px';
+            errorSpan.style.border = '1px dashed var(--md-sys-color-error)';
+            errorSpan.style.borderRadius = '4px';
+            errorSpan.style.display = 'inline-block';
+            errorSpan.title = `Image not found. Tried ${urls.length} URL(s):\n${urls.join('\n')}`;
+            container.appendChild(errorSpan);
+        }
+    };
+
+    img.onload = () => {
+        hasLoaded = true;
+        console.log(`Successfully loaded image: ${img.src}`);
+    };
+
+    img.onerror = (e) => {
+        console.warn(`Failed to load image: ${img.src}`, e);
+        tryNextUrl();
+    };
+
+    container.appendChild(img);
+    tryNextUrl(); // Start with first URL
+
+    return container;
+}
+
+// Open image settings modal
+export function openImageSettingsModal(tableName) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('imageSettingsModal');
+    if (!modal) {
+        modal = createImageSettingsModal();
+        document.body.appendChild(modal);
+    }
+
+    // Update modal content for this table
+    updateImageSettingsModal(modal, tableName);
+
+    // Show modal
+    modal.classList.add('visible');
+}
+
+// Create the image settings modal
+function createImageSettingsModal() {
+    const modal = document.createElement('div');
+    modal.id = 'imageSettingsModal';
+    modal.className = 'image-settings-modal';
+
+    modal.innerHTML = `
+        <div class="image-settings-content">
+            <div class="image-settings-header">
+                <h3>Image Display Settings</h3>
+                <button class="image-settings-close" type="button">×</button>
+            </div>
+            <div class="image-settings-body">
+                <div class="setting-group">
+                    <label class="switch-container">
+                        <input type="checkbox" id="showImagesToggle" class="switch-input">
+                        <span class="switch-label">Show images in table instead of paths</span>
+                    </label>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Image Path Prefixes:</label>
+                    <div class="prefix-list" id="prefixList">
+                        <!-- Prefixes will be added here -->
+                    </div>
+                    <div class="prefix-input-group">
+                        <input type="text" id="newPrefixInput" placeholder="Enter image path prefix (e.g., https://example.com/images/)" class="prefix-input">
+                        <button type="button" id="addPrefixBtn" class="add-prefix-btn">Add</button>
+                    </div>
+                    <div class="prefix-help">
+                        <small>
+                            <strong>Add URL prefixes to help locate images:</strong><br>
+                            • For web images: <code>https://example.com/images/</code><br>
+                            • For local files: <code>C:\\work\\categorizing\\</code> or <code>/home/user/images/</code><br>
+                            <em>Note: Local file access may be limited by browser security. For best results with local files, consider setting up a local web server.</em>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="image-settings-footer">
+                <button type="button" id="applyImageSettings" class="apply-btn">Apply</button>
+                <button type="button" id="cancelImageSettings" class="cancel-btn">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    // Set up event listeners
+    setupImageSettingsEventListeners(modal);
+
+    return modal;
+}
+
+// Update modal content for specific table
+function updateImageSettingsModal(modal, tableName) {
+    // Load current settings
+    loadImageSettings();
+
+    // Update toggle state
+    const toggle = modal.querySelector('#showImagesToggle');
+    toggle.checked = imageSettings.showImages;
+
+    // Update prefix list
+    updatePrefixList(modal);
+
+    // Store current table name for reference
+    modal.dataset.tableName = tableName;
+}
+
+// Update the prefix list display
+function updatePrefixList(modal) {
+    const prefixList = modal.querySelector('#prefixList');
+    prefixList.innerHTML = '';
+
+    imageSettings.pathPrefixes.forEach((prefix, index) => {
+        const prefixItem = document.createElement('div');
+        prefixItem.className = 'prefix-item';
+        prefixItem.innerHTML = `
+            <span class="prefix-text">${prefix}</span>
+            <button type="button" class="remove-prefix-btn" data-index="${index}">×</button>
+        `;
+        prefixList.appendChild(prefixItem);
+    });
+}
+
+// Set up event listeners for the modal
+function setupImageSettingsEventListeners(modal) {
+    // Close button
+    modal.querySelector('.image-settings-close').addEventListener('click', () => {
+        modal.classList.remove('visible');
+    });
+
+    // Click outside to close
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('visible');
+        }
+    });
+
+    // Add prefix button
+    modal.querySelector('#addPrefixBtn').addEventListener('click', () => {
+        const input = modal.querySelector('#newPrefixInput');
+        const prefix = input.value.trim();
+        if (prefix && !imageSettings.pathPrefixes.includes(prefix)) {
+            imageSettings.pathPrefixes.push(prefix);
+            updatePrefixList(modal);
+            input.value = '';
+        }
+    });
+
+    // Enter key in prefix input
+    modal.querySelector('#newPrefixInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            modal.querySelector('#addPrefixBtn').click();
+        }
+    });
+
+    // Remove prefix buttons (delegated event)
+    modal.querySelector('#prefixList').addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-prefix-btn')) {
+            const index = parseInt(e.target.dataset.index);
+            imageSettings.pathPrefixes.splice(index, 1);
+            updatePrefixList(modal);
+        }
+    });
+
+    // Apply button
+    modal.querySelector('#applyImageSettings').addEventListener('click', () => {
+        const toggle = modal.querySelector('#showImagesToggle');
+        imageSettings.showImages = toggle.checked;
+        saveImageSettings();
+
+        // Refresh the table to apply image settings
+        const tableName = modal.dataset.tableName;
+        if (tableName) {
+            refreshTableWithImageSettings(tableName);
+        }
+
+        modal.classList.remove('visible');
+    });
+
+    // Cancel button
+    modal.querySelector('#cancelImageSettings').addEventListener('click', () => {
+        modal.classList.remove('visible');
+    });
+}
+
+// Refresh table with image settings applied
+function refreshTableWithImageSettings(tableName) {
+    const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
+    if (!tableSection) return;
+
+    const tbody = tableSection.querySelector('tbody');
+    if (!tbody) return;
+
+    // Get current table data and columns
+    const table = tableSection.querySelector('table');
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+
+    // Re-render all cells to apply image settings
+    tbody.querySelectorAll('tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        cells.forEach((cell, index) => {
+            const value = cell.textContent;
+            if (imageSettings.showImages && isImagePath(value)) {
+                const imageElement = createImageElement(value);
+                if (imageElement) {
+                    cell.innerHTML = '';
+                    cell.appendChild(imageElement);
+                }
+            } else if (!imageSettings.showImages && cell.querySelector('img')) {
+                // Convert back to text if images are disabled
+                const img = cell.querySelector('img');
+                if (img) {
+                    cell.textContent = img.alt || img.title || '';
+                }
+            }
+        });
+    });
+}
+
+// Initialize image settings on page load
+function initializeImageSettings() {
+    loadImageSettings();
 }
 
 // Set up global query handler (independent of table state)
@@ -942,6 +1300,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Set up initial arrangement and admin mode
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize image settings
+    initializeImageSettings();
+
     const adminToggle = document.getElementById('adminToggle');
     const arrangementToggle = document.getElementById('arrangementToggle');
     
@@ -1033,27 +1394,50 @@ function updateTableRows(tbody, tableData, columns) {
         focusedCellIndex = cells.indexOf(focusedCell);
     }
 
-    // Store current view for comparison
+    // Store current view for comparison using stored raw data when available
     const existingRows = new Map();
-    tbody.querySelectorAll('tr').forEach(tr => {
-        const cells = tr.querySelectorAll('td');
-        const rowKey = cells[0]?.textContent;
-        existingRows.set(rowKey, {
-            element: tr,
-            data: Array.from(cells).map(cell => {
-                const jsonCell = cell.querySelector('.json-cell');
-                if (jsonCell) {
-                    try {
-                        // Parse JSON data for proper comparison
-                        return JSON.parse(jsonCell.textContent);
-                    } catch (e) {
-                        return jsonCell.textContent;
+
+    // Try to use stored raw data from previous update (avoids DOM extraction issues with images)
+    if (tbody.dataset.lastRawData && tbody.dataset.lastColumns) {
+        try {
+            const lastRawData = JSON.parse(tbody.dataset.lastRawData);
+            const lastColumns = JSON.parse(tbody.dataset.lastColumns);
+
+            lastRawData.forEach((row) => {
+                const rowKey = String(row[lastColumns[0]]);
+                existingRows.set(rowKey, {
+                    data: lastColumns.map(col => row[col])
+                });
+            });
+
+
+        } catch (e) {
+            console.warn('Failed to parse stored raw data, falling back to DOM extraction:', e);
+        }
+    }
+
+    // Fallback to DOM extraction if no stored data (first load or error)
+    if (existingRows.size === 0) {
+        tbody.querySelectorAll('tr').forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            const rowKey = cells[0]?.textContent;
+            existingRows.set(rowKey, {
+                element: tr,
+                data: Array.from(cells).map(cell => {
+                    const jsonCell = cell.querySelector('.json-cell');
+                    if (jsonCell) {
+                        try {
+                            return JSON.parse(jsonCell.textContent);
+                        } catch (e) {
+                            return jsonCell.textContent;
+                        }
                     }
-                }
-                return cell.textContent;
-            })
+                    return cell.textContent;
+                })
+            });
         });
-    });
+
+    }
 
     const fragment = document.createDocumentFragment();
     let animateAll = hasRowCountChanged && currentRows > 0; // Only animate if not initial load
@@ -1068,7 +1452,7 @@ function updateTableRows(tbody, tableData, columns) {
             const hasChanged = columns.some((col, idx) => {
                 const newVal = row[col];
                 const existingVal = existing.data[idx];
-                
+
                 // Special handling for JSON comparison
                 if (typeof newVal === 'object' && newVal !== null) {
                     try {
@@ -1078,7 +1462,7 @@ function updateTableRows(tbody, tableData, columns) {
                         return true;
                     }
                 }
-                
+
                 return String(newVal !== null ? newVal : '') !== String(existingVal !== null ? existingVal : '');
             });
 
@@ -1094,6 +1478,13 @@ function updateTableRows(tbody, tableData, columns) {
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
                         td.appendChild(jsonView);
+                    } else if (imageSettings.showImages && isImagePath(String(val))) {
+                        const imageElement = createImageElement(String(val));
+                        if (imageElement) {
+                            td.appendChild(imageElement);
+                        } else {
+                            td.textContent = String(val);
+                        }
                     } else {
                         td.textContent = String(val);
                     }
@@ -1118,6 +1509,13 @@ function updateTableRows(tbody, tableData, columns) {
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
                         td.appendChild(jsonView);
+                    } else if (imageSettings.showImages && isImagePath(String(val))) {
+                        const imageElement = createImageElement(String(val));
+                        if (imageElement) {
+                            td.appendChild(imageElement);
+                        } else {
+                            td.textContent = String(val);
+                        }
                     } else {
                         td.textContent = String(val);
                     }
@@ -1130,6 +1528,10 @@ function updateTableRows(tbody, tableData, columns) {
         
         fragment.appendChild(tr);
     });
+
+    // Store raw data for next comparison (to avoid DOM extraction issues with images)
+    tbody.dataset.lastRawData = JSON.stringify(tableData);
+    tbody.dataset.lastColumns = JSON.stringify(columns);
 
     // Clear and update tbody
     tbody.innerHTML = '';
@@ -1374,9 +1776,25 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
                     );
                 });
             };
-            
+
+            // Create image settings button
+            const imageButton = document.createElement('button');
+            imageButton.className = 'download-button image-settings-button';
+            imageButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                </svg>
+                IMG
+            `;
+
+            // Setup image settings click handler
+            imageButton.onclick = () => {
+                openImageSettingsModal(tableName);
+            };
+
             downloadButtons.appendChild(csvButton);
             downloadButtons.appendChild(xlsxButton);
+            downloadButtons.appendChild(imageButton);
             dragHandle.insertAdjacentElement('afterend', downloadButtons);
         }
     }
@@ -1651,6 +2069,13 @@ function appendTableData(tableName, tableInfo, translations, currentLang) {
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
                         td.appendChild(jsonView);
+                    } else if (imageSettings.showImages && isImagePath(String(val))) {
+                        const imageElement = createImageElement(String(val));
+                        if (imageElement) {
+                            td.appendChild(imageElement);
+                        } else {
+                            td.textContent = String(val);
+                        }
                     } else {
                         td.textContent = String(val);
                     }
@@ -2037,7 +2462,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         const isQueryPopupVisible = queryPopup && queryPopup.classList.contains('visible');
         // Removed query popup handler since it's now handled globally
         
-                if ((e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'x')
+                if (e.key && (e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'x')
             && !isEditing && isAdminMode) {
             const focusedCell = table.querySelector('td.focused');
             if (!focusedCell) return;
@@ -2045,7 +2470,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             const row = focusedCell.closest('tr');
             if (!row) return;
 
-            if (e.key.toLowerCase() === 'x') {
+            if (e.key && e.key.toLowerCase() === 'x') {
                 const columnIndex = Array.from(row.cells).indexOf(focusedCell);
                 const valueToDelete = focusedCell.textContent;
                 const columnName = table.querySelector(`th:nth-child(${columnIndex + 1})`).textContent;
@@ -2097,7 +2522,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                         deletePopup.classList.remove('show');
                     }, 2000);
                 }
-            } else if (e.key.toLowerCase() === 'd') {
+            } else if (e.key && e.key.toLowerCase() === 'd') {
                 const rowId = row.cells[0].textContent;
 
                 try {
@@ -2141,7 +2566,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                         deletePopup.classList.remove('show');
                     }, 2000);
                 }
-            } else if (e.key.toLowerCase() === 'a') {
+            } else if (e.key && e.key.toLowerCase() === 'a') {
                 try {
                     // Get table columns
                     const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
