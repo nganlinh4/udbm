@@ -1,0 +1,59 @@
+<div id="language-switcher" class="language-switcher">
+    <button id="schemaButton" class="schema-button">
+        <span class="lang-ko">스키마</span>
+        <span class="lang-en">SCHEMA</span>
+        <div class="tooltip">
+            <span class="lang-ko">데이터베이스의 최신 스키마를 확인합니다</span>
+            <span class="lang-en">See the latest SCHEMA from the database</span>
+        </div>
+    </button>
+    <div class="admin-mode-container">
+        <span class="admin-mode-label">
+            <span class="lang-ko">관리자 모드</span>
+            <span class="lang-en">ADMIN MODE</span>
+        </span>
+        <div class="switch-container">
+            <label class="switch admin-switch">
+                <input type="checkbox" id="adminToggle">
+                <span class="switch-slider"></span>
+            </label>
+            <div class="tooltip">
+                <span class="lang-ko">
+                    외래 키 검사 무시 - 주의해서 사용하세요<br>
+                    <hr>
+                    <kbd>Q</kbd> - SQL 쿼리 작성<br>
+                    셀을 선택한 후:<br>
+                    <kbd>A</kbd> - 새 빈 행 추가<br>
+                    <kbd>D</kbd> - 선택한 행 삭제<br>
+                    <kbd>X</kbd> - 동일한 값이 있는 모든 행 삭제<br>
+                    <kbd>한 번 더 클릭</kbd> - 값 수정
+                </span>
+                <span class="lang-en">
+                    Ignoring foreign key checks - Use with caution<br>
+                    <hr>
+                    <kbd>Q</kbd> - Custom SQL query<br>
+                    After selecting a cell:<br>
+                    <kbd>A</kbd> - Add new empty row<br>
+                    <kbd>D</kbd> - Delete selected row<br>
+                    <kbd>X</kbd> - Delete all rows matching value<br>
+                    <kbd>One more click</kbd> - Edit value
+                </span>
+            </div>                    
+        </div>
+    </div>
+    <span class="switch-label ko" data-lang="ko">한국어</span>
+   <label class="switch">
+       <input type="checkbox" id="languageToggle">
+       <span class="switch-slider"></span>
+   </label>
+   <span class="switch-label en" data-lang="en">ENG</span>
+    <div class="theme-switcher">
+        <label class="theme-switch" title="Toggle dark mode">
+            <input type="checkbox" id="themeToggle" style=" margin: 7px;">
+            <span class="theme-switch-slider">
+                <span class="theme-icon sun-icon"></span>
+                <span class="theme-icon moon-icon"></span>
+            </span>
+        </label>
+    </div>
+</div>

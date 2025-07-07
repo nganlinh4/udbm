@@ -1,0 +1,44 @@
+<div class="table-buttons-line">
+    <div class="arrangement-mode">
+        <span class="arrangement-label">
+            <span class="lang-ko">스마트정렬</span>
+            <span class="lang-en">Smart Order</span>
+        </span>
+        <label class="switch arrangement-switch">
+            <input type="checkbox" id="arrangementToggle">
+            <span class="switch-slider"></span>
+            <div class="tooltip">
+                <span class="lang-ko">외래 키를 기준으로 테이블을 정렬합니다</span>
+                <span class="lang-en">Order tables by foreign keys</span>
+            </div>
+        </label>
+    </div>
+    {% for table in tables %}
+    <button class="table-button" data-table="{{ table.name }}" data-theme="{{ loop.index0 % 10 }}">
+        {{ table.name }}
+        <span class="count" id="{{ table.name }}_button_count"></span>
+    </button>
+    {% endfor %}
+</div>
+<div id="tables-container">
+    {% for table in tables %}
+    <div class="table-section theme-{{ loop.index0 % 10 }}" data-table-name="{{ table.name }}" data-pk="{{ table.pk }}">
+        <h2>
+            <span class="drag-handle"></span>
+            <span class="table-title">
+                {{ table.name }}
+                <span id="{{ table.name }}_count" style="font-size: smaller; color: gray;"></span>
+            </span>
+            <div class="tooltip-and-button">
+                <span id="{{ table.name }}_limited_info" class="limited-info"></span>
+                <button class="toggle-button hide" onclick="toggleTable('{{ table.name }}')">
+                    <span class="lang-ko">숨기기</span>
+                    <span class="lang-en">Hide</span>
+                </button>
+            </div>
+        </h2>
+        <div id="{{ table.name }}" class="table-container theme-{{ loop.index0 % 10 }}">
+        </div>
+    </div>
+    {% endfor %}
+</div>

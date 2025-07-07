@@ -1,0 +1,125 @@
+<!-- Warning and notification popups -->
+<div id="warningPopup" class="warning-popup">
+    <span class="warning-icon">⚠</span>
+    <div>
+        <span class="lang-ko">갱신 주기가 2초 미만일 경우 시스템 성능에 영향을 줄 수 있습니다.</span>
+        <span class="lang-en">Setting refresh rate under 2s may affect system performance.</span>
+    </div>
+</div>
+<div id="deletePopup" class="warning-popup">
+    <span class="warning-icon">✓</span>
+    <div>
+        <span class="lang-ko">행이 삭제되었습니다.</span>
+        <span class="lang-en">Row has been deleted.</span>
+    </div>
+</div>
+<div id="error-message" class="error" style="display: none;"></div>
+
+<!-- Query popup -->
+<div id="queryPopup" class="query-popup">
+    <div class="query-content">
+        <div class="query-header">
+            <div class="query-title">
+                <span class="lang-ko">사용자 정의 쿼리</span>
+                <span class="lang-en">Custom Query</span>
+            </div>
+            <button class="query-close" title="Close">&times;</button>
+        </div>
+        <div class="query-form">
+            <textarea id="queryInput" placeholder="SELECT * FROM table_name"></textarea>
+            <div class="query-buttons">
+                <button id="executeQuery">
+                    <span class="lang-ko">실행</span>
+                    <span class="lang-en">Execute</span>
+                </button>
+            </div>
+        </div>
+        <div id="queryResult" class="query-result"></div>
+    </div>
+</div>
+
+<!-- Schema modal structure -->
+<div id="schemaModal" class="schema-modal">
+    <div class="schema-content">
+        <div class="schema-container">
+            <div class="schema-loading">Loading schema...</div>
+            <div class="schema-error" style="display: none;"></div>
+
+            <div class="mermaid" style="display: none;"></div>
+            <img id="graphvizContent">
+            <div id="d3Content" style="display: none;"></div>
+
+            <!-- Schema controls -->
+            <div class="schema-controls">
+                <div class="schema-type-selector">
+                    <button class="schema-option active" data-type="graphviz">GraphViz</button>
+                    <button class="schema-option" data-type="mermaid">Mermaid</button>
+                    <button class="schema-option" data-type="d3">Interactive</button>
+                </div>
+
+                <!-- D3 Interactive Controls -->
+                <div class="d3-controls" style="display: none;">
+                    <div class="control-group">
+                        <label for="clumpingSlider">Layout Spacing:</label>
+                        <div class="slider-container">
+                            <span class="slider-label">Tight</span>
+                            <input type="range" id="clumpingSlider" min="0" max="150" value="100" class="layout-slider">
+                            <span class="slider-label">Spread</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label for="arrowType">Arrow Style:</label>
+                        <div class="arrow-type-selector">
+                            <button class="arrow-option active" data-arrow="elbow">Elbow</button>
+                            <button class="arrow-option" data-arrow="straight">Straight</button>
+                            <button class="arrow-option" data-arrow="curved">Curved</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <button id="resetLayout" class="control-button">Reset Layout</button>
+                        <button id="optimizeLayout" class="control-button">Optimize Layout</button>
+                        <button id="pauseSimulation" class="control-button">Pause</button>
+                    </div>
+                </div>
+
+                <button class="copy-button" title="Copy schema to clipboard">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.242a2 2 0 0 0-.602-1.43L16.083 2.57A2 2 0 0 0 14.685 2H10a2 2 0 0 0-2 2z"></path><path d="M16 18v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2"></path></svg>
+                </button>
+                <button class="download-button" title="Download schema as image">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
+            </div>
+
+            <!-- Zoom controls -->
+            <div class="zoom-controls">
+                <button class="zoom-button zoom-in" title="Zoom in">+</button>
+                <button class="zoom-button zoom-out" title="Zoom out">−</button>
+            </div>
+        </div>
+        <button class="schema-close" title="Close schema view">×</button>
+    </div>
+</div>
+
+<!-- Full-view image modal -->
+<div id="imageFullviewModal" class="image-fullview-modal">
+    <div class="image-fullview-content">
+        <button class="image-fullview-close" onclick="closeImageFullview()">&times;</button>
+        <div class="image-fullview-image-container">
+            <img id="fullviewImage" class="image-fullview-image" alt="Full view image">
+        </div>
+        <div id="fullviewInfo" class="image-fullview-info">
+            <div class="image-fullview-path">
+                <div class="image-fullview-path-label">Image Path:</div>
+                <div id="fullviewPath" class="image-fullview-path-value"></div>
+            </div>
+            <button class="image-fullview-download" onclick="downloadFullviewImage()" title="Download image">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download
+            </button>
+        </div>
+    </div>
+</div>

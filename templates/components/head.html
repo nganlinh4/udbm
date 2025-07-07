@@ -1,0 +1,125 @@
+<head>
+    <title></title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard-dynamic-subset.css"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <link rel="icon" href="{{ url_for('static', filename='monitor_icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/table.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/schema.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/logo.css') }}">
+    <script src="{{ url_for('static', filename='js/icon-morph.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logo.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="{{ url_for('static', filename='js/d3-schema.js') }}"></script>
+    <script>
+        // Get saved language preference
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // Set initial language display
+        const savedLang = getCookie('preferred_language') || 'ko';
+        document.documentElement.setAttribute('data-lang', savedLang);
+        
+        // Add style to hide non-selected language elements immediately
+        const style = document.createElement('style');
+        style.textContent = `
+            .lang-ko { display: ${savedLang === 'ko' ? 'inline' : 'none'} !important; }
+            .lang-en { display: ${savedLang === 'en' ? 'inline' : 'none'} !important; }
+            .switch-label[data-lang="${savedLang}"] { opacity: 1; }
+            .switch-label:not([data-lang="${savedLang}"]) { opacity: 0.5; }
+        `;
+        document.head.appendChild(style);
+
+        // Set initial language toggle state
+        window.addEventListener('DOMContentLoaded', () => {
+            const toggle = document.getElementById('languageToggle');
+            const initialToggle = document.getElementById('initialLanguageToggle');
+            
+            const setToggleState = (toggle) => {
+                if (toggle) toggle.checked = savedLang === 'en';
+            };
+            [toggle, initialToggle].forEach(setToggleState);
+
+            // Add event listener to initial setup language toggle
+            if (initialToggle) {
+                initialToggle.addEventListener('change', function() {
+                    const newLang = this.checked ? 'en' : 'ko';
+                    document.documentElement.setAttribute('data-lang', newLang);
+                    document.cookie = `preferred_language=${newLang};path=/;max-age=31536000`;
+                    if (toggle) toggle.checked = this.checked;
+                    
+                    // Immediately update language display without page refresh
+                    document.querySelectorAll('.lang-ko, .lang-en').forEach(el => {
+                        el.style.cssText = 'display: none !important';
+                    });
+                    document.querySelectorAll(`.lang-${newLang}`).forEach(el => {
+                        el.style.cssText = 'display: inline !important';
+                    });
+                    
+                    // Update switch label opacity
+                    document.querySelectorAll('.switch-label').forEach(label => {
+                        if (label.getAttribute('data-lang') === newLang) {
+                            label.style.opacity = '1';
+                        } else {
+                            label.style.opacity = '0.5';
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+    <script>
+        // Wait for mermaid to be loaded
+        window.mermaidPromise = new Promise((resolve) => {
+            if (typeof mermaid !== 'undefined') {
+                mermaid.initialize({
+                    startOnLoad: true,
+                    theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+                    securityLevel: 'loose',
+                    er: { useMaxWidth: true }
+                });
+                resolve(mermaid);
+            } else {
+                document.querySelector('script[src*="mermaid"]').onload = () => {
+                    mermaid.initialize({
+                        startOnLoad: true,
+                        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+                        securityLevel: 'loose'
+                    });
+                    resolve(mermaid);
+                };
+            }
+        });
+
+        // Theme toggle synchronization
+        window.addEventListener('DOMContentLoaded', () => {
+            const mainThemeToggle = document.getElementById('themeToggle');
+            const initialThemeToggle = document.getElementById('initialThemeToggle');
+            
+            // Set initial state based on current theme
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (mainThemeToggle) mainThemeToggle.checked = isDarkTheme;
+            if (initialThemeToggle) initialThemeToggle.checked = isDarkTheme;
+            
+            // Add event listener to initial theme toggle
+            if (initialThemeToggle) {
+                initialThemeToggle.addEventListener('change', function() {
+                    const theme = this.checked ? 'dark' : 'light';
+                    document.documentElement.setAttribute('data-theme', theme);
+                    document.cookie = `preferred_theme=${theme};path=/;max-age=31536000`;
+                    if (mainThemeToggle) mainThemeToggle.checked = this.checked;
+                });
+            }
+        });
+    </script>
+</head>

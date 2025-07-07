@@ -1,0 +1,177 @@
+<script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="{{ url_for('static', filename='js/logo.js') }}"></script>
+<script type="module">
+    import { initializeSchema } from '/static/js/schema.js';
+    var baseUrl = window.location.origin;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize schema visualization
+        var schemaButton = document.getElementById('schemaButton');
+        var schemaModal = document.getElementById('schemaModal');
+        var loading = document.querySelector('.schema-loading');
+        var error = document.querySelector('.schema-error');
+        const container = document.querySelector('.schema-container');
+
+        initializeSchema(schemaButton, schemaModal, loading, error, container);
+    });
+
+    function getCurrentDatabaseKey() {
+            var getCookie = function(name) {
+                var value = '; ' + document.cookie;
+                var parts = value.split('; ' + name + '=');
+                if (parts.length === 2) { return parts.pop().split(';').shift(); }
+                return null;
+            };
+            
+            var dbConfigsCookie = getCookie('db_configs');
+            var lastUsedDb = getCookie('last_used_db');
+            
+            if (dbConfigsCookie && lastUsedDb) {
+                try {
+                    var dbConfigs = JSON.parse(decodeURIComponent(dbConfigsCookie));
+                    return lastUsedDb;
+                } catch (e) {
+                    console.error('Error parsing database configuration:', e);
+                }
+            }
+            return null;
+        }
+        
+        function initializePageTitle() {
+            var pageTitle = document.getElementById('pageTitle');
+            var currentDb = getCurrentDatabaseKey();
+
+            if (currentDb) {
+                var savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+                var savedTitle = savedTitles[currentDb];
+                
+                if (savedTitle) {
+                    requestAnimationFrame(() => {
+                        pageTitle.textContent = savedTitle;
+                        document.title = savedTitle;
+                    });
+                }
+            }
+
+            pageTitle.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    pageTitle.blur();
+                }
+            });
+
+            pageTitle.addEventListener('input', () => {
+                pageTitle.classList.add('editing');
+            });
+
+            pageTitle.addEventListener('blur', () => {
+                pageTitle.classList.remove('editing');
+                savePageTitle();
+            });
+        }
+
+        function savePageTitle() {
+            var pageTitle = document.getElementById('pageTitle');
+            var currentDb = getCurrentDatabaseKey();
+            var titleText = pageTitle.textContent.trim();
+
+            if (currentDb && titleText) {
+                var savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+                savedTitles[currentDb] = titleText;
+                localStorage.setItem('pageTitles', JSON.stringify(savedTitles));
+            }
+        }
+        
+        // Schema button click handler is now handled by the initializeSchema function
+
+        document.querySelector('.schema-close').addEventListener('click', function () {
+            var modal = document.getElementById('schemaModal');
+            modal.classList.remove('visible');
+            setTimeout(() => modal.style.display = 'none', 300);
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var tableButtons = document.querySelectorAll('.table-button');
+            tableButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var tableName = button.dataset.table;
+                    var tableSection = document.querySelector('.table-section[data-table-name="' + tableName + '"]');
+
+                    if (!button.classList.contains('active')) {
+                        button.classList.add('active');
+                        tableSection.style.display = 'block';
+                        requestAnimationFrame(() => {
+                            tableSection.classList.add('visible');
+                        });
+                    } else {
+                        button.classList.remove('active');
+                        tableSection.classList.remove('visible');
+                        tableSection.classList.add('hiding');
+                        setTimeout(() => {
+                            tableSection.classList.remove('hiding');
+                            tableSection.style.display = 'none';
+                        }, 300);
+                    }
+
+                    saveToggleStates();
+                });
+            });
+
+            loadToggleStates();
+            initializePageTitle();
+
+            var updateButtonCount = function(tableName, count) {
+                var buttonCount = document.getElementById(tableName + '_button_count');
+                if (buttonCount) {
+                    buttonCount.textContent = '(' + count + ')';
+                }
+            };
+
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    // Fix: Use endsWith instead of endswith
+                    if (mutation.target.id.endsWith('_count')) {
+                        var tableName = mutation.target.id.replace('_count', '');
+                        var count = mutation.target.textContent.match(/\d+/)[0];
+                        updateButtonCount(tableName, count);
+                    }
+                });
+            });
+
+            document.querySelectorAll('[id$="_count"]').forEach(countSpan => {
+                observer.observe(countSpan, { childList: true, characterData: true, subtree: true });
+            });
+        });
+
+        function saveToggleStates() {
+            var states = {};
+            document.querySelectorAll('.table-button').forEach(function(button) {
+                states[button.dataset.table] = button.classList.contains('active');
+            });
+            localStorage.setItem('tableToggleStates', JSON.stringify(states));
+        }
+
+        function loadToggleStates() {
+            var savedStates = localStorage.getItem('tableToggleStates');
+            if (savedStates) {
+                var states = JSON.parse(savedStates);
+                document.querySelectorAll('.table-button').forEach(function(button) {
+                    var tableName = button.dataset.table;
+                    if (states[tableName]) {
+                        button.classList.add('active');
+                        var tableSection = document.querySelector('.table-section[data-table-name="' + tableName + '"]');
+                        tableSection.classList.add('visible');
+                        tableSection.style.display = 'block';
+                    }
+                });
+            }
+        }
+
+        // Check if page is completely empty
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!document.getElementById('initial-setup') && !document.getElementById('main-interface')) {
+                // Reload the page if essential elements are missing
+                location.reload();
+            }
+        });
+    </script>

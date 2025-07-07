@@ -1,0 +1,65 @@
+<!-- Initial setup screen for no database -->
+<div id="initial-setup" style="display: {{ 'flex' if not has_database else 'none' }};" class="initial-setup">
+    <div class="setup-content">
+        <div class="setup-header">
+            <div class="setup-controls">
+                <div class="setup-language-switcher">
+                    <span class="switch-label ko" data-lang="ko">한국어</span>
+                    <label class="switch">
+                        <input type="checkbox" id="initialLanguageToggle">
+                        <span class="switch-slider"></span>
+                    </label>
+                    <span class="switch-label en" data-lang="en">ENG</span>
+                </div>
+                <div class="setup-theme-switcher">
+                    <label class="theme-switch" title="Toggle dark mode">
+                        <input type="checkbox" id="initialThemeToggle" style="margin: 7px;">
+                        <span class="theme-switch-slider">
+                            <span class="theme-icon sun-icon"></span>
+                            <span class="theme-icon moon-icon"></span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <h1>
+            <span class="lang-ko">데이터베이스 설정</span>
+            <span class="lang-en">Database Setup</span>
+        </h1>
+        <p class="setup-description">
+            <span class="lang-ko">모니터링을 시작하려면 데이터베이스를 추가하세요</span>
+            <span class="lang-en">Add a database to start monitoring</span>
+        </p>
+        <div class="setup-form-container">
+            <form class="db-form material-form">
+                <div class="form-group">
+                    <select name="type" class="db-type-select" required>
+                        <option value="mysql">MySQL</option>
+                        <option value="postgresql">PostgreSQL</option>
+                    </select>
+                    <label style="top: -15px;">Database Type</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="host" required placeholder=" ">
+                    <label for="host">Host</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="user" required placeholder=" ">
+                    <label for="user">User</label>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="password" required placeholder=" ">
+                    <label for="password">Password</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="database" required placeholder=" ">
+                    <label for="database">Database</label>
+                </div>
+                <button type="submit" class="add-db-button">
+                    <span class="lang-ko">연결하기</span>
+                    <span class="lang-en">Connect</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
