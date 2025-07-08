@@ -62,6 +62,8 @@ function updateTablesIfChanged(newData) {
 function measureConnectionStatusWidth(status, statusText) {
     // Create a temporary div to measure text width
     const measureDiv = document.createElement('div');
+    const currentLang = document.documentElement.getAttribute('data-lang') || 'en';
+    const fontFamily = currentLang === 'vi' ? "'Be Vietnam Pro', sans-serif" : "Poppins, sans-serif";
     measureDiv.style.cssText = `
         position: absolute;
         visibility: hidden;
@@ -72,7 +74,7 @@ function measureConnectionStatusWidth(status, statusText) {
         padding: 6px 12px;
         display: inline-flex;
         align-items: center;
-        font-family: Poppins, sans-serif;
+        font-family: ${fontFamily};
     `;
     document.body.appendChild(measureDiv);
 

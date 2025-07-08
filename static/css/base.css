@@ -84,6 +84,11 @@ h1 {
     margin-left: 0vw;
 }
 
+/* Vietnamese-specific font for h1 */
+[data-lang="vi"] h1 {
+    font-family: Pretendard, 'Be Vietnam Pro', sans-serif;
+}
+
 h1::after {
     display: none;
 }
@@ -241,7 +246,7 @@ h1[contenteditable="true"]:focus {
 }
 
 .lang-ko {
-    font-family: Poppins, sans-serif;
+    font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 .lang-en {
@@ -249,7 +254,7 @@ h1[contenteditable="true"]:focus {
 }
 
 .lang-vi {
-    font-family: Poppins, sans-serif;
+    font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 /* Default visibility - English by default */

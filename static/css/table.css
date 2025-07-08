@@ -366,6 +366,11 @@ tbody tr:last-child td {
     color: rgba(0, 0, 0, 0.87);
 }
 
+/* Vietnamese-specific font for table titles */
+[data-lang="vi"] .table-title {
+    font-family: 'Be Vietnam Pro', sans-serif;
+}
+
 .table-title span {
     font-family: 'Roboto', sans-serif;
     background: rgba(0, 0, 0, 0.05);

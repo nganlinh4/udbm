@@ -22,6 +22,11 @@ h2 {
     gap: 8px;
 }
 
+/* Vietnamese-specific font for error messages */
+[data-lang="vi"] .error {
+    font-family: 'Be Vietnam Pro', sans-serif;
+}
+
 .error::before {
     content: "⚠";
     font-size: 1.2em;
@@ -262,7 +267,7 @@ h2 {
 
 .admin-mode-label {
     margin-top: 2px;
-    width: 46px;
+    width: 56px;
     font-size: 0.75em;
     font-weight: 500;
     line-height: 1.2;

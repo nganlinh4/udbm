@@ -12,7 +12,7 @@
     position: absolute;
     right: 358px;
     z-index: 100;
-    min-width: 74px;
+    min-width: 95px;
 }
 
 .schema-button:hover {
