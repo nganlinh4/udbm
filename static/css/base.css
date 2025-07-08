@@ -67,7 +67,7 @@ h1 {
     text-align: center;
     font-size: 2.4em;
     line-height: 1.3;
-    font-family: Pretendard, Poppins, sans-serif;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     font-weight: 900;
     margin: 0;
     padding: 0;
@@ -82,11 +82,6 @@ h1 {
     transform: translateZ(0);
     backface-visibility: hidden;
     margin-left: 0vw;
-}
-
-/* Vietnamese-specific font for h1 */
-[data-lang="vi"] h1 {
-    font-family: Pretendard, 'Be Vietnam Pro', sans-serif;
 }
 
 h1::after {
@@ -245,16 +240,10 @@ h1[contenteditable="true"]:focus {
     }
 }
 
-.lang-ko {
-    font-family: 'Be Vietnam Pro', sans-serif;
-}
-
-.lang-en {
-    font-family: Poppins, sans-serif;
-}
-
+.lang-ko,
+.lang-en,
 .lang-vi {
-    font-family: 'Be Vietnam Pro', sans-serif;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 /* Default visibility - English by default */

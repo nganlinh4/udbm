@@ -80,6 +80,7 @@ export function t(key, options = {}) {
             'schema.schema': '스키마',
             'schema.tooltip': '데이터베이스의 최신 스키마를 확인합니다',
             'database.smartOrder': '스마트정렬',
+            'monitoring.pausedCopying': '텍스트를 복사하고 있어서 모니터링이 일시 중지되었습니다',
             'monitoring.refreshRate': '갱신 주기',
             'query.customQuery': '사용자 정의 쿼리',
             'query.execute': '실행',
@@ -147,6 +148,7 @@ export function t(key, options = {}) {
             'schema.schema': 'SCHEMA',
             'schema.tooltip': 'See the latest SCHEMA from the database',
             'database.smartOrder': 'Smart Order',
+            'monitoring.pausedCopying': 'Monitoring is paused since you are copying texts',
             'monitoring.refreshRate': 'Refresh rate',
             'query.customQuery': 'Custom Query',
             'query.execute': 'Execute',
@@ -186,7 +188,10 @@ export function t(key, options = {}) {
             'image.download': 'Download',
             'languages.korean': '한국어',
             'languages.english': 'English',
-            'languages.vietnamese': 'Tiếng Việt'
+            'languages.vietnamese': 'Tiếng Việt',
+            'ui.warningPerformance': 'Setting refresh rate under 2s may affect system performance.',
+            'ui.rowDeleted': 'Row has been deleted.',
+            'ui.databaseSetup': 'Database Setup'
         },
         vi: {
             'ui.noData': 'Không có dữ liệu.',
@@ -214,6 +219,7 @@ export function t(key, options = {}) {
             'schema.schema': 'LƯỢC ĐỒ',
             'schema.tooltip': 'Xem lược đồ mới nhất từ cơ sở dữ liệu',
             'database.smartOrder': 'Sắp xếp thông minh',
+            'monitoring.pausedCopying': 'Giám sát tạm dừng vì bạn đang sao chép văn bản',
             'monitoring.refreshRate': 'Tần suất làm mới',
             'query.customQuery': 'Truy vấn tùy chỉnh',
             'query.execute': 'Thực thi',
@@ -253,7 +259,13 @@ export function t(key, options = {}) {
             'image.download': 'Tải xuống',
             'languages.korean': '한국어',
             'languages.english': 'English',
-            'languages.vietnamese': 'Tiếng Việt'
+            'languages.vietnamese': 'Tiếng Việt',
+            'ui.warningPerformance': 'Đặt tần suất làm mới dưới 2 giây có thể ảnh hưởng đến hiệu suất hệ thống.',
+            'ui.rowDeleted': 'Hàng đã được xóa.',
+            'ui.databaseSetup': 'Thiết lập cơ sở dữ liệu',
+            'ui.warningPerformance': '갱신 주기가 2초 미만일 경우 시스템 성능에 영향을 줄 수 있습니다.',
+            'ui.rowDeleted': '행이 삭제되었습니다.',
+            'ui.databaseSetup': '데이터베이스 설정'
         }
     };
 

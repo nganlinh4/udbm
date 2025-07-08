@@ -12,7 +12,7 @@
     border-radius: 34px;
     cursor: pointer;
     font-size: 0.85em;
-    font-weight: 500;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -123,7 +123,7 @@
 .language-dropdown-item.active {
     background-color: #e3f2fd;
     color: #1a73e8;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .language-dropdown-item .flag {

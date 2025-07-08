@@ -15,16 +15,11 @@ h2 {
     background: #ffebee;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin: 16px;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 500;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-/* Vietnamese-specific font for error messages */
-[data-lang="vi"] .error {
-    font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 .error::before {
@@ -269,7 +264,7 @@ h2 {
     margin-top: 2px;
     width: 56px;
     font-size: 0.75em;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1.2;
     color: var(--md-sys-color-on-surface);
     text-align: center;
@@ -362,7 +357,7 @@ h2 {
     border-bottom: 1px solid var(--md-sys-color-outline);
     font-size: 1.2em;
     color: var(--md-sys-color-on-surface);
-    font-weight: 500;
+    font-weight: 600;
     border: #00000000;
 }
 
@@ -465,7 +460,7 @@ h2 {
     background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;

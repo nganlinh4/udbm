@@ -190,7 +190,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 /* Add new styles for the back button state */
@@ -440,7 +440,7 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
     position: relative;
     z-index: 1;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .material-form .db-type-group .db-type-segmented label:first-of-type {
@@ -456,7 +456,7 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
     color: var(--md-sys-color-on-primary);
     background: var(--md-sys-color-primary);
     box-shadow: var(--md-elevation-level1);
-    font-weight: 500;
+    font-weight: 600;
     border-right: none;
 }
 
@@ -491,7 +491,7 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
     border-radius: 8px;
     background: var(--md-sys-color-on-surface);
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--md-sys-color-surface);
     cursor: pointer;
     transition: all 0.2s ease;

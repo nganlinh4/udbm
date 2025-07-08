@@ -360,15 +360,10 @@ tbody tr:last-child td {
     flex-grow: 1;
     text-align: center;
     margin-left: 11vw;
-    font-family: Poppins, sans-serif;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     font-weight: 600;
     font-size: 1em;
     color: rgba(0, 0, 0, 0.87);
-}
-
-/* Vietnamese-specific font for table titles */
-[data-lang="vi"] .table-title {
-    font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 .table-title span {
@@ -588,7 +583,7 @@ tr {
     border-bottom: 1px solid var(--md-sys-color-outline-variant);
     background: var(--md-sys-color-surface-variant);
     font-size: 0.85em;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--md-sys-color-on-surface-variant);
 }
 
@@ -1082,14 +1077,14 @@ tr {
 .switch-label {
     font-size: 14px;
     color: var(--md-sys-color-on-surface);
-    font-weight: 500;
+    font-weight: 600;
     flex: 1;
     user-select: none;
 }
 
 .setting-label {
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--md-sys-color-on-surface);
     margin-bottom: 8px;
 }
@@ -1209,7 +1204,7 @@ tr {
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.2s ease;
 }
 
