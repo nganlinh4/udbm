@@ -12,11 +12,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/schema.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/logo.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/language-dropdown.css') }}">
     <script src="{{ url_for('static', filename='js/icon-morph.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logo.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="{{ url_for('static', filename='js/d3-schema.js') }}"></script>
+
+    <!-- i18next for internationalization -->
+    <script src="https://unpkg.com/i18next@23.7.6/dist/umd/i18next.min.js"></script>
+    <script src="https://unpkg.com/i18next-http-backend@2.4.2/dist/umd/i18nextHttpBackend.min.js"></script>
+
     <script>
         // Get saved language preference
         function getCookie(name) {
@@ -27,18 +33,11 @@
         }
 
         // Set initial language display
-        const savedLang = getCookie('preferred_language') || 'ko';
+        const savedLang = getCookie('preferred_language') || 'en';
         document.documentElement.setAttribute('data-lang', savedLang);
-        
-        // Add style to hide non-selected language elements immediately
-        const style = document.createElement('style');
-        style.textContent = `
-            .lang-ko { display: ${savedLang === 'ko' ? 'inline' : 'none'} !important; }
-            .lang-en { display: ${savedLang === 'en' ? 'inline' : 'none'} !important; }
-            .switch-label[data-lang="${savedLang}"] { opacity: 1; }
-            .switch-label:not([data-lang="${savedLang}"]) { opacity: 0.5; }
-        `;
-        document.head.appendChild(style);
+
+        // The CSS in base.css will handle the language visibility based on data-lang attribute
+        // No need for inline styles that can conflict
 
         // Set initial language toggle state
         window.addEventListener('DOMContentLoaded', () => {
@@ -58,13 +57,7 @@
                     document.cookie = `preferred_language=${newLang};path=/;max-age=31536000`;
                     if (toggle) toggle.checked = this.checked;
                     
-                    // Immediately update language display without page refresh
-                    document.querySelectorAll('.lang-ko, .lang-en').forEach(el => {
-                        el.style.cssText = 'display: none !important';
-                    });
-                    document.querySelectorAll(`.lang-${newLang}`).forEach(el => {
-                        el.style.cssText = 'display: inline !important';
-                    });
+                    // CSS will handle the language display based on data-lang attribute
                     
                     // Update switch label opacity
                     document.querySelectorAll('.switch-label').forEach(label => {
@@ -121,5 +114,274 @@
                 });
             }
         });
+    </script>
+
+    <!-- i18next initialization -->
+    <script>
+        // Initialize a fallback promise immediately
+        window.i18nextPromise = Promise.resolve();
+
+        // Wait for i18next scripts to load, then initialize
+        function initializeI18next() {
+            if (typeof i18next === 'undefined' || typeof i18nextHttpBackend === 'undefined') {
+                setTimeout(initializeI18next, 50);
+                return;
+            }
+
+            // Initialize i18next
+            window.i18nextPromise = i18next
+                .use(i18nextHttpBackend)
+                .init({
+                    lng: getCookie('preferred_language') || 'en',
+                    fallbackLng: 'en',
+                    debug: false,
+                    backend: {
+                        loadPath: '/static/locales/{{lng}}/translation.json'
+                    },
+                    interpolation: {
+                        escapeValue: false
+                    }
+                })
+                .then(() => {
+                    console.log('i18next initialized successfully');
+                    // Update translations when ready
+                    if (window.updateTranslations) {
+                        window.updateTranslations();
+                    }
+                })
+                .catch(error => {
+                    console.error('i18next initialization failed:', error);
+                    // Fallback: create a dummy promise that resolves
+                    window.i18nextPromise = Promise.resolve();
+                });
+        }
+
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeI18next);
+        } else {
+            initializeI18next();
+        }
+
+        // Global translation function with fallback
+        window.t = (key, options = {}) => {
+            if (window.i18next && window.i18next.isInitialized) {
+                return window.i18next.t(key, options);
+            }
+
+            // Get current language for fallback
+            const currentLang = document.documentElement.getAttribute('data-lang') || 'en';
+
+            // Language-specific fallback translations
+            const fallbackTranslations = {
+                ko: {
+                    'ui.timeUnit': '초',
+                    'admin.adminMode': '관리자 모드',
+                    'admin.adminTooltip': '외래 키 검사 무시 - 주의해서 사용하세요',
+                    'admin.customQuery': 'SQL 쿼리 작성',
+                    'admin.afterSelectingCell': '셀을 선택한 후:',
+                    'admin.addNewRow': '새 빈 행 추가',
+                    'admin.deleteRow': '선택한 행 삭제',
+                    'admin.deleteAllMatching': '동일한 값이 있는 모든 행 삭제',
+                    'admin.editValue': '값 수정',
+                    'admin.oneMoreClick': '한 번 더 클릭',
+                    'schema.schema': '스키마',
+                    'schema.tooltip': '데이터베이스의 최신 스키마를 확인합니다',
+                    'query.customQuery': '사용자 정의 쿼리',
+                    'query.execute': '실행',
+                    'favicon.useCustomFavicon': '사용자 지정 파비콘 사용',
+                    'favicon.uploadFavicon': '파비콘 업로드',
+                    'logo.useCustomLogo': '사용자 지정 로고 사용',
+                    'logo.uploadLogo': '로고 업로드',
+                    'database.addNewDatabase': '새 데이터베이스 추가',
+                    'database.goBack': '뒤로 가기',
+                    'database.smartOrder': '스마트정렬',
+                    'schema.layoutSpacing': '레이아웃 간격',
+                    'schema.tight': '밀집',
+                    'schema.spread': '분산',
+                    'schema.arrowStyle': '화살표 스타일',
+                    'schema.elbow': '꺾인선',
+                    'schema.straight': '직선',
+                    'schema.curved': '곡선',
+                    'schema.resetLayout': '레이아웃 재설정',
+                    'schema.optimizeLayout': '레이아웃 최적화',
+                    'schema.pause': '일시정지',
+                    'schema.resume': '재개',
+                    'schema.optimizing': '최적화 중...',
+                    'image.displaySettings': '이미지 표시 설정',
+                    'image.showImagesInTable': '경로 대신 테이블에 이미지 표시',
+                    'image.pathPrefixes': '이미지 경로 접두사',
+                    'image.add': '추가',
+                    'image.apply': '적용',
+                    'image.cancel': '취소',
+                    'image.imagePath': '이미지 경로',
+                    'image.download': '다운로드',
+                    'languages.korean': '한국어',
+                    'languages.english': 'English',
+                    'languages.vietnamese': 'Tiếng Việt'
+                },
+                en: {
+                    'ui.timeUnit': 's',
+                    'admin.adminMode': 'ADMIN MODE',
+                    'admin.adminTooltip': 'Ignoring foreign key checks - Use with caution',
+                    'admin.customQuery': 'Custom SQL query',
+                    'admin.afterSelectingCell': 'After selecting a cell:',
+                    'admin.addNewRow': 'Add new empty row',
+                    'admin.deleteRow': 'Delete selected row',
+                    'admin.deleteAllMatching': 'Delete all rows matching value',
+                    'admin.editValue': 'Edit value',
+                    'admin.oneMoreClick': 'One more click',
+                    'schema.schema': 'SCHEMA',
+                    'schema.tooltip': 'See the latest SCHEMA from the database',
+                    'query.customQuery': 'Custom Query',
+                    'query.execute': 'Execute',
+                    'favicon.useCustomFavicon': 'Use Custom Favicon',
+                    'favicon.uploadFavicon': 'Upload Favicon',
+                    'logo.useCustomLogo': 'Use Custom Logo',
+                    'logo.uploadLogo': 'Upload Logo',
+                    'database.addNewDatabase': 'Add New Database',
+                    'database.goBack': 'Go Back',
+                    'database.smartOrder': 'Smart Order',
+                    'schema.layoutSpacing': 'Layout Spacing',
+                    'schema.tight': 'Tight',
+                    'schema.spread': 'Spread',
+                    'schema.arrowStyle': 'Arrow Style',
+                    'schema.elbow': 'Elbow',
+                    'schema.straight': 'Straight',
+                    'schema.curved': 'Curved',
+                    'schema.resetLayout': 'Reset Layout',
+                    'schema.optimizeLayout': 'Optimize Layout',
+                    'schema.pause': 'Pause',
+                    'schema.resume': 'Resume',
+                    'schema.optimizing': 'Optimizing...',
+                    'image.displaySettings': 'Image Display Settings',
+                    'image.showImagesInTable': 'Show images in table instead of paths',
+                    'image.pathPrefixes': 'Image Path Prefixes',
+                    'image.add': 'Add',
+                    'image.apply': 'Apply',
+                    'image.cancel': 'Cancel',
+                    'image.imagePath': 'Image Path',
+                    'image.download': 'Download',
+                    'languages.korean': '한국어',
+                    'languages.english': 'English',
+                    'languages.vietnamese': 'Tiếng Việt'
+                },
+                vi: {
+                    'ui.timeUnit': 'giây',
+                    'admin.adminMode': 'CHẾ ĐỘ QUẢN TRỊ',
+                    'admin.adminTooltip': 'Bỏ qua kiểm tra khóa ngoại - Sử dụng cẩn thận',
+                    'admin.customQuery': 'Truy vấn SQL tùy chỉnh',
+                    'admin.afterSelectingCell': 'Sau khi chọn ô:',
+                    'admin.addNewRow': 'Thêm hàng trống mới',
+                    'admin.deleteRow': 'Xóa hàng đã chọn',
+                    'admin.deleteAllMatching': 'Xóa tất cả hàng có giá trị giống nhau',
+                    'admin.editValue': 'Chỉnh sửa giá trị',
+                    'admin.oneMoreClick': 'Nhấp thêm một lần',
+                    'schema.schema': 'LƯỢC ĐỒ',
+                    'schema.tooltip': 'Xem lược đồ mới nhất từ cơ sở dữ liệu',
+                    'query.customQuery': 'Truy vấn tùy chỉnh',
+                    'query.execute': 'Thực thi',
+                    'favicon.useCustomFavicon': 'Sử dụng Favicon tùy chỉnh',
+                    'favicon.uploadFavicon': 'Tải lên Favicon',
+                    'logo.useCustomLogo': 'Sử dụng Logo tùy chỉnh',
+                    'logo.uploadLogo': 'Tải lên Logo',
+                    'database.addNewDatabase': 'Thêm cơ sở dữ liệu mới',
+                    'database.goBack': 'Quay lại',
+                    'database.smartOrder': 'Sắp xếp thông minh',
+                    'schema.layoutSpacing': 'Khoảng cách bố cục',
+                    'schema.tight': 'Chặt',
+                    'schema.spread': 'Rộng',
+                    'schema.arrowStyle': 'Kiểu mũi tên',
+                    'schema.elbow': 'Gấp khúc',
+                    'schema.straight': 'Thẳng',
+                    'schema.curved': 'Cong',
+                    'schema.resetLayout': 'Đặt lại bố cục',
+                    'schema.optimizeLayout': 'Tối ưu bố cục',
+                    'schema.pause': 'Tạm dừng',
+                    'schema.resume': 'Tiếp tục',
+                    'schema.optimizing': 'Đang tối ưu...',
+                    'image.displaySettings': 'Cài đặt hiển thị hình ảnh',
+                    'image.showImagesInTable': 'Hiển thị hình ảnh trong bảng thay vì đường dẫn',
+                    'image.pathPrefixes': 'Tiền tố đường dẫn hình ảnh',
+                    'image.add': 'Thêm',
+                    'image.apply': 'Áp dụng',
+                    'image.cancel': 'Hủy',
+                    'image.imagePath': 'Đường dẫn hình ảnh',
+                    'image.download': 'Tải xuống',
+                    'languages.korean': '한국어',
+                    'languages.english': 'English',
+                    'languages.vietnamese': 'Tiếng Việt'
+                }
+            };
+
+            return fallbackTranslations[currentLang]?.[key] || fallbackTranslations['en']?.[key] || key;
+        };
+
+        // Update all translatable elements
+        window.updateTranslations = () => {
+            if (window.i18next && window.i18next.isInitialized) {
+                document.querySelectorAll('[data-i18n]').forEach(element => {
+                    const key = element.getAttribute('data-i18n');
+                    const translation = i18next.t(key);
+                    if (element.tagName === 'INPUT' && element.type === 'text') {
+                        element.placeholder = translation;
+                    } else {
+                        element.textContent = translation;
+                    }
+                });
+            }
+        };
+
+        // Language change handler
+        window.changeLanguage = (lng) => {
+            if (window.i18next && window.i18next.isInitialized) {
+                i18next.changeLanguage(lng, () => {
+                    document.documentElement.setAttribute('data-lang', lng);
+                    document.cookie = `preferred_language=${lng};path=/;max-age=31536000`;
+                    updateTranslations();
+
+                    // Trigger custom event for other components
+                    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lng } }));
+                });
+            } else {
+                // Fallback when i18next is not ready - convert data-i18n elements manually
+                document.documentElement.setAttribute('data-lang', lng);
+                document.cookie = `preferred_language=${lng};path=/;max-age=31536000`;
+
+                // Manually update data-i18n elements using fallback translations
+                updateDataI18nElements(lng);
+
+                // Trigger custom event for other components
+                window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lng } }));
+            }
+        };
+
+        // Function to manually update data-i18n elements when i18next is not ready
+        window.updateDataI18nElements = (lng) => {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const translation = window.t(key); // Use our fallback t() function
+                if (element.tagName === 'INPUT' && element.type === 'text') {
+                    element.placeholder = translation;
+                } else {
+                    element.textContent = translation;
+                }
+            });
+
+            // Also update language dropdown button if it exists
+            const languageDropdown = window.languageDropdown;
+            if (languageDropdown && languageDropdown.updateButtonText) {
+                languageDropdown.updateButtonText(lng);
+            }
+        };
+
+        // Initialize translations when i18next is ready
+        if (window.i18nextPromise && typeof window.i18nextPromise.then === 'function') {
+            window.i18nextPromise.then(() => {
+                updateTranslations();
+            }).catch(() => {
+                console.log('i18next initialization failed, using fallback translations');
+            });
+        }
     </script>
 </head>

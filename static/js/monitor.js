@@ -1,4 +1,4 @@
-import { getTextWidth } from './utils.js';
+import { getTextWidth, t } from './utils.js';
 import { adjustColumnWidths } from './table.js';
 
 // Constants
@@ -25,37 +25,7 @@ function updateMonitoringState(newPausedState) {
     updateClockAnimation();
 }
 
-// Add translations object at the top
-const translations = {
-    ko: {
-        connecting: "연결 중...",
-        connected: "연결됨",
-        disconnected: "연결 끊김,",
-        attemptPrefix: "재시도 중 (",
-        attemptSuffix: "번째)",
-        hide: "숨기기",
-        show: "보이기",
-        noData: "데이터가 없습니다.",
-        scrollMore: "스크롤하여 더 많은 데이터 불러오기!",
-        allDataLoaded: "모든 데이터가 로드되었습니다.",
-        rows: "행",
-        timeUnit: '초',
-    },
-    en: {
-        connecting: "Connecting...",
-        connected: "Connected",
-        disconnected: "Disconnected,",
-        attemptPrefix: "Attempt (",
-        attemptSuffix: ")",
-        hide: "Hide",
-        show: "Show",
-        noData: "No data available.",
-        scrollMore: "Scroll to load more data!",
-        allDataLoaded: "All data loaded.",
-        rows: "rows",
-        timeUnit: 's',
-    }
-};
+// Using i18next for translations
 
 let currentLang = 'ko'; // Set default language to Korean
 
@@ -127,7 +97,7 @@ function updateTableRows(tbody, tableData, columns) {
 
 function createNewTable(tableDiv, tableData, columns) {
     if (!tableData || !tableData.length) {
-        tableDiv.innerHTML = `<p><span class="lang-ko">${translations.ko.noData}</span><span class="lang-en">${translations.en.noData}</span></p>`;
+        tableDiv.innerHTML = `<p><span class="lang-ko">${t('ui.noData')}</span><span class="lang-en">${t('ui.noData')}</span><span class="lang-vi">${t('ui.noData')}</span></p>`;
         return;
     }
 
@@ -329,19 +299,19 @@ function updateSingleTable(tableName, tableInfo) {
     if (tableDiv) {
         const countSpan = document.getElementById(`${tableName}_count`);
         if (countSpan) {
-            countSpan.textContent = `(${tableInfo.count} ${translations[currentLang].rows})`;
+            countSpan.textContent = `(${tableInfo.count} ${t('ui.rows')})`;
         }
 
         const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
         if (limitedInfoSpan) {
             if (tableInfo.limited) {
-                limitedInfoSpan.innerHTML = `<span class="lang-ko">${translations.ko.scrollMore}</span><span class="lang-en">${translations.en.scrollMore}</span>`;
+                limitedInfoSpan.innerHTML = `<span class="lang-ko">${t('ui.scrollMore')}</span><span class="lang-en">${t('ui.scrollMore')}</span><span class="lang-vi">${t('ui.scrollMore')}</span>`;
                 // Small delay to ensure the text is set before animation
                 requestAnimationFrame(() => {
                     limitedInfoSpan.classList.add('visible');
                 });
             } else {
-                limitedInfoSpan.innerHTML = `<span class="lang-ko">${translations.ko.allDataLoaded}</span><span class="lang-en">${translations.en.allDataLoaded}</span>`;
+                limitedInfoSpan.innerHTML = `<span class="lang-ko">${t('ui.allDataLoaded')}</span><span class="lang-en">${t('ui.allDataLoaded')}</span><span class="lang-vi">${t('ui.allDataLoaded')}</span>`;
                 requestAnimationFrame(() => {
                     limitedInfoSpan.classList.add('visible');
                 });
@@ -367,7 +337,7 @@ function updateSingleTable(tableName, tableInfo) {
 
             tableDiv.classList.add('initialized');
         } else {
-            tableDiv.innerHTML = `<p><span class="lang-ko">${translations.ko.noData}</span><span class="lang-en">${translations.en.noData}</span></p>`;
+            tableDiv.innerHTML = `<p><span class="lang-ko">${t('ui.noData')}</span><span class="lang-en">${t('ui.noData')}</span><span class="lang-vi">${t('ui.noData')}</span></p>`;
         }
 
         // Use double requestAnimationFrame for smoother animation
@@ -386,10 +356,13 @@ function updateConnectionStatus() {
     status.className = `connection-status ${isConnected ? 'connected' : 'disconnected'}`;
     status.innerHTML = `
         <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">
-            ${isConnected ? translations.ko.connected : `${translations.ko.disconnected} ${translations.ko.attemptPrefix}${connectionAttempts}${translations.ko.attemptSuffix}`}
+            ${isConnected ? t('connection.connected') : `${t('connection.disconnected')} ${t('connection.attemptPrefix')}${connectionAttempts}${t('connection.attemptSuffix')}`}
         </span>
         <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">
-            ${isConnected ? translations.en.connected : `${translations.en.disconnected} ${translations.en.attemptPrefix}${connectionAttempts}${translations.en.attemptSuffix}`}
+            ${isConnected ? t('connection.connected') : `${t('connection.disconnected')} ${t('connection.attemptPrefix')}${connectionAttempts}${t('connection.attemptSuffix')}`}
+        </span>
+        <span class="lang-vi" style="display: ${currentLang === 'vi' ? 'inline' : 'none'}">
+            ${isConnected ? t('connection.connected') : `${t('connection.disconnected')} ${t('connection.attemptPrefix')}${connectionAttempts}${t('connection.attemptSuffix')}`}
         </span>
     `;
 }
@@ -551,14 +524,14 @@ function appendTableData(tableName, tableInfo) {
     }
 
     const countSpan = document.getElementById(`${tableName}_count`);
-    countSpan.textContent = `(${tableInfo.count} ${translations[currentLang].rows})`;
+    countSpan.textContent = `(${tableInfo.count} ${t('ui.rows')})`;
 
     const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
     if (tableInfo.limited) {
-        limitedInfoSpan.innerHTML = `<span class="lang-ko">${translations.ko.scrollMore}</span><span class="lang-en">${translations.en.scrollMore}</span>`;
+        limitedInfoSpan.innerHTML = `<span class="lang-ko">${t('ui.scrollMore')}</span><span class="lang-en">${t('ui.scrollMore')}</span><span class="lang-vi">${t('ui.scrollMore')}</span>`;
         limitedInfoSpan.classList.add('visible');
     } else {
-        limitedInfoSpan.innerHTML = `<span class="lang-ko">${translations.ko.allDataLoaded}</span><span class="lang-en">${translations.en.allDataLoaded}</span>`;
+        limitedInfoSpan.innerHTML = `<span class="lang-ko">${t('ui.allDataLoaded')}</span><span class="lang-en">${t('ui.allDataLoaded')}</span><span class="lang-vi">${t('ui.allDataLoaded')}</span>`;
         limitedInfoSpan.classList.add('visible');
     }
 }
@@ -582,9 +555,9 @@ function fetchTableCount(tableName) {
     .then(data => {
         const countSpan = document.getElementById(`${tableName}_count`);
         if (data.count !== undefined) {
-            countSpan.textContent = `(${data.count} ${translations[currentLang].rows})`;
+            countSpan.textContent = `(${data.count} ${t('ui.rows')})`;
         } else {
-            countSpan.textContent = `(0 ${translations[currentLang].rows})`;
+            countSpan.textContent = `(0 ${t('ui.rows')})`;
         }
     })
     .catch(error => {
@@ -951,32 +924,17 @@ function updateLanguage() {
         updateDynamicElements();
     });
 
-    // Update dropdown options language
-    const dropdown = document.getElementById('monitorDropdown');
-    dropdown.querySelectorAll('option').forEach(option => {
-        option.querySelectorAll('.lang-ko, .lang-en').forEach(el => {
-            el.style.cssText = 'display: none !important';
-        });
-        option.querySelectorAll(`.lang-${currentLang}`).forEach(el => {
-            el.style.cssText = 'display: inline !important';
-        });
-    });
+    // The dropdown options will be handled by CSS based on data-lang attribute
+    // No need to set inline styles
 
     // Update dropdown options with correct unit
     updateDropdownOptions();
 }
 
 function updateStaticLanguageElements() {
-    requestAnimationFrame(() => {
-        document.querySelectorAll('.lang-ko, .lang-en').forEach(el => {
-            el.style.cssText = 'display: none !important';
-        });
-        document.querySelectorAll(`.lang-${currentLang}`).forEach(el => {
-            el.style.cssText = 'display: inline !important';
-        });
-    });
-
-
+    // Simply ensure the data-lang attribute is set correctly
+    // CSS will handle the visibility based on this attribute
+    document.documentElement.setAttribute('data-lang', currentLang);
 }
 
 function updateDynamicElements() {
@@ -990,7 +948,7 @@ function updateDynamicElements() {
     document.querySelectorAll('[id$="_count"]').forEach(countSpan => {
         const count = countSpan.textContent.match(/\d+/);
         if (count) {
-            countSpan.textContent = `(${count[0]} ${translations[currentLang].rows})`;
+            countSpan.textContent = `(${count[0]} ${t('ui.rows')})`;
         }
     });
 
@@ -998,17 +956,15 @@ function updateDynamicElements() {
     document.querySelectorAll('[id$="_limited_info"]').forEach(span => {
         if (!span.textContent) return;
         
-        const isScrollMore = span.textContent.includes(translations.ko.scrollMore) || 
-                            span.textContent.includes(translations.en.scrollMore);
-        const text = isScrollMore ? translations[currentLang].scrollMore : translations[currentLang].allDataLoaded;
+        const isScrollMore = span.textContent.includes('scroll') || span.textContent.includes('스크롤') || span.textContent.includes('Cuộn');
+        const text = isScrollMore ? t('ui.scrollMore') : t('ui.allDataLoaded');
         span.innerHTML = `<span class="lang-${currentLang}" style="display: inline">${text}</span>`;
     });
 
     // Update empty table messages
     document.querySelectorAll('.table-container p').forEach(p => {
-        if (p.textContent.includes(translations.ko.noData) || 
-            p.textContent.includes(translations.en.noData)) {
-            p.innerHTML = `<span class="lang-${currentLang}" style="display: inline">${translations[currentLang].noData}</span>`;
+        if (p.textContent.includes('No data') || p.textContent.includes('데이터가') || p.textContent.includes('Không có')) {
+            p.innerHTML = `<span class="lang-${currentLang}" style="display: inline">${t('ui.noData')}</span>`;
         }
     });
 }
@@ -1021,10 +977,13 @@ function updateConnectionStatus() {
     status.className = `connection-status ${isConnected ? 'connected' : 'disconnected'}`;
     status.innerHTML = `
         <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">
-            ${isConnected ? translations.ko.connected : `${translations.ko.disconnected} ${translations.ko.attemptPrefix}${connectionAttempts}${translations.ko.attemptSuffix}`}
+            ${isConnected ? t('connection.connected') : `${t('connection.disconnected')} ${t('connection.attemptPrefix')}${connectionAttempts}${t('connection.attemptSuffix')}`}
         </span>
         <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">
-            ${isConnected ? translations.en.connected : `${translations.en.disconnected} ${translations.en.attemptPrefix}${connectionAttempts}${translations.en.attemptSuffix}`}
+            ${isConnected ? t('connection.connected') : `${t('connection.disconnected')} ${t('connection.attemptPrefix')}${connectionAttempts}${t('connection.attemptSuffix')}`}
+        </span>
+        <span class="lang-vi" style="display: ${currentLang === 'vi' ? 'inline' : 'none'}">
+            ${isConnected ? t('connection.connected') : `${t('connection.disconnected')} ${t('connection.attemptPrefix')}${connectionAttempts}${t('connection.attemptSuffix')}`}
         </span>
     `;
 }
@@ -1035,8 +994,9 @@ function updateTableButtons() {
     buttons.forEach(button => {
         const isHidden = button.closest('.table-section').querySelector('.table-container').classList.contains('hidden-table');
         button.innerHTML = `
-            <span class="lang-ko">${translations.ko[isHidden ? 'show' : 'hide']}</span>
-            <span class="lang-en">${translations.en[isHidden ? 'show' : 'hide']}</span>
+            <span class="lang-ko">${isHidden ? t('ui.show') : t('ui.hide')}</span>
+            <span class="lang-en">${isHidden ? t('ui.show') : t('ui.hide')}</span>
+            <span class="lang-vi">${isHidden ? t('ui.show') : t('ui.hide')}</span>
         `;
     });
     updateLanguage();
@@ -1046,7 +1006,7 @@ function updateTableButtons() {
 function updateLimitedInfo(tableName, isLimited) {
     const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
     if (limitedInfoSpan) {
-        const text = isLimited ? translations[currentLang].scrollMore : translations[currentLang].allDataLoaded;
+        const text = isLimited ? t('ui.scrollMore') : t('ui.allDataLoaded');
         limitedInfoSpan.innerHTML = `<span class="lang-${currentLang}">${text}</span>`;
     }
 }
@@ -1054,8 +1014,9 @@ function updateLimitedInfo(tableName, isLimited) {
 // Add new helper function for button text updates
 function updateToggleButtonText(button, isHidden) {
     button.innerHTML = `
-        <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko[isHidden ? 'show' : 'hide']}</span>
-        <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en[isHidden ? 'show' : 'hide']}</span>
+        <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${isHidden ? t('ui.show') : t('ui.hide')}</span>
+        <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${isHidden ? t('ui.show') : t('ui.hide')}</span>
+        <span class="lang-vi" style="display: ${currentLang === 'vi' ? 'inline' : 'none'}">${isHidden ? t('ui.show') : t('ui.hide')}</span>
     `;
 }
 
@@ -1175,11 +1136,13 @@ function snapToStep(value) {
 
 function updateDropdownOptions() {
     const dropdown = document.getElementById('monitorDropdown');
-    dropdown.querySelectorAll('option').forEach(option => {
-        // Remove any existing units first
-        const baseValue = option.textContent.replace(/[초s]/g, '').trim();
-        option.textContent = `${baseValue}${translations[currentLang].timeUnit}`;
-    });
+    if (dropdown) {
+        dropdown.querySelectorAll('option').forEach(option => {
+            // Remove any existing units first (Korean: 초, English: s, Vietnamese: giây)
+            const baseValue = option.textContent.replace(/[초s]|giây/g, '').trim();
+            option.textContent = `${baseValue}${t('ui.timeUnit')}`;
+        });
+    }
 }
 
 function updateClockAnimation() {

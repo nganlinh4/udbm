@@ -1,0 +1,147 @@
+/* Language Dropdown Styles */
+.language-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.language-dropdown-button {
+    background: linear-gradient(135deg, #1a73e8, #8ab4f8);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-width: 120px;
+    justify-content: space-between;
+}
+
+.language-dropdown-button:hover {
+    background: linear-gradient(135deg, #1557b0, #6fa8f5);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.language-dropdown-button .arrow {
+    transition: transform 0.3s ease;
+    font-size: 0.8em;
+}
+
+.language-dropdown.open .language-dropdown-button .arrow {
+    transform: rotate(180deg);
+}
+
+.language-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+    display: none;
+    min-width: 160px;
+    z-index: 1000;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transform-origin: top left;
+    transform: scale(0.95);
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.language-dropdown.open .language-dropdown-menu {
+    display: block;
+    transform: scale(1);
+    opacity: 1;
+}
+
+.language-dropdown-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9em;
+}
+
+.language-dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+.language-dropdown-item.active {
+    background-color: #e3f2fd;
+    color: #1a73e8;
+    font-weight: 500;
+}
+
+.language-dropdown-item .flag {
+    font-size: 1.2em;
+    width: 20px;
+    text-align: center;
+}
+
+.language-dropdown-item .name {
+    flex: 1;
+}
+
+/* Dark theme support */
+[data-theme="dark"] .language-dropdown-button {
+    background: linear-gradient(135deg, #0d47a1, #4285f4);
+}
+
+[data-theme="dark"] .language-dropdown-button:hover {
+    background: linear-gradient(135deg, #0a3d91, #3367d6);
+}
+
+[data-theme="dark"] .language-dropdown-menu {
+    background: #2d2d2d;
+    border-color: #404040;
+}
+
+[data-theme="dark"] .language-dropdown-item:hover {
+    background-color: #404040;
+}
+
+[data-theme="dark"] .language-dropdown-item.active {
+    background-color: #1e3a8a;
+    color: #60a5fa;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .language-dropdown-button {
+        min-width: 100px;
+        padding: 6px 12px;
+        font-size: 0.8em;
+    }
+    
+    .language-dropdown-menu {
+        min-width: 140px;
+    }
+    
+    .language-dropdown-item {
+        padding: 10px 12px;
+        font-size: 0.8em;
+    }
+}
+
+/* Integration with existing language switcher container */
+.language-switcher .language-dropdown {
+    margin: 0;
+}
+
+/* Remove old toggle switch styles when dropdown is used */
+.language-switcher.dropdown-mode .switch,
+.language-switcher.dropdown-mode .switch-label {
+    display: none;
+}
+
+.language-switcher.dropdown-mode {
+    padding: 4px 8px;
+}

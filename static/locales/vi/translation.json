@@ -1,0 +1,96 @@
+{
+  "connection": {
+    "connecting": "Đang kết nối...",
+    "connected": "Đã kết nối",
+    "disconnected": "Mất kết nối",
+    "noDatabase": "Không có cơ sở dữ liệu",
+    "attemptPrefix": "Thử lần (",
+    "attemptSuffix": ")"
+  },
+  "ui": {
+    "hide": "Ẩn",
+    "show": "Hiện",
+    "noData": "Không có dữ liệu.",
+    "scrollMore": "Cuộn để tải thêm dữ liệu!",
+    "allDataLoaded": "Đã tải tất cả dữ liệu.",
+    "rows": "hàng",
+    "timeUnit": "giây"
+  },
+  "admin": {
+    "adminMode": "CHẾ ĐỘ QUẢN TRỊ",
+    "adminTooltip": "Bỏ qua kiểm tra khóa ngoại - Sử dụng cẩn thận",
+    "customQuery": "Truy vấn SQL tùy chỉnh",
+    "afterSelectingCell": "Sau khi chọn ô:",
+    "addNewRow": "Thêm hàng trống mới",
+    "deleteRow": "Xóa hàng đã chọn",
+    "deleteAllMatching": "Xóa tất cả hàng có giá trị giống nhau",
+    "editValue": "Chỉnh sửa giá trị",
+    "oneMoreClick": "Nhấp thêm một lần"
+  },
+  "schema": {
+    "schema": "LƯỢC ĐỒ",
+    "tooltip": "Xem lược đồ mới nhất từ cơ sở dữ liệu"
+  },
+  "database": {
+    "addNewDatabase": "Thêm cơ sở dữ liệu mới",
+    "goBack": "Quay lại",
+    "smartOrder": "Sắp xếp thông minh",
+    "smartOrderTooltip": "Sắp xếp bảng theo khóa ngoại",
+    "databaseType": "Loại cơ sở dữ liệu",
+    "host": "Máy chủ",
+    "user": "Người dùng",
+    "password": "Mật khẩu",
+    "database": "Cơ sở dữ liệu",
+    "add": "Thêm",
+    "connect": "Kết nối"
+  },
+  "favicon": {
+    "useCustomFavicon": "Sử dụng Favicon tùy chỉnh",
+    "uploadFavicon": "Tải lên Favicon"
+  },
+  "logo": {
+    "useCustomLogo": "Sử dụng Logo tùy chỉnh",
+    "uploadLogo": "Tải lên Logo"
+  },
+  "monitoring": {
+    "pausedCopying": "Giám sát tạm dừng vì bạn đang sao chép văn bản",
+    "refreshRate": "Tần suất làm mới"
+  },
+  "query": {
+    "customQuery": "Truy vấn tùy chỉnh",
+    "execute": "Thực thi"
+  },
+  "schema": {
+    "layoutSpacing": "Khoảng cách bố cục",
+    "tight": "Chặt",
+    "spread": "Rộng",
+    "arrowStyle": "Kiểu mũi tên",
+    "elbow": "Gấp khúc",
+    "straight": "Thẳng",
+    "curved": "Cong",
+    "resetLayout": "Đặt lại bố cục",
+    "optimizeLayout": "Tối ưu bố cục",
+    "pause": "Tạm dừng",
+    "resume": "Tiếp tục",
+    "optimizing": "Đang tối ưu..."
+  },
+  "image": {
+    "displaySettings": "Cài đặt hiển thị hình ảnh",
+    "showImagesInTable": "Hiển thị hình ảnh trong bảng thay vì đường dẫn",
+    "pathPrefixes": "Tiền tố đường dẫn hình ảnh",
+    "add": "Thêm",
+    "apply": "Áp dụng",
+    "cancel": "Hủy",
+    "imagePath": "Đường dẫn hình ảnh",
+    "download": "Tải xuống",
+    "prefixHelp": "Thêm tiền tố URL để giúp định vị hình ảnh",
+    "webImages": "Cho hình ảnh web",
+    "localFiles": "Cho tệp cục bộ",
+    "securityNote": "Lưu ý: Truy cập tệp cục bộ có thể bị hạn chế bởi bảo mật trình duyệt. Để có kết quả tốt nhất với tệp cục bộ, hãy xem xét thiết lập máy chủ web cục bộ."
+  },
+  "languages": {
+    "korean": "한국어",
+    "english": "English",
+    "vietnamese": "Tiếng Việt"
+  }
+}

@@ -1,15 +1,16 @@
-import { 
-    setCookie, 
+import {
+    setCookie,
     getCookie,
     initializeTheme,
-    translations,
     getCurrentLanguage,
     initializeLanguage,
     updateLanguage,
     updateStaticLanguageElements,
     checkConnection,
-    connectionAttempts
+    connectionAttempts,
+    t
 } from './utils.js';
+import './language-dropdown.js';
 import { 
     updateSingleTable, 
     fetchTableData, 
@@ -51,7 +52,7 @@ function hideError() {
 function updateTablesIfChanged(newData) {
     Object.keys(newData).forEach(tableName => {
         if (!previousData[tableName] || JSON.stringify(newData[tableName].data) !== JSON.stringify(previousData[tableName].data)) {
-            updateSingleTable(tableName, newData[tableName], translations, getCurrentLanguage(), fetchTableData);
+            updateSingleTable(tableName, newData[tableName], null, getCurrentLanguage(), fetchTableData);
         }
     });
     previousData = JSON.parse(JSON.stringify(newData));
@@ -90,26 +91,35 @@ function updateConnectionStatus(forceLang) {
     const isNoDatabase = status.classList.contains('no-database');
     const isConnected = status.classList.contains('connected');
     const isDisconnected = status.classList.contains('disconnected');
-    
+
     // Keep existing classes to maintain state
     status.className = 'connection-status';
     if (isNoDatabase) status.classList.add('no-database');
     if (isConnected) status.classList.add('connected');
     if (isDisconnected) status.classList.add('disconnected');
 
-    // Get text for both languages
-    const koText = isNoDatabase ? translations.ko.noDatabase :
-                  isConnected ? translations.ko.connected :
-                  `${translations.ko.disconnected} ${translations.ko.attemptPrefix}${connectionAttempts}${translations.ko.attemptSuffix}`;
+    // Get text for current language using i18next
+    const currentLang = forceLang || getCurrentLanguage();
+    let statusText;
 
-    const enText = isNoDatabase ? translations.en.noDatabase :
-                  isConnected ? translations.en.connected :
-                  `${translations.en.disconnected} ${translations.en.attemptPrefix}${connectionAttempts}${translations.en.attemptSuffix}`;
+    if (isNoDatabase) {
+        statusText = t('connection.noDatabase');
+    } else if (isConnected) {
+        statusText = t('connection.connected');
+    } else {
+        statusText = `${t('connection.disconnected')} ${t('connection.attemptPrefix')}${connectionAttempts}${t('connection.attemptSuffix')}`;
+    }
+
+    // For width calculation, we'll use the current text
+    const koText = statusText;
+    const enText = statusText;
+    const viText = statusText;
 
     // Measure widths
     const koWidth = measureConnectionStatusWidth(status, koText);
     const enWidth = measureConnectionStatusWidth(status, enText);
-    const maxWidth = Math.max(koWidth, enWidth);
+    const viWidth = measureConnectionStatusWidth(status, viText);
+    const maxWidth = Math.max(koWidth, enWidth, viWidth);
 
     // Store max width in cookie if it's different
     const savedWidth = parseInt(getCookie('connection_status_width')) || 0;
@@ -120,12 +130,11 @@ function updateConnectionStatus(forceLang) {
     // Apply the width to the connection status element
     status.style.setProperty('--connection-status-width', `${maxWidth}px`);
 
-    // Update the content
-    const currentLang = forceLang || getCurrentLanguage();
-    const statusText = currentLang === 'ko' ? koText : enText;
+    // Update the content - CSS will handle visibility based on data-lang attribute
     status.innerHTML = `
-        <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${koText}</span>
-        <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${enText}</span>
+        <span class="lang-ko">${statusText}</span>
+        <span class="lang-en">${statusText}</span>
+        <span class="lang-vi">${statusText}</span>
     `;
 }
 
@@ -154,7 +163,7 @@ function loadTableStates() {
         container.classList.add('initialized');
         
         // Always fetch table count
-        fetchTableCount(tableName, baseUrl, translations, getCurrentLanguage());
+        fetchTableCount(tableName, baseUrl, null, getCurrentLanguage());
     });
 
     // Phase 2: After a brief delay, simulate clicking for previously visible tables
@@ -208,11 +217,13 @@ function loadTableOrder() {
 
 function updateDropdownOptions() {
     const dropdown = document.getElementById('monitorDropdown');
-    dropdown.querySelectorAll('option').forEach(option => {
-        // Remove any existing units first
-        const baseValue = option.textContent.replace(/[초s]/g, '').trim();
-        option.textContent = `${baseValue}${translations[getCurrentLanguage()].timeUnit}`;
-    });
+    if (dropdown) {
+        dropdown.querySelectorAll('option').forEach(option => {
+            // Remove any existing units first (Korean: 초, English: s, Vietnamese: giây)
+            const baseValue = option.textContent.replace(/[초s]|giây/g, '').trim();
+            option.textContent = `${baseValue}${t('ui.timeUnit')}`;
+        });
+    }
 }
 
 function updateDynamicElements() {
@@ -226,7 +237,7 @@ function updateDynamicElements() {
     document.querySelectorAll('[id$="_count"]').forEach(countSpan => {
         const count = countSpan.textContent.match(/\d+/);
         if (count) {
-            countSpan.textContent = `(${count[0]} ${translations[getCurrentLanguage()].rows})`;
+            countSpan.textContent = `(${count[0]} ${t('ui.rows')})`;
         }
     });
 
@@ -234,26 +245,26 @@ function updateDynamicElements() {
     document.querySelectorAll('[id$="_limited_info"]').forEach(span => {
         if (!span.textContent) return;
 
-        const isScrollMore = span.textContent.includes(translations.ko.scrollMore) ||
-            span.textContent.includes(translations.en.scrollMore);
-        const text = isScrollMore ? translations[getCurrentLanguage()].scrollMore : translations[getCurrentLanguage()].allDataLoaded;
-        span.innerHTML = `<span class="lang-${getCurrentLanguage()}" style="display: inline">${text}</span>`;
+        const isScrollMore = span.textContent.includes('scroll') || span.textContent.includes('스크롤') || span.textContent.includes('Cuộn');
+        const text = isScrollMore ? t('ui.scrollMore') : t('ui.allDataLoaded');
+        span.innerHTML = `<span class="lang-ko">${text}</span><span class="lang-en">${text}</span><span class="lang-vi">${text}</span>`;
     });
 
     // Update empty table messages
     document.querySelectorAll('.table-container p').forEach(p => {
-        if (p.textContent.includes(translations.ko.noData) ||
-            p.textContent.includes(translations.en.noData)) {
-            p.innerHTML = `<span class="lang-${getCurrentLanguage()}" style="display: inline">${translations[getCurrentLanguage()].noData}</span>`;
+        if (p.textContent.includes('No data') || p.textContent.includes('데이터가') || p.textContent.includes('Không có')) {
+            p.innerHTML = `<span class="lang-ko">${t('ui.noData')}</span><span class="lang-en">${t('ui.noData')}</span><span class="lang-vi">${t('ui.noData')}</span>`;
         }
     });
 }
 
 // Add new helper function for button text updates
 function updateToggleButtonText(button, isHidden) {
+    const text = isHidden ? t('ui.show') : t('ui.hide');
     button.innerHTML = `
-        <span class="lang-ko" style="display: ${getCurrentLanguage() === 'ko' ? 'inline' : 'none'}">${translations.ko[isHidden ? 'show' : 'hide']}</span>
-        <span class="lang-en" style="display: ${getCurrentLanguage() === 'en' ? 'inline' : 'none'}">${translations.en[isHidden ? 'show' : 'hide']}</span>
+        <span class="lang-ko">${text}</span>
+        <span class="lang-en">${text}</span>
+        <span class="lang-vi">${text}</span>
     `;
 }
 
@@ -282,7 +293,7 @@ monitorIntervalId = setInterval(async () => {
 
         // Update all table counts only if connected
         tableNames.forEach(tableName => {
-            fetchTableCount(tableName, baseUrl, translations, currentLang)
+            fetchTableCount(tableName, baseUrl, null, currentLang)
                 .then(newCount => {
                     const oldCount = previousCounts[tableName];
                     
@@ -338,10 +349,10 @@ monitorIntervalId = setInterval(async () => {
         visibleTables.forEach(tableContainer => {
             const tableName = tableContainer.id;
             fetchTableData(
-                tableName, 
+                tableName,
                 false,
                 baseUrl,
-                translations,
+                null,
                 currentLang,
                 updateSingleTable
             );
@@ -501,19 +512,21 @@ function toggleTable(tableName) {
         };
 
         // Pass baseUrl when calling fetchTableData
-        fetchTableData(tableName, false, baseUrl, translations, getCurrentLanguage(), 
+        fetchTableData(tableName, false, baseUrl, null, getCurrentLanguage(),
             (tName, tInfo, trans, lang, fetchFn) => {
                 const limitedInfoSpan = document.getElementById(`${tName}_limited_info`);
                 if (limitedInfoSpan) {
                     if (tInfo.limited) {
                         limitedInfoSpan.innerHTML = `
-                            <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.scrollMore}</span>
-                            <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.scrollMore}</span>
+                            <span class="lang-ko" style="display: ${getCurrentLanguage() === 'ko' ? 'inline' : 'none'}">${t('ui.scrollMore')}</span>
+                            <span class="lang-en" style="display: ${getCurrentLanguage() === 'en' ? 'inline' : 'none'}">${t('ui.scrollMore')}</span>
+                            <span class="lang-vi" style="display: ${getCurrentLanguage() === 'vi' ? 'inline' : 'none'}">${t('ui.scrollMore')}</span>
                         `;
                     } else {
                         limitedInfoSpan.innerHTML = `
-                            <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.allDataLoaded}</span>
-                            <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.allDataLoaded}</span>
+                            <span class="lang-ko" style="display: ${getCurrentLanguage() === 'ko' ? 'inline' : 'none'}">${t('ui.allDataLoaded')}</span>
+                            <span class="lang-en" style="display: ${getCurrentLanguage() === 'en' ? 'inline' : 'none'}">${t('ui.allDataLoaded')}</span>
+                            <span class="lang-vi" style="display: ${getCurrentLanguage() === 'vi' ? 'inline' : 'none'}">${t('ui.allDataLoaded')}</span>
                         `;
                     }
                     limitedInfoSpan.classList.add('visible');
@@ -862,23 +875,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="form-group">
                         <input type="text" name="host" id="host" required placeholder=" ">
-                        <label for="host">Host</label>
+                        <label for="host">
+                            <span class="lang-ko">호스트</span>
+                            <span class="lang-en">Host</span>
+                            <span class="lang-vi">Máy chủ</span>
+                        </label>
                     </div>
                     <div class="form-group">
                         <input type="text" name="user" id="user" required placeholder=" ">
-                        <label for="user">User</label>
+                        <label for="user">
+                            <span class="lang-ko">사용자</span>
+                            <span class="lang-en">User</span>
+                            <span class="lang-vi">Người dùng</span>
+                        </label>
                     </div>
                     <div class="form-group">
                         <input type="password" name="password" id="password" required placeholder=" ">
-                        <label for="password">Password</label>
+                        <label for="password">
+                            <span class="lang-ko">비밀번호</span>
+                            <span class="lang-en">Password</span>
+                            <span class="lang-vi">Mật khẩu</span>
+                        </label>
                     </div>
                     <div class="form-group">
                         <input type="text" name="database" id="database" required placeholder=" ">
-                        <label for="database">Database</label>
+                        <label for="database">
+                            <span class="lang-ko">데이터베이스</span>
+                            <span class="lang-en">Database</span>
+                            <span class="lang-vi">Cơ sở dữ liệu</span>
+                        </label>
                     </div>
                     <button type="submit" class="add-db-button">
                         <span class="lang-ko">추가</span>
                         <span class="lang-en">Add</span>
+                        <span class="lang-vi">Thêm</span>
                     </button>
                 </form>
             `;
@@ -1482,23 +1512,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="form-group">
                         <input type="text" name="host" id="host" required placeholder=" ">
-                        <label for="host">Host</label>
+                        <label for="host">
+                            <span class="lang-ko">호스트</span>
+                            <span class="lang-en">Host</span>
+                            <span class="lang-vi">Máy chủ</span>
+                        </label>
                     </div>
                     <div class="form-group">
                         <input type="text" name="user" id="user" required placeholder=" ">
-                        <label for="user">User</label>
+                        <label for="user">
+                            <span class="lang-ko">사용자</span>
+                            <span class="lang-en">User</span>
+                            <span class="lang-vi">Người dùng</span>
+                        </label>
                     </div>
                     <div class="form-group">
                         <input type="password" name="password" id="password" required placeholder=" ">
-                        <label for="password">Password</label>
+                        <label for="password">
+                            <span class="lang-ko">비밀번호</span>
+                            <span class="lang-en">Password</span>
+                            <span class="lang-vi">Mật khẩu</span>
+                        </label>
                     </div>
                     <div class="form-group">
                         <input type="text" name="database" id="database" required placeholder=" ">
-                        <label for="database">Database</label>
+                        <label for="database">
+                            <span class="lang-ko">데이터베이스</span>
+                            <span class="lang-en">Database</span>
+                            <span class="lang-vi">Cơ sở dữ liệu</span>
+                        </label>
                     </div>
                     <button type="submit" class="add-db-button">
                         <span class="lang-ko">추가</span>
                         <span class="lang-en">Add</span>
+                        <span class="lang-vi">Thêm</span>
                     </button>
                 </form>
             `;

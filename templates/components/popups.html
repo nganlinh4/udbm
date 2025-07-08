@@ -22,6 +22,7 @@
             <div class="query-title">
                 <span class="lang-ko">사용자 정의 쿼리</span>
                 <span class="lang-en">Custom Query</span>
+                <span class="lang-vi">Truy vấn tùy chỉnh</span>
             </div>
             <button class="query-close" title="Close">&times;</button>
         </div>
@@ -31,6 +32,7 @@
                 <button id="executeQuery">
                     <span class="lang-ko">실행</span>
                     <span class="lang-en">Execute</span>
+                    <span class="lang-vi">Thực thi</span>
                 </button>
             </div>
         </div>
@@ -60,25 +62,65 @@
                 <!-- D3 Interactive Controls -->
                 <div class="d3-controls" style="display: none;">
                     <div class="control-group">
-                        <label for="clumpingSlider">Layout Spacing:</label>
+                        <label for="clumpingSlider">
+                            <span class="lang-ko">레이아웃 간격:</span>
+                            <span class="lang-en">Layout Spacing:</span>
+                            <span class="lang-vi">Khoảng cách bố cục:</span>
+                        </label>
                         <div class="slider-container">
-                            <span class="slider-label">Tight</span>
+                            <span class="slider-label">
+                                <span class="lang-ko">밀집</span>
+                                <span class="lang-en">Tight</span>
+                                <span class="lang-vi">Chặt</span>
+                            </span>
                             <input type="range" id="clumpingSlider" min="0" max="150" value="100" class="layout-slider">
-                            <span class="slider-label">Spread</span>
+                            <span class="slider-label">
+                                <span class="lang-ko">분산</span>
+                                <span class="lang-en">Spread</span>
+                                <span class="lang-vi">Rộng</span>
+                            </span>
                         </div>
                     </div>
                     <div class="control-group">
-                        <label for="arrowType">Arrow Style:</label>
+                        <label for="arrowType">
+                            <span class="lang-ko">화살표 스타일:</span>
+                            <span class="lang-en">Arrow Style:</span>
+                            <span class="lang-vi">Kiểu mũi tên:</span>
+                        </label>
                         <div class="arrow-type-selector">
-                            <button class="arrow-option active" data-arrow="elbow">Elbow</button>
-                            <button class="arrow-option" data-arrow="straight">Straight</button>
-                            <button class="arrow-option" data-arrow="curved">Curved</button>
+                            <button class="arrow-option active" data-arrow="elbow">
+                                <span class="lang-ko">꺾인선</span>
+                                <span class="lang-en">Elbow</span>
+                                <span class="lang-vi">Gấp khúc</span>
+                            </button>
+                            <button class="arrow-option" data-arrow="straight">
+                                <span class="lang-ko">직선</span>
+                                <span class="lang-en">Straight</span>
+                                <span class="lang-vi">Thẳng</span>
+                            </button>
+                            <button class="arrow-option" data-arrow="curved">
+                                <span class="lang-ko">곡선</span>
+                                <span class="lang-en">Curved</span>
+                                <span class="lang-vi">Cong</span>
+                            </button>
                         </div>
                     </div>
                     <div class="control-group">
-                        <button id="resetLayout" class="control-button">Reset Layout</button>
-                        <button id="optimizeLayout" class="control-button">Optimize Layout</button>
-                        <button id="pauseSimulation" class="control-button">Pause</button>
+                        <button id="resetLayout" class="control-button">
+                            <span class="lang-ko">레이아웃 재설정</span>
+                            <span class="lang-en">Reset Layout</span>
+                            <span class="lang-vi">Đặt lại bố cục</span>
+                        </button>
+                        <button id="optimizeLayout" class="control-button">
+                            <span class="lang-ko">레이아웃 최적화</span>
+                            <span class="lang-en">Optimize Layout</span>
+                            <span class="lang-vi">Tối ưu bố cục</span>
+                        </button>
+                        <button id="pauseSimulation" class="control-button">
+                            <span class="lang-ko">일시정지</span>
+                            <span class="lang-en">Pause</span>
+                            <span class="lang-vi">Tạm dừng</span>
+                        </button>
                     </div>
                 </div>
 
@@ -109,7 +151,11 @@
         </div>
         <div id="fullviewInfo" class="image-fullview-info">
             <div class="image-fullview-path">
-                <div class="image-fullview-path-label">Image Path:</div>
+                <div class="image-fullview-path-label">
+                    <span class="lang-ko">이미지 경로:</span>
+                    <span class="lang-en">Image Path:</span>
+                    <span class="lang-vi">Đường dẫn hình ảnh:</span>
+                </div>
                 <div id="fullviewPath" class="image-fullview-path-value"></div>
             </div>
             <button class="image-fullview-download" onclick="downloadFullviewImage()" title="Download image">
@@ -118,7 +164,9 @@
                     <polyline points="7 10 12 15 17 10"></polyline>
                     <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                Download
+                <span class="lang-ko">다운로드</span>
+                <span class="lang-en">Download</span>
+                <span class="lang-vi">Tải xuống</span>
             </button>
         </div>
     </div>

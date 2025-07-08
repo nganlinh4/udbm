@@ -279,7 +279,8 @@ select.monitor-dropdown[size]:not([size="1"]) {
 }
 
 .refresh-rate-label .lang-ko,
-.refresh-rate-label .lang-en {
+.refresh-rate-label .lang-en,
+.refresh-rate-label .lang-vi {
     display: flex;
     flex-direction: column;
     align-items: center;

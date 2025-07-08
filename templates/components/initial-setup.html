@@ -4,12 +4,26 @@
         <div class="setup-header">
             <div class="setup-controls">
                 <div class="setup-language-switcher">
-                    <span class="switch-label ko" data-lang="ko">한국어</span>
-                    <label class="switch">
-                        <input type="checkbox" id="initialLanguageToggle">
-                        <span class="switch-slider"></span>
-                    </label>
-                    <span class="switch-label en" data-lang="en">ENG</span>
+                    <div class="language-dropdown" id="initialLanguageDropdown">
+                        <button class="language-dropdown-button" id="initialLanguageDropdownButton">
+                            <span class="current-language" data-i18n="languages.english">English</span>
+                            <span class="arrow">▼</span>
+                        </button>
+                        <div class="language-dropdown-menu" id="initialLanguageDropdownMenu">
+                            <div class="language-dropdown-item" data-lang="ko">
+                                <span class="flag">🇰🇷</span>
+                                <span class="name" data-i18n="languages.korean">한국어</span>
+                            </div>
+                            <div class="language-dropdown-item active" data-lang="en">
+                                <span class="flag">🇺🇸</span>
+                                <span class="name" data-i18n="languages.english">English</span>
+                            </div>
+                            <div class="language-dropdown-item" data-lang="vi">
+                                <span class="flag">🇻🇳</span>
+                                <span class="name" data-i18n="languages.vietnamese">Tiếng Việt</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="setup-theme-switcher">
                     <label class="theme-switch" title="Toggle dark mode">
@@ -29,6 +43,7 @@
         <p class="setup-description">
             <span class="lang-ko">모니터링을 시작하려면 데이터베이스를 추가하세요</span>
             <span class="lang-en">Add a database to start monitoring</span>
+            <span class="lang-vi">Thêm cơ sở dữ liệu để bắt đầu giám sát</span>
         </p>
         <div class="setup-form-container">
             <form class="db-form material-form">
@@ -37,27 +52,48 @@
                         <option value="mysql">MySQL</option>
                         <option value="postgresql">PostgreSQL</option>
                     </select>
-                    <label style="top: -15px;">Database Type</label>
+                    <label style="top: -15px;">
+                        <span class="lang-ko">데이터베이스 유형</span>
+                        <span class="lang-en">Database Type</span>
+                        <span class="lang-vi">Loại cơ sở dữ liệu</span>
+                    </label>
                 </div>
                 <div class="form-group">
                     <input type="text" name="host" required placeholder=" ">
-                    <label for="host">Host</label>
+                    <label for="host">
+                        <span class="lang-ko">호스트</span>
+                        <span class="lang-en">Host</span>
+                        <span class="lang-vi">Máy chủ</span>
+                    </label>
                 </div>
                 <div class="form-group">
                     <input type="text" name="user" required placeholder=" ">
-                    <label for="user">User</label>
+                    <label for="user">
+                        <span class="lang-ko">사용자</span>
+                        <span class="lang-en">User</span>
+                        <span class="lang-vi">Người dùng</span>
+                    </label>
                 </div>
                 <div class="form-group">
                     <input type="password" name="password" required placeholder=" ">
-                    <label for="password">Password</label>
+                    <label for="password">
+                        <span class="lang-ko">비밀번호</span>
+                        <span class="lang-en">Password</span>
+                        <span class="lang-vi">Mật khẩu</span>
+                    </label>
                 </div>
                 <div class="form-group">
                     <input type="text" name="database" required placeholder=" ">
-                    <label for="database">Database</label>
+                    <label for="database">
+                        <span class="lang-ko">데이터베이스</span>
+                        <span class="lang-en">Database</span>
+                        <span class="lang-vi">Cơ sở dữ liệu</span>
+                    </label>
                 </div>
                 <button type="submit" class="add-db-button">
                     <span class="lang-ko">연결하기</span>
                     <span class="lang-en">Connect</span>
+                    <span class="lang-vi">Kết nối</span>
                 </button>
             </form>
         </div>

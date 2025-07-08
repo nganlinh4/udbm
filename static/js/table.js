@@ -1,4 +1,4 @@
-import { setCookie, getCookie, getTextWidth, translations, getCurrentLanguage } from './utils.js';
+import { setCookie, getCookie, getTextWidth, getCurrentLanguage, t } from './utils.js';
 
 // Constants and state variables
 const ROWS_PER_LOAD = 50;
@@ -23,8 +23,9 @@ function setupQueryPopup() {
     function handleClose() {
         queryPopup.classList.remove('visible');
         queryInput.value = '';
-        document.querySelector('.download-buttons')?.remove();
-        document.querySelector('.example-queries')?.remove();
+        // Only remove download buttons and example queries from within the query popup
+        queryPopup.querySelector('.download-buttons')?.remove();
+        queryPopup.querySelector('.example-queries')?.remove();
         resultArea.textContent = '';
     }
 
@@ -439,39 +440,77 @@ function createImageSettingsModal() {
     modal.innerHTML = `
         <div class="image-settings-content">
             <div class="image-settings-header">
-                <h3>Image Display Settings</h3>
+                <h3>
+                    <span class="lang-ko">이미지 표시 설정</span>
+                    <span class="lang-en">Image Display Settings</span>
+                    <span class="lang-vi">Cài đặt hiển thị hình ảnh</span>
+                </h3>
                 <button class="image-settings-close" type="button">×</button>
             </div>
             <div class="image-settings-body">
                 <div class="setting-group">
                     <label class="switch-container">
                         <input type="checkbox" id="showImagesToggle" class="switch-input">
-                        <span class="switch-label">Show images in table instead of paths</span>
+                        <span class="switch-label">
+                            <span class="lang-ko">경로 대신 테이블에 이미지 표시</span>
+                            <span class="lang-en">Show images in table instead of paths</span>
+                            <span class="lang-vi">Hiển thị hình ảnh trong bảng thay vì đường dẫn</span>
+                        </span>
                     </label>
                 </div>
 
                 <div class="setting-group">
-                    <label class="setting-label">Image Path Prefixes:</label>
+                    <label class="setting-label">
+                        <span class="lang-ko">이미지 경로 접두사:</span>
+                        <span class="lang-en">Image Path Prefixes:</span>
+                        <span class="lang-vi">Tiền tố đường dẫn hình ảnh:</span>
+                    </label>
                     <div class="prefix-list" id="prefixList">
                         <!-- Prefixes will be added here -->
                     </div>
                     <div class="prefix-input-group">
                         <input type="text" id="newPrefixInput" placeholder="Enter image path prefix (e.g., https://example.com/images/)" class="prefix-input">
-                        <button type="button" id="addPrefixBtn" class="add-prefix-btn">Add</button>
+                        <button type="button" id="addPrefixBtn" class="add-prefix-btn">
+                            <span class="lang-ko">추가</span>
+                            <span class="lang-en">Add</span>
+                            <span class="lang-vi">Thêm</span>
+                        </button>
                     </div>
                     <div class="prefix-help">
                         <small>
-                            <strong>Add URL prefixes to help locate images:</strong><br>
-                            • For web images: <code>https://example.com/images/</code><br>
-                            • For local files: <code>C:\\work\\categorizing\\</code> or <code>/home/user/images/</code><br>
-                            <em>Note: Local file access may be limited by browser security. For best results with local files, consider setting up a local web server.</em>
+                            <span class="lang-ko">
+                                <strong>이미지를 찾기 위한 URL 접두사 추가:</strong><br>
+                                • 웹 이미지: <code>https://example.com/images/</code><br>
+                                • 로컬 파일: <code>C:\\work\\categorizing\\</code> 또는 <code>/home/user/images/</code><br>
+                                <em>참고: 로컬 파일 접근은 브라우저 보안에 의해 제한될 수 있습니다. 로컬 파일의 최상의 결과를 위해 로컬 웹 서버 설정을 고려하세요.</em>
+                            </span>
+                            <span class="lang-en">
+                                <strong>Add URL prefixes to help locate images:</strong><br>
+                                • For web images: <code>https://example.com/images/</code><br>
+                                • For local files: <code>C:\\work\\categorizing\\</code> or <code>/home/user/images/</code><br>
+                                <em>Note: Local file access may be limited by browser security. For best results with local files, consider setting up a local web server.</em>
+                            </span>
+                            <span class="lang-vi">
+                                <strong>Thêm tiền tố URL để giúp định vị hình ảnh:</strong><br>
+                                • Cho hình ảnh web: <code>https://example.com/images/</code><br>
+                                • Cho tệp cục bộ: <code>C:\\work\\categorizing\\</code> hoặc <code>/home/user/images/</code><br>
+                                <em>Lưu ý: Truy cập tệp cục bộ có thể bị hạn chế bởi bảo mật trình duyệt. Để có kết quả tốt nhất với tệp cục bộ, hãy xem xét thiết lập máy chủ web cục bộ.</em>
+                            </span>
                         </small>
                     </div>
                 </div>
             </div>
             <div class="image-settings-footer">
-                <button type="button" id="applyImageSettings" class="apply-btn">Apply</button>
-                <button type="button" id="cancelImageSettings" class="cancel-btn">Cancel</button>
+                <button type="button" id="applyImageSettings" class="apply-btn">
+                    <span class="lang-ko">적용</span>
+                    <span class="lang-en">Apply</span>
+                    <span class="lang-vi">Áp dụng</span>
+                </button>
+                <button type="button" id="cancelImageSettings" class="cancel-btn">
+                    <span class="lang-ko">취소</span>
+                    <span class="lang-en">Cancel</span>
+                    <span class="lang-vi">Hủy</span>
+                </button>
             </div>
         </div>
     `;
@@ -618,13 +657,15 @@ document.addEventListener('keydown', (e) => {
     // Clear and show popup
     queryPopup.classList.add('visible');
     queryInput.value = '';
-    document.querySelector('.download-buttons')?.remove();
+    // Only remove download buttons from query popup, not from table sections
+    queryPopup.querySelector('.download-buttons')?.remove();
     resultArea.textContent = '';
 
     // Set up execute button text
     executeButton.innerHTML = `
         <span class="lang-ko">(Ctrl+Enter) 실행</span>
         <span class="lang-en">(Ctrl+Enter) Execute</span>
+        <span class="lang-vi">(Ctrl+Enter) Thực thi</span>
     `;
 
     // Replace elements to clear old event listeners
@@ -638,8 +679,8 @@ document.addEventListener('keydown', (e) => {
     // Handle query execution
     const handleExecute = async () => {
         const query = queryInput.value.trim();
-        // Clean up previous download buttons
-        document.querySelector('.download-buttons')?.remove();
+        // Clean up previous download buttons only from query popup
+        queryPopup.querySelector('.download-buttons')?.remove();
         if (!query) return;
 
         // Save to history
@@ -907,6 +948,7 @@ function setupQueryHandler() {
         executeButton.innerHTML = `
             <span class="lang-ko">(Ctrl+Enter) 실행</span>
             <span class="lang-en">(Ctrl+Enter) Execute</span>
+            <span class="lang-vi">(Ctrl+Enter) Thực thi</span>
         `;
 
         // Clean up previous event listeners
@@ -1137,6 +1179,7 @@ document.addEventListener('DOMContentLoaded', () => {
             executeButton.innerHTML = `
                 <span class="lang-ko">(Ctrl+Enter) 실행</span>
                 <span class="lang-en">(Ctrl+Enter) Execute</span>
+                <span class="lang-vi">(Ctrl+Enter) Thực thi</span>
             `;
 
             // Clean up previous event listeners
@@ -1795,7 +1838,7 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
 
     const countSpan = document.getElementById(`${tableName}_count`);
     if (countSpan) {
-        countSpan.textContent = `(${tableInfo.count} ${translations[currentLang].rows})`;
+        countSpan.textContent = `(${tableInfo.count} ${t('ui.rows')})`;
     }
 
     const isHidden = tableDiv.classList.contains('hidden-table');
@@ -1803,13 +1846,15 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
     if (limitedInfoSpan && !isHidden) {
         if (tableInfo.limited) {
             limitedInfoSpan.innerHTML = `
-                <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.scrollMore}</span>
-                <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.scrollMore}</span>
+                <span class="lang-ko">${t('ui.scrollMore')}</span>
+                <span class="lang-en">${t('ui.scrollMore')}</span>
+                <span class="lang-vi">${t('ui.scrollMore')}</span>
             `;
         } else {
             limitedInfoSpan.innerHTML = `
-                <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.allDataLoaded}</span>
-                <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.allDataLoaded}</span>
+                <span class="lang-ko">${t('ui.allDataLoaded')}</span>
+                <span class="lang-en">${t('ui.allDataLoaded')}</span>
+                <span class="lang-vi">${t('ui.allDataLoaded')}</span>
             `;
         }
         limitedInfoSpan.classList.add('visible');
@@ -1828,7 +1873,7 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
                 const noDataRow = document.createElement('tr');
                 const noDataCell = document.createElement('td');
                 noDataCell.colSpan = tableInfo.columns.length;
-                noDataCell.innerHTML = `<span class="lang-ko no-data-message">${translations.ko.noData}</span><span class="lang-en no-data-message">${translations.en.noData}</span>`;
+                noDataCell.innerHTML = `<span class="lang-ko no-data-message">${t('ui.noData')}</span><span class="lang-en no-data-message">${t('ui.noData')}</span><span class="lang-vi no-data-message">${t('ui.noData')}</span>`;
                 noDataCell.style.textAlign = 'center';
                 if (wasFocused) {
                     noDataCell.classList.add('focused');
@@ -2084,20 +2129,22 @@ function appendTableData(tableName, tableInfo, translations, currentLang) {
 
     const countSpan = document.getElementById(`${tableName}_count`);
     if (countSpan) {
-        countSpan.textContent = `(${tableInfo.count} ${translations[currentLang].rows})`;
+        countSpan.textContent = `(${tableInfo.count} ${t('ui.rows')})`;
     }
 
     const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
     if (limitedInfoSpan) {
         if (tableInfo.limited) {
             limitedInfoSpan.innerHTML = `
-                <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.scrollMore}</span>
-                <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.scrollMore}</span>
+                <span class="lang-ko">${t('ui.scrollMore')}</span>
+                <span class="lang-en">${t('ui.scrollMore')}</span>
+                <span class="lang-vi">${t('ui.scrollMore')}</span>
             `;
         } else {
             limitedInfoSpan.innerHTML = `
-                <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko.allDataLoaded}</span>
-                <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en.allDataLoaded}</span>
+                <span class="lang-ko">${t('ui.allDataLoaded')}</span>
+                <span class="lang-en">${t('ui.allDataLoaded')}</span>
+                <span class="lang-vi">${t('ui.allDataLoaded')}</span>
             `;
         }
         limitedInfoSpan.classList.add('visible');
@@ -2123,10 +2170,10 @@ export function fetchTableCount(tableName, baseUrl, translations, currentLang) {
     .then(data => {
         const countSpan = document.getElementById(`${tableName}_count`);
         if (data.count !== undefined) {
-            countSpan.textContent = `(${data.count} ${translations[currentLang].rows})`;
+            countSpan.textContent = `(${data.count} ${t('ui.rows')})`;
             return data.count;
         } else {
-            countSpan.textContent = `(0 ${translations[currentLang].rows})`;
+            countSpan.textContent = `(0 ${t('ui.rows')})`;
             return 0;
         }
     })
@@ -3464,10 +3511,11 @@ export function handleTableScroll(wrapper, tableName) {
             }
     
             const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
-            if (limitedInfoSpan && translations) {
+            if (limitedInfoSpan) {
                 limitedInfoSpan.innerHTML = `
-                    <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">${translations.ko?.scrollMore || '스크롤하여 더 많은 데이터 불러오기!'}</span>
-                    <span class="lang-en" style="display: ${currentLang === 'en' ? 'inline' : 'none'}">${translations.en?.scrollMore || 'Scroll to load more data!'}</span>
+                    <span class="lang-ko">${t('ui.scrollMore')}</span>
+                    <span class="lang-en">${t('ui.scrollMore')}</span>
+                    <span class="lang-vi">${t('ui.scrollMore')}</span>
                 `;
                 limitedInfoSpan.classList.add('visible');
             }

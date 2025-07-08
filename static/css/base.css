@@ -248,10 +248,47 @@ h1[contenteditable="true"]:focus {
     font-family: Poppins, sans-serif;
 }
 
+.lang-vi {
+    font-family: Poppins, sans-serif;
+}
+
+/* Default visibility - English by default */
 .lang-en {
-    display: inline;  /* Changed from 'none' to 'inline' */
+    display: inline;
 }
 
 .lang-ko {
-    display: none;    /* Changed from 'inline' to 'none' */
+    display: none;
+}
+
+.lang-vi {
+    display: none;
+}
+
+/* Language-specific visibility based on data-lang attribute */
+[data-lang="ko"] .lang-ko {
+    display: inline !important;
+}
+
+[data-lang="ko"] .lang-en,
+[data-lang="ko"] .lang-vi {
+    display: none !important;
+}
+
+[data-lang="en"] .lang-en {
+    display: inline !important;
+}
+
+[data-lang="en"] .lang-ko,
+[data-lang="en"] .lang-vi {
+    display: none !important;
+}
+
+[data-lang="vi"] .lang-vi {
+    display: inline !important;
+}
+
+[data-lang="vi"] .lang-ko,
+[data-lang="vi"] .lang-en {
+    display: none !important;
 }

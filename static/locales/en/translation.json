@@ -1,0 +1,96 @@
+{
+  "connection": {
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "noDatabase": "No Database",
+    "attemptPrefix": "Attempt (",
+    "attemptSuffix": ")"
+  },
+  "ui": {
+    "hide": "Hide",
+    "show": "Show",
+    "noData": "No data available.",
+    "scrollMore": "Scroll to load more data!",
+    "allDataLoaded": "All data loaded.",
+    "rows": "rows",
+    "timeUnit": "s"
+  },
+  "admin": {
+    "adminMode": "ADMIN MODE",
+    "adminTooltip": "Ignoring foreign key checks - Use with caution",
+    "customQuery": "Custom SQL query",
+    "afterSelectingCell": "After selecting a cell:",
+    "addNewRow": "Add new empty row",
+    "deleteRow": "Delete selected row",
+    "deleteAllMatching": "Delete all rows matching value",
+    "editValue": "Edit value",
+    "oneMoreClick": "One more click"
+  },
+  "schema": {
+    "schema": "SCHEMA",
+    "tooltip": "See the latest SCHEMA from the database"
+  },
+  "database": {
+    "addNewDatabase": "Add New Database",
+    "goBack": "Go Back",
+    "smartOrder": "Smart Order",
+    "smartOrderTooltip": "Order tables by foreign keys",
+    "databaseType": "Database Type",
+    "host": "Host",
+    "user": "User",
+    "password": "Password",
+    "database": "Database",
+    "add": "Add",
+    "connect": "Connect"
+  },
+  "favicon": {
+    "useCustomFavicon": "Use Custom Favicon",
+    "uploadFavicon": "Upload Favicon"
+  },
+  "logo": {
+    "useCustomLogo": "Use Custom Logo",
+    "uploadLogo": "Upload Logo"
+  },
+  "monitoring": {
+    "pausedCopying": "Monitoring is paused since you are copying texts",
+    "refreshRate": "Refresh rate"
+  },
+  "query": {
+    "customQuery": "Custom Query",
+    "execute": "Execute"
+  },
+  "schema": {
+    "layoutSpacing": "Layout Spacing",
+    "tight": "Tight",
+    "spread": "Spread",
+    "arrowStyle": "Arrow Style",
+    "elbow": "Elbow",
+    "straight": "Straight",
+    "curved": "Curved",
+    "resetLayout": "Reset Layout",
+    "optimizeLayout": "Optimize Layout",
+    "pause": "Pause",
+    "resume": "Resume",
+    "optimizing": "Optimizing..."
+  },
+  "image": {
+    "displaySettings": "Image Display Settings",
+    "showImagesInTable": "Show images in table instead of paths",
+    "pathPrefixes": "Image Path Prefixes",
+    "add": "Add",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "imagePath": "Image Path",
+    "download": "Download",
+    "prefixHelp": "Add URL prefixes to help locate images",
+    "webImages": "For web images",
+    "localFiles": "For local files",
+    "securityNote": "Note: Local file access may be limited by browser security. For best results with local files, consider setting up a local web server."
+  },
+  "languages": {
+    "korean": "한국어",
+    "english": "English",
+    "vietnamese": "Tiếng Việt"
+  }
+}

@@ -900,8 +900,8 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         optimizeLayoutBtn.addEventListener('click', () => {
             if (d3Renderer) {
                 // Show loading state
-                const originalText = optimizeLayoutBtn.textContent;
-                optimizeLayoutBtn.textContent = 'Optimizing...';
+                const originalHTML = optimizeLayoutBtn.innerHTML;
+                optimizeLayoutBtn.innerHTML = `<span class="lang-ko">최적화 중...</span><span class="lang-en">Optimizing...</span><span class="lang-vi">Đang tối ưu...</span>`;
                 optimizeLayoutBtn.disabled = true;
 
                 // Use setTimeout to allow UI to update before heavy computation
@@ -914,7 +914,7 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                         }
                     } finally {
                         // Restore button state
-                        optimizeLayoutBtn.textContent = originalText;
+                        optimizeLayoutBtn.innerHTML = originalHTML;
                         optimizeLayoutBtn.disabled = false;
                     }
                 }, 50);
@@ -926,7 +926,10 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         pauseSimulationBtn.addEventListener('click', () => {
             if (d3Renderer) {
                 const isPaused = d3Renderer.pauseSimulation();
-                pauseSimulationBtn.textContent = isPaused ? 'Resume' : 'Pause';
+                // Update button text with language spans
+                pauseSimulationBtn.innerHTML = isPaused ?
+                    `<span class="lang-ko">재개</span><span class="lang-en">Resume</span><span class="lang-vi">Tiếp tục</span>` :
+                    `<span class="lang-ko">일시정지</span><span class="lang-en">Pause</span><span class="lang-vi">Tạm dừng</span>`;
                 pauseSimulationBtn.classList.toggle('active', isPaused);
             }
         });

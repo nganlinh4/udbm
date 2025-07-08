@@ -17,6 +17,10 @@
                     <span>Refresh</span>
                     <span>rate</span>
                 </span>
+                <span class="lang-vi">
+                    <span>Tần suất</span>
+                    <span>làm mới</span>
+                </span>
             </div>
             <select id="monitorDropdown" class="monitor-dropdown">
                 <option value="500">0.5</option>
@@ -42,8 +46,7 @@
                     <path class="pause-path" fill="currentColor" d="M6,5 L10,5 L10,19 L6,19 L6,5 M14,5 L18,5 L18,19 L14,19 L14,5"></path>
                 </svg>
                 <div class="tooltip temp-tooltip" style="display: none;">
-                    <span class="lang-ko">텍스트를 복사하는 동안 모니터링이 일시 중지되었습니다</span>
-                    <span class="lang-en">Monitoring is paused since you are copying texts</span>
+                    <span data-i18n="monitoring.pausedCopying">Monitoring is paused since you are copying texts</span>
                 </div>
             </button>
         </div>
@@ -56,12 +59,10 @@
                 <div class="db-list"></div>
                 <button id="addDbButton" class="add-db-button">
                     <span class="add-text">
-                        <span class="lang-ko">새 데이터베이스 추가</span>
-                        <span class="lang-en">Add New Database</span>
+                        <span data-i18n="database.addNewDatabase">Add New Database</span>
                     </span>
                     <span class="back-text" style="display: none;">
-                        <span class="lang-ko">뒤로 가기</span>
-                        <span class="lang-en">Go Back</span>
+                        <span data-i18n="database.goBack">Go Back</span>
                     </span>
                 </button>
                 <div class="favicon-controls">
@@ -69,6 +70,7 @@
                         <span class="switch-label">
                             <span class="lang-ko">사용자 지정 파비콘 사용</span>
                             <span class="lang-en">Use Custom Favicon</span>
+                            <span class="lang-vi">Sử dụng Favicon tùy chỉnh</span>
                         </span>
                         <label class="switch">
                             <input type="checkbox" id="faviconToggle">
@@ -80,6 +82,7 @@
                         <button class="upload-button" onclick="document.getElementById('faviconUpload').click()">
                             <span class="lang-ko">파비콘 업로드</span>
                             <span class="lang-en">Upload Favicon</span>
+                            <span class="lang-vi">Tải lên Favicon</span>
                         </button>
                     </div>
                 </div>
@@ -88,6 +91,7 @@
                         <span class="switch-label">
                             <span class="lang-ko">사용자 지정 로고 사용</span>
                             <span class="lang-en">Use Custom Logo</span>
+                            <span class="lang-vi">Sử dụng Logo tùy chỉnh</span>
                         </span>
                         <label class="switch">
                             <input type="checkbox" id="logoToggle">
@@ -99,6 +103,7 @@
                         <button class="upload-button" onclick="document.getElementById('logoUpload').click()">
                             <span class="lang-ko">로고 업로드</span>
                             <span class="lang-en">Upload Logo</span>
+                            <span class="lang-vi">Tải lên Logo</span>
                         </button>
                     </div>
                 </div>
