@@ -15,6 +15,26 @@
 
 A real-time web-based database monitoring system that focus on monitoring tables' data. You can use it for multiple databases, free and locally. Monitor your MySQL and PostgreSQL databases with a modern, responsive interface.
 
+## Quick Installation
+
+### Automated Installation (Recommended)
+
+**Linux/macOS:**
+```bash
+./install.sh
+./run.sh
+```
+
+**Windows:**
+```cmd
+install.bat
+run.bat
+```
+
+Then open your browser to: `http://127.0.0.1:5046`
+
+📖 **For detailed installation instructions, troubleshooting, and manual setup, see [INSTALL.md](INSTALL.md)**
+
 ## Features
 
 - Real-time monitoring for MySQL and PostgreSQL databases, at any scale
