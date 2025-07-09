@@ -10,7 +10,7 @@ import {
     connectionAttempts,
     t
 } from './utils.js';
-import './language-dropdown.js';
+import './main-lang-switcher.js';
 import './simple-lang-switcher.js';
 import { 
     updateSingleTable, 

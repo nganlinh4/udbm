@@ -10,7 +10,7 @@
     cursor: pointer;
     box-shadow: var(--md-elevation-level2);
     position: absolute;
-    right: 358px;
+    right: 295px;
     z-index: 100;
     min-width: 95px;
 }
