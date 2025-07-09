@@ -25,7 +25,7 @@
 }
 
 .setup-content {
-    width: 400px;
+    width: 500px;
     text-align: center;
     padding: 2rem;
     border-radius: 24px;
@@ -36,12 +36,14 @@
     background: linear-gradient(145deg, rgba(var(--md-sys-color-surface), 0.9), rgba(var(--md-sys-color-surface-variant), 0.9));
     transform: translateY(0);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
 }
 
-.setup-content:hover {
+/* Temporarily disable hover transform to test click events */
+/* .setup-content:hover {
     transform: translateY(-5px);
     box-shadow: var(--md-elevation-level8);
-}
+} */
 
 .setup-header {
     position: relative;
@@ -50,22 +52,60 @@
 }
 
 .setup-controls {
-    position: absolute;
-    right: 0;
-    top: 0;
+    position: fixed;
+    right: 20px;
+    top: 20px;
     display: flex;
     align-items: center;
-    gap: 180px;
+    gap: 12px;
+    pointer-events: auto;
+    z-index: 99999;
+    background: rgba(0, 0, 0, 0.1);
+    padding: 8px;
+    border-radius: 12px;
 }
 
 .setup-language-switcher {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: var(--md-sys-color-surface);
-    padding: 4px 12px;
-    border-radius: 20px;
-    border: 1px solid var(--md-sys-color-outline);
+}
+
+/* Aggressive language cycler button */
+.setup-lang-cycler {
+    background: var(--md-sys-color-primary) !important;
+    color: var(--md-sys-color-on-primary) !important;
+    border: 2px solid var(--md-sys-color-primary) !important;
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: 999999 !important;
+    min-width: 60px !important;
+    text-align: center !important;
+}
+
+.setup-lang-cycler:hover {
+    background: var(--md-sys-color-primary-container) !important;
+    color: var(--md-sys-color-on-primary-container) !important;
+    transform: scale(1.05) !important;
+}
+
+.setup-lang-cycler:active {
+    transform: scale(0.95) !important;
+}
+
+/* Protect button from i18next interference */
+.setup-lang-cycler.no-translate {
+    /* Ensure the button content is never modified by translation systems */
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
 }
 
 .setup-theme-switcher {
@@ -81,6 +121,24 @@
 .setup-controls .switch {
     margin: 0;
     height: 24px;
+}
+
+/* Fix z-index for language dropdown in setup context */
+.initial-setup .language-dropdown-menu {
+    z-index: 10000;
+}
+
+/* Ensure language dropdown is clickable in setup context */
+.setup-controls .language-dropdown {
+    pointer-events: auto;
+    position: relative;
+    z-index: 10002;
+}
+
+.setup-controls .language-dropdown-button {
+    pointer-events: auto;
+    position: relative;
+    z-index: 10003;
 }
 
 .setup-content h1 {

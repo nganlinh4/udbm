@@ -4,26 +4,9 @@
         <div class="setup-header">
             <div class="setup-controls">
                 <div class="setup-language-switcher">
-                    <div class="language-dropdown" id="initialLanguageDropdown">
-                        <button class="language-dropdown-button" id="initialLanguageDropdownButton">
-                            <span class="current-language" data-i18n="languages.english">English</span>
-                            <span class="arrow"></span>
-                        </button>
-                        <div class="language-dropdown-menu" id="initialLanguageDropdownMenu">
-                            <div class="language-dropdown-item" data-lang="ko">
-                                <span class="flag">🇰🇷</span>
-                                <span class="name" data-i18n="languages.korean">한국어</span>
-                            </div>
-                            <div class="language-dropdown-item active" data-lang="en">
-                                <span class="flag">🇺🇸</span>
-                                <span class="name" data-i18n="languages.english">English</span>
-                            </div>
-                            <div class="language-dropdown-item" data-lang="vi">
-                                <span class="flag">🇻🇳</span>
-                                <span class="name" data-i18n="languages.vietnamese">Tiếng Việt</span>
-                            </div>
-                        </div>
-                    </div>
+                    <button id="setupLangCycler" class="setup-lang-cycler no-translate" data-no-translate="true" title="Click to change language">
+                        🇺🇸 EN
+                    </button>
                 </div>
                 <div class="setup-theme-switcher">
                     <label class="theme-switch" title="Toggle dark mode">

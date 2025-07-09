@@ -11,6 +11,7 @@ import {
     t
 } from './utils.js';
 import './language-dropdown.js';
+import './simple-lang-switcher.js';
 import { 
     updateSingleTable, 
     fetchTableData, 

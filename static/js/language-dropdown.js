@@ -11,14 +11,13 @@ export class LanguageDropdown {
     
     init() {
         if (!this.dropdown || !this.button || !this.menu) {
-            console.warn('Language dropdown elements not found');
             return;
         }
-        
+
         // Set initial language from cookie or default
         const savedLang = this.getCookie('preferred_language') || 'en';
         this.setLanguage(savedLang, false);
-        
+
         // Button click handler
         this.button.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -58,6 +57,7 @@ export class LanguageDropdown {
     }
     
     toggle() {
+        console.log('Toggle called, current state:', this.dropdown.classList.contains('open'));
         if (this.dropdown.classList.contains('open')) {
             this.close();
         } else {
@@ -141,12 +141,15 @@ document.addEventListener('DOMContentLoaded', () => {
         'languageDropdownMenu'
     );
     
-    // Initial setup language dropdown
-    const initialDropdown = new LanguageDropdown(
-        'initialLanguageDropdown',
-        'initialLanguageDropdownButton',
-        'initialLanguageDropdownMenu'
-    );
+    // Initial setup language dropdown (only if elements exist)
+    let initialDropdown = null;
+    if (document.getElementById('initialLanguageDropdown')) {
+        initialDropdown = new LanguageDropdown(
+            'initialLanguageDropdown',
+            'initialLanguageDropdownButton',
+            'initialLanguageDropdownMenu'
+        );
+    }
     
     // Store references globally for other scripts
     window.languageDropdowns = {
@@ -159,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
 export function initializeLanguageDropdown() {
     // This function maintains compatibility with existing code
     // that might call initializeLanguage
-    console.log('Language dropdown system initialized');
 }
 
 // Export for use in other modules
