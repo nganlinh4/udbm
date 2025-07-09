@@ -70,7 +70,7 @@
     width: 100%;
     padding: 16px;
     border: 2px solid var(--md-sys-color-outline);
-    border-radius: 8px;
+    border-radius: 32px;
     background: var(--md-sys-color-surface);
     font-size: 14px;
     transition: all 0.2s ease;
@@ -87,6 +87,7 @@
 [data-theme="dark"] .material-form .form-group input:focus + label,
 [data-theme="dark"] .material-form .form-group input:not(:placeholder-shown) + label {
     background: var(--md-sys-color-surface);
+    border-radius: 5px;
 }
 
 .material-form .form-group input:focus {

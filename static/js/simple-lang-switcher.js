@@ -68,18 +68,9 @@ function setLanguageCookie(lang) {
     document.cookie = `preferred_language=${lang};expires=${expires.toUTCString()};path=/`;
 }
 
-// Aggressive translation function that actually works
+// Simple translation function using manual span switching
 function translatePage(langCode) {
-    // First, try to use i18next if available
-    if (window.i18next && window.i18next.changeLanguage) {
-        try {
-            window.i18next.changeLanguage(langCode);
-        } catch (error) {
-            console.warn('i18next failed, using manual translation');
-        }
-    }
-
-    // Also do manual translation as backup
+    // Manual translation using language spans (primary method for setup page)
     // Hide all language spans
     const allLangSpans = document.querySelectorAll('.lang-en, .lang-ko, .lang-vi');
     allLangSpans.forEach(span => {
@@ -96,13 +87,25 @@ function translatePage(langCode) {
     document.documentElement.setAttribute('lang', langCode);
     document.documentElement.setAttribute('data-lang', langCode);
 
+    // Only try i18next if we're on the main interface (not setup page)
+    if (document.getElementById('main-interface') &&
+        window.i18next &&
+        window.i18next.changeLanguage &&
+        window.i18next.isInitialized &&
+        typeof window.i18next.changeLanguage === 'function') {
+        try {
+            if (window.i18next.hasResourceBundle && window.i18next.hasResourceBundle(langCode)) {
+                window.i18next.changeLanguage(langCode);
+            }
+        } catch (error) {
+            // Silently ignore i18next errors on setup page
+        }
+    }
+
     // Dispatch language change event for other systems
     window.dispatchEvent(new CustomEvent('languageChanged', {
         detail: { language: langCode }
     }));
-
-    // Force a reflow to ensure changes are applied
-    document.body.offsetHeight;
 }
 
 // Initialize simple language switcher

@@ -33,20 +33,28 @@ function setMainLanguageCookie(lang) {
 function changeMainLanguage(langCode) {
     // Set cookie
     setMainLanguageCookie(langCode);
-    
+
     // Update document attribute
     document.documentElement.setAttribute('lang', langCode);
     document.documentElement.setAttribute('data-lang', langCode);
-    
-    // Use existing i18next system
-    if (window.i18next && window.i18next.changeLanguage) {
+
+    // Use existing i18next system with better error handling
+    if (window.i18next &&
+        window.i18next.changeLanguage &&
+        window.i18next.isInitialized &&
+        typeof window.i18next.changeLanguage === 'function') {
         try {
-            window.i18next.changeLanguage(langCode);
+            // Check if i18next has the language loaded
+            if (window.i18next.hasResourceBundle && window.i18next.hasResourceBundle(langCode)) {
+                window.i18next.changeLanguage(langCode);
+            } else {
+                console.warn('i18next: Language bundle not found for', langCode);
+            }
         } catch (error) {
             console.warn('i18next error:', error);
         }
     }
-    
+
     // Use existing global changeLanguage function
     if (window.changeLanguage && typeof window.changeLanguage === 'function') {
         try {
@@ -55,10 +63,10 @@ function changeMainLanguage(langCode) {
             console.warn('Global changeLanguage error:', error);
         }
     }
-    
+
     // Dispatch language change event
-    window.dispatchEvent(new CustomEvent('languageChanged', { 
-        detail: { language: langCode } 
+    window.dispatchEvent(new CustomEvent('languageChanged', {
+        detail: { language: langCode }
     }));
 }
 
