@@ -13,6 +13,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedLogoData && savedLogoEnabled) {
         pageLogo.style.display = 'block';
         pageLogo.innerHTML = '<img src="' + savedLogoData + '" alt="Page Logo"><div class="resize-handle"></div>';
+
+        // Apply saved width if available
+        var savedWidth = localStorage.getItem('logoWidth');
+        if (savedWidth) {
+            pageLogo.style.width = savedWidth + 'px';
+        }
     }
 
     // Handle logo toggle
@@ -23,10 +29,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.checked && localStorage.getItem('pageLogo')) {
             pageLogo.style.display = 'block';
             pageLogo.innerHTML = '<img src="' + localStorage.getItem('pageLogo') + '" alt="Page Logo"><div class="resize-handle"></div>';
+
+            // Apply saved width if available
+            var savedWidth = localStorage.getItem('logoWidth');
+            if (savedWidth) {
+                pageLogo.style.width = savedWidth + 'px';
+            }
         }
         
         if (!this.checked) {
-            pageLogo.innerHTML = '<div class="resize-handle"></div>';
+            pageLogo.innerHTML = '';
             pageLogo.style.display = 'none';
         }
     });
@@ -43,6 +55,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 pageLogo.style.display = 'block';
                 logoToggle.checked = true;
                 localStorage.setItem('logoEnabled', true);
+
+                // Apply saved width if available
+                var savedWidth = localStorage.getItem('logoWidth');
+                if (savedWidth) {
+                    pageLogo.style.width = savedWidth + 'px';
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -69,6 +87,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 pageLogo.style.display = 'block';
                 logoToggle.checked = true;
                 localStorage.setItem('logoEnabled', true);
+
+                // Apply saved width if available
+                var savedWidth = localStorage.getItem('logoWidth');
+                if (savedWidth) {
+                    pageLogo.style.width = savedWidth + 'px';
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -78,23 +102,28 @@ document.addEventListener('DOMContentLoaded', function() {
     var isResizing = false;
     var originalWidth;
     var originalX;
-    
+
     function initResize(e) {
         isResizing = true;
         originalWidth = pageLogo.offsetWidth;
         originalX = e.clientX;
         pageLogo.classList.add('resizing');
-        
+
+        // Prevent text selection during resize
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'se-resize';
+
         document.addEventListener('mousemove', handleResize);
         document.addEventListener('mouseup', stopResize);
         e.preventDefault();
+        e.stopPropagation();
     }
 
     function handleResize(e) {
         if (!isResizing) return;
-        
+
         var width = originalWidth + (e.clientX - originalX);
-        if (width >= 50 && width <= 200) {
+        if (width >= 50 && width <= 1000) {
             pageLogo.style.width = width + 'px';
             localStorage.setItem('logoWidth', width);
         }
@@ -103,21 +132,39 @@ document.addEventListener('DOMContentLoaded', function() {
     function stopResize() {
         isResizing = false;
         pageLogo.classList.remove('resizing');
+
+        // Restore normal cursor and text selection
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+
         document.removeEventListener('mousemove', handleResize);
         document.removeEventListener('mouseup', stopResize);
     }
 
-    // Add resize handle event listener
-    pageLogo.addEventListener('mousedown', function(e) {
-        var handle = pageLogo.querySelector('.resize-handle');
-        if (e.target === handle) {
+    // Add resize handle event listener using event delegation
+    document.addEventListener('mousedown', function(e) {
+        if (e.target.classList.contains('resize-handle') && e.target.closest('#pageLogo')) {
+            console.log('Resize handle clicked'); // Debug log
             initResize(e);
         }
     });
 
-    // Initialize logo width from localStorage
-    var savedWidth = localStorage.getItem('logoWidth');
-    if (savedWidth) {
-        pageLogo.style.width = savedWidth + 'px';
-    }
+    // Add visual feedback for resize handle
+    document.addEventListener('mouseover', function(e) {
+        if (e.target.classList.contains('resize-handle') && e.target.closest('#pageLogo')) {
+            e.target.style.opacity = '1';
+            e.target.style.transform = 'scale(1.2)';
+        }
+    });
+
+    document.addEventListener('mouseout', function(e) {
+        if (e.target.classList.contains('resize-handle') && e.target.closest('#pageLogo')) {
+            if (!isResizing) {
+                e.target.style.opacity = '';
+                e.target.style.transform = '';
+            }
+        }
+    });
+
+
 });
