@@ -783,7 +783,7 @@ tr {
 
 .image-settings-header h3 {
     margin: 0;
-    font-size: 1.2em;
+    font-size: 1.4em;
     color: var(--md-sys-color-on-surface);
     font-weight: 500;
 }
@@ -1075,7 +1075,7 @@ tr {
 }
 
 .switch-label {
-    font-size: 14px;
+    font-size: 16px;
     color: var(--md-sys-color-on-surface);
     font-weight: 600;
     flex: 1;
@@ -1083,7 +1083,7 @@ tr {
 }
 
 .setting-label {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--md-sys-color-on-surface);
     margin-bottom: 8px;
@@ -1148,7 +1148,7 @@ tr {
     border-radius: 8px;
     background: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
-    font-size: 14px;
+    font-size: 16px;
     min-height: 36px;
     box-sizing: border-box;
 }
@@ -1166,7 +1166,7 @@ tr {
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 500;
     transition: background 0.2s ease;
     min-height: 36px;
@@ -1185,7 +1185,7 @@ tr {
 
 .prefix-help small {
     color: var(--md-sys-color-on-surface-variant);
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.4;
 }
 
@@ -1203,7 +1203,7 @@ tr {
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     transition: all 0.2s ease;
 }

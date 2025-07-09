@@ -14,15 +14,35 @@
                 <input type="checkbox" id="adminToggle">
                 <span class="switch-slider"></span>
             </label>
-            <div class="tooltip">
-                <span data-i18n="admin.adminTooltip">Ignoring foreign key checks - Use with caution</span><br>
-                <hr>
-                <kbd>Q</kbd> - <span data-i18n="admin.customQuery">Custom SQL query</span><br>
-                <span data-i18n="admin.afterSelectingCell">After selecting a cell:</span><br>
-                <kbd>A</kbd> - <span data-i18n="admin.addNewRow">Add new empty row</span><br>
-                <kbd>D</kbd> - <span data-i18n="admin.deleteRow">Delete selected row</span><br>
-                <kbd>X</kbd> - <span data-i18n="admin.deleteAllMatching">Delete all rows matching value</span><br>
-                <kbd><span data-i18n="admin.oneMoreClick">One more click</span></kbd> - <span data-i18n="admin.editValue">Edit value</span>
+            <div class="tooltip admin-tooltip">
+                <div class="tooltip-warning">
+                    <span data-i18n="admin.adminTooltip">Ignoring foreign key checks - Use with caution</span>
+                </div>
+                <div class="tooltip-content">
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">Q</span>
+                        <span class="shortcut-desc" data-i18n="admin.customQuery">Custom SQL query</span>
+                    </div>
+                    <div class="shortcut-section">
+                        <span data-i18n="admin.afterSelectingCell">After selecting a cell:</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">A</span>
+                        <span class="shortcut-desc" data-i18n="admin.addNewRow">Add new empty row</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">D</span>
+                        <span class="shortcut-desc" data-i18n="admin.deleteRow">Delete selected row</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">X</span>
+                        <span class="shortcut-desc" data-i18n="admin.deleteAllMatching">Delete all rows matching value</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key" data-i18n="admin.oneMoreClick">Click</span>
+                        <span class="shortcut-desc" data-i18n="admin.editValue">Edit value</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

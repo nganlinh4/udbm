@@ -75,47 +75,82 @@
     transform: translate(-50%, 4px);
 }
 
-/* Admin mode tooltip specific styles */
-.switch-container .tooltip {
+/* Modern Admin Tooltip Styles */
+.switch-container .admin-tooltip {
     position: absolute;
     top: 130%;
     left: 50%;
     transform: translate(-50%, 8px);
-    min-width: 280px;
-    line-height: 1.5;
-    padding: 12px 20px;
+    width: 290px;
+    padding: 0;
     opacity: 0;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
-    font-size: 0.9em;
-    background: rgba(97, 97, 97, 0.9);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background: #2d3748;
+    border-radius: 8px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.switch-container .tooltip span {
-    display: block;
-    text-align: left;
+.switch-container .admin-tooltip .tooltip-warning {
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    color: white;
+    padding: 8px 12px;
+    font-size: 1em;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.switch-container .tooltip kbd {
-    display: inline-block;
-    padding: 3px 8px;
-    margin: 0 2px;
-    background: rgba(255, 255, 255, 0.15);
+.switch-container .admin-tooltip .tooltip-content {
+    padding: 8px 0;
+    background: #2d3748;
+}
+
+.switch-container .admin-tooltip .shortcut-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 12px;
+    transition: background-color 0.2s ease;
+}
+
+.switch-container .admin-tooltip .shortcut-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.switch-container .admin-tooltip .shortcut-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, #4299e1, #3182ce);
+    color: white;
     border-radius: 4px;
     font-size: 0.9em;
-    font-weight: 500;
-    color: #fff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    font-weight: 700;
+    margin-right: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
 }
 
-.switch-container .tooltip hr {
-    border: none;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.15);
-    margin: 10px 0;
-    padding: 0;
+.switch-container .admin-tooltip .shortcut-desc {
+    color: #e2e8f0;
+    font-size: 1em;
+    line-height: 1.3;
 }
+
+.switch-container .admin-tooltip .shortcut-section {
+    padding: 6px 12px 2px;
+    color: #a0aec0;
+    font-size: 0.9em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+
 
 [data-theme="dark"] .switch-container .tooltip {
     background: rgba(97, 97, 97, 0.9);
