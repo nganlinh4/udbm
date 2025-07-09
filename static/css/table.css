@@ -3,10 +3,13 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 8px;
-    border-radius: 16px;
+    padding: 6px 12px;
+    border-radius: 20px;
     margin-right: 10px;
     cursor: default;
+    height: 32px;
+    box-sizing: border-box;
+    position: relative;
 }
 
 .arrangement-switch {
@@ -1340,7 +1343,7 @@ tr {
     margin: 20px 0;
     -webkit-overflow-scrolling: touch;
     max-height: none;
-    align-items: flex-start;
+    align-items: center;
     opacity: 0;
     transition: opacity 0.3s ease-out;
     will-change: opacity;

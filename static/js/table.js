@@ -1340,6 +1340,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize image settings
     initializeImageSettings();
 
+    // Ensure translations are applied to table interface elements
+    if (window.updateTranslations) {
+        window.updateTranslations();
+    } else if (window.updateDataI18nElements) {
+        const currentLang = document.documentElement.getAttribute('data-lang') || 'en';
+        window.updateDataI18nElements(currentLang);
+    }
+
+    // Also try again after a short delay in case i18next is still initializing
+    setTimeout(() => {
+        if (window.updateTranslations) {
+            window.updateTranslations();
+        } else if (window.updateDataI18nElements) {
+            const currentLang = document.documentElement.getAttribute('data-lang') || 'en';
+            window.updateDataI18nElements(currentLang);
+        }
+    }, 500);
+
     const adminToggle = document.getElementById('adminToggle');
     const arrangementToggle = document.getElementById('arrangementToggle');
     

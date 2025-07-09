@@ -1,11 +1,15 @@
 <div class="table-buttons-line">
     <div class="arrangement-mode">
         <span class="arrangement-label">
-            <span data-i18n="database.smartOrder">Smart Order</span>
+            <span class="lang-ko">스마트정렬</span>
+            <span class="lang-en">Smart Order</span>
+            <span class="lang-vi">Sắp xếp thông minh</span>
         </span>
         <md-switch id="arrangementToggle" aria-label="Smart Order Toggle"></md-switch>
         <div class="tooltip">
-            <span data-i18n="database.smartOrderTooltip">Order tables by foreign keys</span>
+            <span class="lang-ko">외래 키를 기준으로 테이블을 정렬합니다</span>
+            <span class="lang-en">Order tables by foreign keys</span>
+            <span class="lang-vi">Sắp xếp bảng theo khóa ngoại</span>
         </div>
     </div>
     {% for table in tables %}

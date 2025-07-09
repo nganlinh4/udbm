@@ -17,18 +17,23 @@ md-switch {
     --md-switch-track-height: 32px;
     --md-switch-handle-width: 24px;
     --md-switch-handle-height: 24px;
-    
+
     /* Use Material Design 3 colors */
     --md-switch-selected-track-color: var(--md-sys-color-primary);
     --md-switch-selected-handle-color: var(--md-sys-color-on-primary);
     --md-switch-unselected-track-color: var(--md-sys-color-surface-variant);
     --md-switch-unselected-handle-color: var(--md-sys-color-outline);
-    
+
     /* Focus and hover states */
     --md-switch-selected-focus-track-color: var(--md-sys-color-primary);
     --md-switch-selected-hover-track-color: var(--md-sys-color-primary);
     --md-switch-unselected-focus-track-color: var(--md-sys-color-on-surface);
     --md-switch-unselected-hover-track-color: var(--md-sys-color-on-surface);
+}
+
+/* Default switch handle alignment fix */
+md-switch::part(handle) {
+    transform: translateY(1px);
 }
 
 /* Theme switcher specific styling */
@@ -39,6 +44,10 @@ md-switch {
     --md-switch-handle-height: 24px;
 }
 
+.theme-switcher md-switch::part(handle) {
+    transform: translateY(1px);
+}
+
 /* Setup theme switcher styling */
 .setup-theme-switcher md-switch {
     --md-switch-track-width: 56px;
@@ -47,12 +56,21 @@ md-switch {
     --md-switch-handle-height: 24px;
 }
 
+.setup-theme-switcher md-switch::part(handle) {
+    transform: translateY(1px);
+}
+
 /* Arrangement mode switch styling */
 .arrangement-mode md-switch {
-    --md-switch-track-width: 48px;
-    --md-switch-track-height: 28px;
-    --md-switch-handle-width: 20px;
-    --md-switch-handle-height: 20px;
+    --md-switch-track-width: 42px;
+    --md-switch-track-height: 24px;
+    --md-switch-handle-width: 16px;
+    --md-switch-handle-height: 16px;
+    --md-switch-track-shape: 12px;
+}
+
+.arrangement-mode md-switch::part(handle) {
+    transform: translateY(2px);
 }
 
 /* Header switches (favicon and logo) styling */
@@ -62,6 +80,11 @@ md-switch {
     --md-switch-track-height: 28px;
     --md-switch-handle-width: 20px;
     --md-switch-handle-height: 20px;
+}
+
+.favicon-switch md-switch::part(handle),
+.logo-switch md-switch::part(handle) {
+    transform: translateY(1px);
 }
 
 /* Icon styling for theme switches */
@@ -122,8 +145,19 @@ md-switch {
 
 /* Tooltip positioning for arrangement switch */
 .arrangement-mode .tooltip {
-    position: relative;
-    margin-left: 8px;
+    position: absolute;
+    top: 115%;
+    left: 50%;
+    transform: translate(-50%, 8px);
+    margin-left: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.arrangement-mode:hover .tooltip {
+    opacity: 1;
+    transform: translate(-50%, 4px);
 }
 
 /* Remove old switch styles that are no longer needed */
