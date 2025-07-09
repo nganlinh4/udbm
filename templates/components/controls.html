@@ -10,10 +10,7 @@
             <span data-i18n="admin.adminMode">ADMIN MODE</span>
         </span>
         <div class="switch-container">
-            <label class="switch admin-switch">
-                <input type="checkbox" id="adminToggle">
-                <span class="switch-slider"></span>
-            </label>
+            <md-switch id="adminToggle" aria-label="Admin Mode Toggle"></md-switch>
             <div class="tooltip admin-tooltip">
                 <div class="tooltip-warning">
                     <span data-i18n="admin.adminTooltip">Ignoring foreign key checks - Use with caution</span>
@@ -52,12 +49,9 @@
         </button>
     </div>
     <div class="theme-switcher">
-        <label class="theme-switch" title="Toggle dark mode">
-            <input type="checkbox" id="themeToggle" style=" margin: 7px;">
-            <span class="theme-switch-slider">
-                <span class="theme-icon sun-icon"></span>
-                <span class="theme-icon moon-icon"></span>
-            </span>
-        </label>
+        <md-switch id="themeToggle" aria-label="Toggle dark mode" icons>
+            <md-icon slot="selected-icon">dark_mode</md-icon>
+            <md-icon slot="icon">light_mode</md-icon>
+        </md-switch>
     </div>
 </div>

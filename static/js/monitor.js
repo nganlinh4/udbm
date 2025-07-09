@@ -674,10 +674,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const languageLabels = document.querySelectorAll('.switch-label');
 
     // Set initial state based on saved language
-    languageToggle.checked = currentLang === 'en';
+    languageToggle.selected = currentLang === 'en';
 
     languageToggle.addEventListener('change', () => {
-        const newLang = languageToggle.checked ? 'en' : 'ko';
+        const newLang = languageToggle.selected ? 'en' : 'ko';
         if (newLang !== currentLang) {
             // Update active states
             languageLabels.forEach(label => {
@@ -777,11 +777,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Load saved theme preference
     const savedTheme = document.documentElement.getAttribute('data-theme');
-    themeToggle.checked = savedTheme === 'dark';
+    themeToggle.selected = savedTheme === 'dark';
     isDarkMode = savedTheme === 'dark';
 
     themeToggle.addEventListener('change', () => {
-        isDarkMode = themeToggle.checked;
+        isDarkMode = themeToggle.selected;
         document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
         setCookie('preferred_theme', isDarkMode ? 'dark' : 'light', 365);
     });
@@ -791,19 +791,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (adminToggle) {
         // Load saved state from localStorage
         const savedAdminState = localStorage.getItem('adminToggleState');
-        
-        // Set the checkbox state based on saved value
-        adminToggle.checked = savedAdminState === 'true';
-        
+
+        // Set the switch state based on saved value
+        adminToggle.selected = savedAdminState === 'true';
+
         // Update body class to match the toggle state
-        document.body.classList.toggle('admin-mode', adminToggle.checked);
+        document.body.classList.toggle('admin-mode', adminToggle.selected);
 
         adminToggle.addEventListener('change', () => {
             // Save the current state to localStorage
-            localStorage.setItem('adminToggleState', adminToggle.checked.toString());
-            
+            localStorage.setItem('adminToggleState', adminToggle.selected.toString());
+
             // Update body class when toggle changes
-            document.body.classList.toggle('admin-mode', adminToggle.checked);
+            document.body.classList.toggle('admin-mode', adminToggle.selected);
         });
     }
 
@@ -1197,10 +1197,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const languageLabels = document.querySelectorAll('.switch-label');
 
     // Set initial state based on saved language
-    languageToggle.checked = currentLang === 'en';
+    languageToggle.selected = currentLang === 'en';
 
     languageToggle.addEventListener('change', () => {
-        const newLang = languageToggle.checked ? 'en' : 'ko';
+        const newLang = languageToggle.selected ? 'en' : 'ko';
         if (newLang !== currentLang) {
             // Update active states
             languageLabels.forEach(label => {
@@ -1318,11 +1318,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Load saved theme preference
     const savedTheme = document.documentElement.getAttribute('data-theme');
-    themeToggle.checked = savedTheme === 'dark';
+    themeToggle.selected = savedTheme === 'dark';
     isDarkMode = savedTheme === 'dark';
 
     themeToggle.addEventListener('change', () => {
-        isDarkMode = themeToggle.checked;
+        isDarkMode = themeToggle.selected;
         document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
         setCookie('preferred_theme', isDarkMode ? 'dark' : 'light', 365);
     });

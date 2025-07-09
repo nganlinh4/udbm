@@ -9,13 +9,10 @@
                     </button>
                 </div>
                 <div class="setup-theme-switcher">
-                    <label class="theme-switch" title="Toggle dark mode">
-                        <input type="checkbox" id="initialThemeToggle" style="margin: 7px;">
-                        <span class="theme-switch-slider">
-                            <span class="theme-icon sun-icon"></span>
-                            <span class="theme-icon moon-icon"></span>
-                        </span>
-                    </label>
+                    <md-switch id="initialThemeToggle" aria-label="Toggle dark mode" icons>
+                        <md-icon slot="selected-icon">dark_mode</md-icon>
+                        <md-icon slot="icon">light_mode</md-icon>
+                    </md-switch>
                 </div>
             </div>
         </div>

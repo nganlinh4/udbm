@@ -565,14 +565,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const useCustomFavicon = localStorage.getItem('useCustomFavicon') === 'true';
     
     // Initialize toggle state and visibility
-    faviconToggle.checked = useCustomFavicon;
+    faviconToggle.selected = useCustomFavicon;
     faviconUploadButton.style.display = useCustomFavicon ? 'block' : 'none';
     updateFavicon();
 
     // Handle favicon toggle
     faviconToggle.addEventListener('change', () => {
-        localStorage.setItem('useCustomFavicon', faviconToggle.checked);
-        faviconUploadButton.style.display = faviconToggle.checked ? 'block' : 'none';
+        localStorage.setItem('useCustomFavicon', faviconToggle.selected);
+        faviconUploadButton.style.display = faviconToggle.selected ? 'block' : 'none';
         updateFavicon();
     });
 
@@ -591,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateFavicon() {
         const favicon = document.querySelector('link[rel="icon"]');
-        if (!faviconToggle.checked) {
+        if (!faviconToggle.selected) {
             favicon.href = defaultFaviconPath;
         } else {
             const customFavicon = localStorage.getItem('customFavicon');
@@ -778,16 +778,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (adminToggle) {
         // Load saved state from localStorage
         const savedAdminState = localStorage.getItem('adminToggleState');
-        adminToggle.checked = savedAdminState === 'true';
-        
+        adminToggle.selected = savedAdminState === 'true';
+
         // Update UI to reflect the loaded state
-        document.body.classList.toggle('admin-mode', adminToggle.checked);
-        
+        document.body.classList.toggle('admin-mode', adminToggle.selected);
+
         adminToggle.addEventListener('change', () => {
             // Save state to localStorage when changed
-            localStorage.setItem('adminToggleState', adminToggle.checked);
+            localStorage.setItem('adminToggleState', adminToggle.selected);
             // Update UI based on new state
-            document.body.classList.toggle('admin-mode', adminToggle.checked);
+            document.body.classList.toggle('admin-mode', adminToggle.selected);
         });
     }
 

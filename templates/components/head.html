@@ -1,6 +1,7 @@
 <head>
     <title></title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard-dynamic-subset.css"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
@@ -12,11 +13,25 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/schema.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/logo.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/language-dropdown.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/material-switches.css') }}">
     <script src="{{ url_for('static', filename='js/icon-morph.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logo.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="{{ url_for('static', filename='js/d3-schema.js') }}"></script>
+
+    <!-- Material Web Components -->
+    <script type="importmap">
+        {
+            "imports": {
+                "@material/web/": "https://esm.run/@material/web/"
+            }
+        }
+    </script>
+    <script type="module">
+        import '@material/web/switch/switch.js';
+        import '@material/web/icon/icon.js';
+    </script>
 
     <!-- i18next for internationalization -->
     <script src="https://unpkg.com/i18next@23.7.6/dist/umd/i18next.min.js"></script>
@@ -44,17 +59,17 @@
             const initialToggle = document.getElementById('initialLanguageToggle');
             
             const setToggleState = (toggle) => {
-                if (toggle) toggle.checked = savedLang === 'en';
+                if (toggle) toggle.selected = savedLang === 'en';
             };
             [toggle, initialToggle].forEach(setToggleState);
 
             // Add event listener to initial setup language toggle
             if (initialToggle) {
                 initialToggle.addEventListener('change', function() {
-                    const newLang = this.checked ? 'en' : 'ko';
+                    const newLang = this.selected ? 'en' : 'ko';
                     document.documentElement.setAttribute('data-lang', newLang);
                     document.cookie = `preferred_language=${newLang};path=/;max-age=31536000`;
-                    if (toggle) toggle.checked = this.checked;
+                    if (toggle) toggle.selected = this.selected;
                     
                     // CSS will handle the language display based on data-lang attribute
                     
@@ -100,16 +115,16 @@
             
             // Set initial state based on current theme
             const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
-            if (mainThemeToggle) mainThemeToggle.checked = isDarkTheme;
-            if (initialThemeToggle) initialThemeToggle.checked = isDarkTheme;
-            
+            if (mainThemeToggle) mainThemeToggle.selected = isDarkTheme;
+            if (initialThemeToggle) initialThemeToggle.selected = isDarkTheme;
+
             // Add event listener to initial theme toggle
             if (initialThemeToggle) {
                 initialThemeToggle.addEventListener('change', function() {
-                    const theme = this.checked ? 'dark' : 'light';
+                    const theme = this.selected ? 'dark' : 'light';
                     document.documentElement.setAttribute('data-theme', theme);
                     document.cookie = `preferred_theme=${theme};path=/;max-age=31536000`;
-                    if (mainThemeToggle) mainThemeToggle.checked = this.checked;
+                    if (mainThemeToggle) mainThemeToggle.selected = this.selected;
                 });
             }
         });

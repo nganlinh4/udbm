@@ -449,14 +449,14 @@ function createImageSettingsModal() {
             </div>
             <div class="image-settings-body">
                 <div class="setting-group">
-                    <label class="switch-container">
-                        <input type="checkbox" id="showImagesToggle" class="switch-input">
+                    <div class="switch-container">
                         <span class="switch-label">
                             <span class="lang-ko">경로 대신 테이블에 이미지 표시</span>
                             <span class="lang-en">Show images in table instead of paths</span>
                             <span class="lang-vi">Hiển thị hình ảnh trong bảng thay vì đường dẫn</span>
                         </span>
-                    </label>
+                        <md-switch id="showImagesToggle" aria-label="Show Images Toggle"></md-switch>
+                    </div>
                 </div>
 
                 <div class="setting-group">
@@ -1346,8 +1346,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set up admin mode
     if (adminToggle) {
         adminToggle.addEventListener('change', (e) => {
-            const checked = e.target.checked;
-            isAdminMode = checked;
+            const selected = e.target.selected;
+            isAdminMode = selected;
             document.querySelectorAll('td.focused').forEach(cell => {
                 cell.classList.remove('focused');
             });

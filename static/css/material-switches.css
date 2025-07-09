@@ -1,0 +1,135 @@
+/* Material Web Switch Styling */
+
+/* Admin switch container */
+.admin-mode-container .switch-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    width: fit-content;
+}
+
+/* Material Web switch styling */
+md-switch {
+    --md-switch-track-shape: 16px;
+    --md-switch-handle-shape: 50%;
+    --md-switch-track-width: 52px;
+    --md-switch-track-height: 32px;
+    --md-switch-handle-width: 24px;
+    --md-switch-handle-height: 24px;
+    
+    /* Use Material Design 3 colors */
+    --md-switch-selected-track-color: var(--md-sys-color-primary);
+    --md-switch-selected-handle-color: var(--md-sys-color-on-primary);
+    --md-switch-unselected-track-color: var(--md-sys-color-surface-variant);
+    --md-switch-unselected-handle-color: var(--md-sys-color-outline);
+    
+    /* Focus and hover states */
+    --md-switch-selected-focus-track-color: var(--md-sys-color-primary);
+    --md-switch-selected-hover-track-color: var(--md-sys-color-primary);
+    --md-switch-unselected-focus-track-color: var(--md-sys-color-on-surface);
+    --md-switch-unselected-hover-track-color: var(--md-sys-color-on-surface);
+}
+
+/* Theme switcher specific styling */
+.theme-switcher md-switch {
+    --md-switch-track-width: 56px;
+    --md-switch-track-height: 32px;
+    --md-switch-handle-width: 24px;
+    --md-switch-handle-height: 24px;
+}
+
+/* Setup theme switcher styling */
+.setup-theme-switcher md-switch {
+    --md-switch-track-width: 56px;
+    --md-switch-track-height: 32px;
+    --md-switch-handle-width: 24px;
+    --md-switch-handle-height: 24px;
+}
+
+/* Arrangement mode switch styling */
+.arrangement-mode md-switch {
+    --md-switch-track-width: 48px;
+    --md-switch-track-height: 28px;
+    --md-switch-handle-width: 20px;
+    --md-switch-handle-height: 20px;
+}
+
+/* Header switches (favicon and logo) styling */
+.favicon-switch md-switch,
+.logo-switch md-switch {
+    --md-switch-track-width: 48px;
+    --md-switch-track-height: 28px;
+    --md-switch-handle-width: 20px;
+    --md-switch-handle-height: 20px;
+}
+
+/* Icon styling for theme switches */
+.theme-switcher md-switch md-icon,
+.setup-theme-switcher md-switch md-icon {
+    font-size: 16px;
+    color: var(--md-sys-color-on-surface);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] md-switch {
+    --md-switch-selected-track-color: var(--md-sys-color-primary);
+    --md-switch-selected-handle-color: var(--md-sys-color-on-primary);
+    --md-switch-unselected-track-color: var(--md-sys-color-surface-variant);
+    --md-switch-unselected-handle-color: var(--md-sys-color-outline);
+}
+
+/* Ensure proper spacing and alignment */
+.switch-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.arrangement-mode {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Header switch containers */
+.favicon-switch,
+.logo-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.favicon-switch .switch-container,
+.logo-switch .switch-container {
+    gap: 0;
+}
+
+.theme-switcher {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    height: 42px;
+}
+
+.setup-theme-switcher {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Tooltip positioning for arrangement switch */
+.arrangement-mode .tooltip {
+    position: relative;
+    margin-left: 8px;
+}
+
+/* Remove old switch styles that are no longer needed */
+.switch,
+.switch-slider,
+.theme-switch,
+.theme-switch-slider {
+    display: none !important;
+}

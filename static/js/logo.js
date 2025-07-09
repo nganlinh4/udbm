@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var savedLogoEnabled = localStorage.getItem('logoEnabled') === 'true';
 
     // Initialize logo state
-    logoToggle.checked = savedLogoEnabled;
+    logoToggle.selected = savedLogoEnabled;
     logoUploadButton.style.display = savedLogoEnabled ? 'block' : 'none';
     
     if (savedLogoData && savedLogoEnabled) {
@@ -23,10 +23,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle logo toggle
     logoToggle.addEventListener('change', function() {
-        logoUploadButton.style.display = this.checked ? 'block' : 'none';
-        localStorage.setItem('logoEnabled', this.checked);
-        
-        if (this.checked && localStorage.getItem('pageLogo')) {
+        logoUploadButton.style.display = this.selected ? 'block' : 'none';
+        localStorage.setItem('logoEnabled', this.selected);
+
+        if (this.selected && localStorage.getItem('pageLogo')) {
             pageLogo.style.display = 'block';
             pageLogo.innerHTML = '<img src="' + localStorage.getItem('pageLogo') + '" alt="Page Logo"><div class="resize-handle"></div>';
 
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        if (!this.checked) {
+        if (!this.selected) {
             pageLogo.innerHTML = '';
             pageLogo.style.display = 'none';
         }
@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 pageLogo.innerHTML = '<img src="' + logoData + '" alt="Page Logo"><div class="resize-handle"></div>';
                 localStorage.setItem('pageLogo', logoData);
                 pageLogo.style.display = 'block';
-                logoToggle.checked = true;
+                logoToggle.selected = true;
                 localStorage.setItem('logoEnabled', true);
 
                 // Apply saved width if available
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 pageLogo.innerHTML = '<img src="' + logoData + '" alt="Page Logo"><div class="resize-handle"></div>';
                 localStorage.setItem('pageLogo', logoData);
                 pageLogo.style.display = 'block';
-                logoToggle.checked = true;
+                logoToggle.selected = true;
                 localStorage.setItem('logoEnabled', true);
 
                 // Apply saved width if available

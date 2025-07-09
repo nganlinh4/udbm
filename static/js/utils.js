@@ -26,11 +26,11 @@ export let isDarkMode = false;
 export function initializeTheme() {
     const themeToggle = document.getElementById('themeToggle');
     const savedTheme = document.documentElement.getAttribute('data-theme');
-    themeToggle.checked = savedTheme === 'dark';
+    themeToggle.selected = savedTheme === 'dark';
     isDarkMode = savedTheme === 'dark';
 
     themeToggle.addEventListener('change', () => {
-        isDarkMode = themeToggle.checked;
+        isDarkMode = themeToggle.selected;
         document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
         setCookie('preferred_theme', isDarkMode ? 'dark' : 'light', 365);
     });
@@ -366,7 +366,7 @@ export function initializeLanguage(updateLanguage, updateStaticLanguageElements,
     const languageToggle = document.getElementById('languageToggle');
     if (languageToggle) {
         const languageLabels = document.querySelectorAll('.switch-label');
-        languageToggle.checked = currentLang === 'en';
+        languageToggle.selected = currentLang === 'en';
 
         languageToggle.addEventListener('change', () => {
             const newLang = languageToggle.checked ? 'en' : 'ko';

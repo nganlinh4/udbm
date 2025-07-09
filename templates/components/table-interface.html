@@ -3,13 +3,10 @@
         <span class="arrangement-label">
             <span data-i18n="database.smartOrder">Smart Order</span>
         </span>
-        <label class="switch arrangement-switch">
-            <input type="checkbox" id="arrangementToggle">
-            <span class="switch-slider"></span>
-            <div class="tooltip">
-                <span data-i18n="database.smartOrderTooltip">Order tables by foreign keys</span>
-            </div>
-        </label>
+        <md-switch id="arrangementToggle" aria-label="Smart Order Toggle"></md-switch>
+        <div class="tooltip">
+            <span data-i18n="database.smartOrderTooltip">Order tables by foreign keys</span>
+        </div>
     </div>
     {% for table in tables %}
     <button class="table-button" data-table="{{ table.name }}" data-theme="{{ loop.index0 % 10 }}">
