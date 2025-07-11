@@ -8,3 +8,6 @@ pandas
 openpyxl
 graphviz
 xlsxwriter
+faker
+pymysql
+cryptography

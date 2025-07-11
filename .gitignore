@@ -106,3 +106,4 @@ venv.bak/
 dmypy.json
 static/schema
 static/schema.png
+config.py

@@ -1125,21 +1125,11 @@ loadSchemaData().then(() => {
     const initialArrangement = savedArrangement !== null ? JSON.parse(savedArrangement) : false;
     
     if (tablesContainer && buttonsLine && schemaData) {
-        const tableSections = document.querySelectorAll('.table-section');
-        const sortedOrder = initialArrangement ? getSortedTableOrder() :
-            Array.from(tableSections).map(section => section.getAttribute('data-table-name')).sort();
-
-        sortedOrder.forEach(tableName => {
-            const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
-            if (section) {
-                tablesContainer.appendChild(section);
-            }
-            const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
-            if (pill) {
-                buttonsLine.appendChild(pill);
-            }
-        });
-
+        if (initialArrangement) {
+            arrangeByRelations();
+        } else {
+            arrangeAlphabetically();
+        }
         // Show content after initial arrangement
         requestAnimationFrame(() => {
             tablesContainer.style.opacity = '1';
@@ -1397,6 +1387,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             
             if (isRelationMode) {
+                // Check if schema data is available before arranging by relations
+                if (!schemaData || !schemaData.relationships) {
+                    console.warn('Schema data not available for relationship arrangement, using alphabetical instead');
+                }
                 arrangeByRelations();
             } else {
                 arrangeAlphabetically();
@@ -3597,7 +3591,8 @@ export function scrollAllTablesToTop() {
 // Function to arrange tables by relations
 function arrangeByRelations() {
     if (!schemaData || !schemaData.relationships) {
-        console.error('Schema data not available');
+        console.warn('Schema data not available, falling back to alphabetical arrangement');
+        arrangeAlphabetically();
         return;
     }
 
