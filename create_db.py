@@ -324,5 +324,17 @@ def main():
     create_database_with_name('fake_db')
 
 if __name__ == "__main__":
-    main()
-    print("Databases created successfully with sample data!")
+    try:
+        from config import MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST
+        dbs = ['mock_db', 'fake_db']
+        main()
+        print("Databases created successfully with sample data!")
+        for db in dbs:
+            print(f"DB Credentials for '{db}':")
+            print(f"  HOST: {MYSQL_HOST}")
+            print(f"  USER: {MYSQL_USER}")
+            print(f"  PASSWORD: {MYSQL_PASSWORD}")
+            print(f"  DB NAME: {db}")
+            print("-" * 32)
+    except Exception as e:
+        print(f"Could not display DB credentials: {e}")
