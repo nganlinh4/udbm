@@ -9,6 +9,16 @@ echo     UDBM Installation Script (Windows)
 echo ========================================
 echo.
 
+REM Check for administrator privileges
+net session >nul 2>&1
+if errorlevel 1 (
+    echo [WARNING] This script is not running as Administrator
+    echo [INFO] Some operations may fail due to insufficient permissions
+    echo [INFO] For best results, run this script as Administrator
+    echo.
+    timeout /t 3 >nul
+)
+
 REM Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
@@ -42,18 +52,56 @@ echo [INFO] Checking for Graphviz...
 dot -V >nul 2>&1
 if errorlevel 1 (
     echo [WARNING] Graphviz not found in PATH
-    echo.
-    echo Please install Graphviz manually:
-    echo 1. Download from: https://graphviz.org/download/
-    echo 2. Install and add to PATH
-    echo 3. Or use chocolatey: choco install graphviz
-    echo 4. Or use winget: winget install Graphviz.Graphviz
-    echo.
-    set /p continue="Continue without Graphviz? (y/N): "
-    if /i not "!continue!"=="y" (
-        echo Installation cancelled
-        pause
-        exit /b 1
+    echo [INFO] Attempting to install Graphviz automatically...
+
+    REM Try to install Graphviz using winget first
+    echo [INFO] Trying winget installation...
+    winget install Graphviz.Graphviz --accept-package-agreements --accept-source-agreements --silent >nul 2>&1
+    if errorlevel 1 (
+        echo [INFO] Winget installation failed, trying chocolatey...
+
+        REM Check if chocolatey is available
+        choco --version >nul 2>&1
+        if errorlevel 1 (
+            echo [WARNING] Chocolatey not found either
+            echo.
+            echo Please install Graphviz manually:
+            echo 1. Download from: https://graphviz.org/download/
+            echo 2. Install and add to PATH
+            echo 3. Or install chocolatey first: https://chocolatey.org/install
+            echo 4. Then run: choco install graphviz
+            echo 5. Or restart this script after manual installation
+            echo.
+            echo [INFO] Continuing installation without Graphviz...
+            echo [WARNING] Schema visualization will not work until Graphviz is installed
+        ) else (
+            REM Try chocolatey installation
+            choco install graphviz -y --no-progress --force
+            if errorlevel 1 (
+                echo [WARNING] Chocolatey installation also failed
+                echo.
+                echo Please install Graphviz manually:
+                echo 1. Download from: https://graphviz.org/download/
+                echo 2. Install and add to PATH
+                echo.
+                echo [INFO] Continuing installation without Graphviz...
+                echo [WARNING] Schema visualization will not work until Graphviz is installed
+            ) else (
+                echo [SUCCESS] Graphviz installed successfully via chocolatey
+                echo [INFO] Adding Graphviz to PATH for current session...
+                set "PATH=%PATH%;C:\Program Files\Graphviz\bin"
+                echo [INFO] Adding Graphviz to system PATH permanently...
+                setx PATH "%PATH%" /M >nul 2>&1
+                echo [SUCCESS] Graphviz added to PATH
+            )
+        )
+    ) else (
+        echo [SUCCESS] Graphviz installed successfully via winget
+        echo [INFO] Adding Graphviz to PATH for current session...
+        set "PATH=%PATH%;C:\Program Files\Graphviz\bin"
+        echo [INFO] Adding Graphviz to system PATH permanently...
+        setx PATH "%PATH%" /M >nul 2>&1
+        echo [SUCCESS] Graphviz added to PATH
     )
 ) else (
     echo [SUCCESS] Graphviz found
@@ -103,6 +151,24 @@ if not exist "templates\components" mkdir templates\components
 
 echo [SUCCESS] Project directories created
 
+REM Check if Graphviz is now available after installation
+echo [INFO] Verifying Graphviz installation...
+dot -V >nul 2>&1
+if errorlevel 1 (
+    echo [WARNING] Graphviz dot command not found in PATH
+    echo [INFO] Attempting to add Graphviz to PATH manually...
+    if exist "C:\Program Files\Graphviz\bin\dot.exe" (
+        set "PATH=%PATH%;C:\Program Files\Graphviz\bin"
+        setx PATH "%PATH%" /M >nul 2>&1
+        echo [SUCCESS] Graphviz found and added to PATH
+    ) else (
+        echo [WARNING] Graphviz installation not found at expected location
+    )
+) else (
+    echo [SUCCESS] Graphviz is available in PATH
+    dot -V
+)
+
 REM Test installation
 echo [INFO] Testing installation...
 python -c "import flask; import mysql.connector; import psycopg2; import graphviz; import pandas; import psutil; print('All Python dependencies imported successfully')"
@@ -116,6 +182,11 @@ echo.
 echo ========================================
 echo [SUCCESS] Installation completed!
 echo ========================================
+echo.
+echo IMPORTANT NOTES:
+echo - Graphviz has been added to your system PATH
+echo - For applications already running, you may need to restart them
+echo - If schema generation still doesn't work, restart your command prompt
 echo.
 echo To run the application:
 echo 1. Open Command Prompt or PowerShell

@@ -109,26 +109,48 @@ md-switch::part(handle) {
     height: 18px;
 }
 
-/* Light mode icon colors */
-.theme-switcher md-switch md-icon[slot="on-icon"],
-.setup-theme-switcher md-switch md-icon[slot="on-icon"] {
-    color: #424242; /* Dark for dark mode icon on light thumb */
+/* Light mode icon colors - focused state */
+.theme-switcher md-switch:focus md-icon[slot="on-icon"],
+.setup-theme-switcher md-switch:focus md-icon[slot="on-icon"] {
+    color: #000000; /* Pure black for maximum contrast on light thumb */
 }
 
-.theme-switcher md-switch md-icon[slot="off-icon"],
-.setup-theme-switcher md-switch md-icon[slot="off-icon"] {
-    color: #ffffff; /* Light for light mode icon on dark thumb */
+.theme-switcher md-switch:focus md-icon[slot="off-icon"],
+.setup-theme-switcher md-switch:focus md-icon[slot="off-icon"] {
+    color: #ffffff; /* Pure white for maximum contrast on dark thumb */
 }
 
-/* Dark theme icon colors */
-[data-theme="dark"] .theme-switcher md-switch md-icon[slot="on-icon"],
-[data-theme="dark"] .setup-theme-switcher md-switch md-icon[slot="on-icon"] {
-    color: #424242; /* Dark for dark mode icon on light thumb */
+/* Light mode icon colors - unfocused state */
+.theme-switcher md-switch:not(:focus) md-icon[slot="on-icon"],
+.setup-theme-switcher md-switch:not(:focus) md-icon[slot="on-icon"] {
+    color: #1565c0; /* Blue for contrast and distinction when unfocused */
 }
 
-[data-theme="dark"] .theme-switcher md-switch md-icon[slot="off-icon"],
-[data-theme="dark"] .setup-theme-switcher md-switch md-icon[slot="off-icon"] {
-    color: #ffffff; /* Light for light mode icon on dark thumb */
+.theme-switcher md-switch:not(:focus) md-icon[slot="off-icon"],
+.setup-theme-switcher md-switch:not(:focus) md-icon[slot="off-icon"] {
+    color: #ffeb3b; /* Bright yellow for strong contrast against dark thumb */
+}
+
+/* Dark theme icon colors - focused state */
+[data-theme="dark"] .theme-switcher md-switch:focus md-icon[slot="on-icon"],
+[data-theme="dark"] .setup-theme-switcher md-switch:focus md-icon[slot="on-icon"] {
+    color: #000000; /* Pure black for maximum contrast on light thumb */
+}
+
+[data-theme="dark"] .theme-switcher md-switch:focus md-icon[slot="off-icon"],
+[data-theme="dark"] .setup-theme-switcher md-switch:focus md-icon[slot="off-icon"] {
+    color: #ffffff; /* Pure white for maximum contrast on dark thumb */
+}
+
+/* Dark theme icon colors - unfocused state */
+[data-theme="dark"] .theme-switcher md-switch:not(:focus) md-icon[slot="on-icon"],
+[data-theme="dark"] .setup-theme-switcher md-switch:not(:focus) md-icon[slot="on-icon"] {
+    color: #42a5f5; /* Light blue for contrast in dark theme when unfocused */
+}
+
+[data-theme="dark"] .theme-switcher md-switch:not(:focus) md-icon[slot="off-icon"],
+[data-theme="dark"] .setup-theme-switcher md-switch:not(:focus) md-icon[slot="off-icon"] {
+    color: #ffc107; /* Bright amber/yellow for strong contrast against dark thumb in dark theme */
 }
 
 /* Dark theme adjustments */
