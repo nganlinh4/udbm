@@ -891,7 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </label>
                     </div>
                     <div class="form-group">
-                        <input type="password" name="password" id="password" required placeholder=" ">
+                        <input type="password" name="password" id="password" placeholder=" ">
                         <label for="password">
                             <span class="lang-ko">비밀번호</span>
                             <span class="lang-en">Password</span>
@@ -1528,7 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </label>
                     </div>
                     <div class="form-group">
-                        <input type="password" name="password" id="password" required placeholder=" ">
+                        <input type="password" name="password" id="password" placeholder=" ">
                         <label for="password">
                             <span class="lang-ko">비밀번호</span>
                             <span class="lang-en">Password</span>
