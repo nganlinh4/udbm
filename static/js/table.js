@@ -3721,7 +3721,10 @@ function applyImageSettings() {
 
     // Refresh all tables to apply image settings
     document.querySelectorAll('.table-section').forEach(section => {
-        refreshTableImages(section);
+        const tableName = section.getAttribute('data-table-name');
+        if (tableName) {
+            refreshTableWithImageSettings(tableName);
+        }
     });
 
     closeImageSettingsModal();
