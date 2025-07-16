@@ -68,14 +68,13 @@
     background: var(--md-sys-color-surface);
     padding: 4px;
     border-radius: 20px;
-    border: 1px solid var(--md-sys-color-outline);
 }
 
 /* Language cycler button with pill aesthetic */
 .setup-lang-cycler {
     background: var(--md-sys-color-surface-variant) !important;
     color: var(--md-sys-color-on-surface-variant) !important;
-    border: none !important;
+    border: 1px solid var(--md-sys-color-outline);
     padding: 6px 12px !important;
     border-radius: 16px !important;
     font-size: 13px !important;
@@ -85,12 +84,11 @@
     pointer-events: auto !important;
     position: relative !important;
     min-width: 56px !important;
-    height: 28px !important;
+    height: 32px !important;
     text-align: center !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    box-shadow: var(--md-elevation-level1) !important;
 }
 
 .setup-lang-cycler:hover {
@@ -136,7 +134,7 @@
     pointer-events: auto !important;
     position: relative !important;
     min-width: 56px !important;
-    height: 28px !important;
+    height: 32px !important;
     text-align: center !important;
     display: flex !important;
     align-items: center !important;
@@ -163,7 +161,6 @@
     background: var(--md-sys-color-surface);
     padding: 4px;
     border-radius: 20px;
-    border: 1px solid var(--md-sys-color-outline);
 }
 
 /* Ensure the switches in setup have consistent spacing */
