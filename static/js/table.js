@@ -3548,7 +3548,13 @@ export function handleTableScroll(wrapper, tableName) {
         }
     
         // Always fetch more data when scrolling to bottom, regardless of monitoring state
-        fetchTableData(tableName, true, baseUrl, translations, currentLang, updateSingleTable);
+        // Use global variables and imports that are available
+        const baseUrl = window.baseUrl;
+        const currentLangValue = getCurrentLanguage();
+
+        if (baseUrl) {
+            fetchTableData(tableName, true, baseUrl, null, currentLangValue, updateSingleTable);
+        }
     }
     
     // Resume monitoring if table is hidden or at top (but not if filters are active)
