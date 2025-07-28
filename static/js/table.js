@@ -1024,10 +1024,27 @@ function refreshTableWithImageSettings(tableName) {
 // Initialize image settings on page load
 function initializeImageSettings() {
     loadImageSettings();
-    // Update button highlights after a short delay to ensure tables are loaded
+    // Update button highlights and apply settings to existing tables
     setTimeout(() => {
         updateAllImageButtonHighlights();
+        applyImageSettingsToAllTables();
     }, 100);
+
+    // Additional retry after a longer delay to catch any late-loaded tables
+    setTimeout(() => {
+        updateAllImageButtonHighlights();
+        applyImageSettingsToAllTables();
+    }, 1000);
+}
+
+// Apply current image settings to all existing tables
+function applyImageSettingsToAllTables() {
+    document.querySelectorAll('.table-section').forEach(section => {
+        const tableName = section.getAttribute('data-table-name');
+        if (tableName) {
+            refreshTableWithImageSettings(tableName);
+        }
+    });
 }
 
 // Update IMG button highlighting based on table settings
@@ -2222,6 +2239,11 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
     }
 
     updateTableRows(tbody, tableData, columns, tableDiv.id);
+
+    // Apply current image settings to the newly created table
+    setTimeout(() => {
+        refreshTableWithImageSettings(tableDiv.id);
+    }, 50);
 }
 
 export function updateSingleTable(tableName, tableInfo, translations, currentLang, fetchTableData, baseUrl) {
@@ -2415,6 +2437,8 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             tableDiv.classList.add('expanded');
+            // Apply current image settings after table is fully rendered
+            refreshTableWithImageSettings(tableName);
         });
     });
 }
@@ -4434,3 +4458,4 @@ window.closeImageSettingsModal = closeImageSettingsModal;
 window.openImageFullview = openImageFullview;
 window.closeImageFullview = closeImageFullview;
 window.downloadFullviewImage = downloadFullviewImage;
+window.applyImageSettingsToAllTables = applyImageSettingsToAllTables;

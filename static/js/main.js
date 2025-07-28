@@ -542,6 +542,12 @@ function toggleTable(tableName) {
             }
             requestAnimationFrame(() => {
                 container.classList.add('expanded');
+                // Ensure image settings are applied after table is fully loaded
+                if (window.applyImageSettingsToAllTables) {
+                    setTimeout(() => {
+                        window.applyImageSettingsToAllTables();
+                    }, 100);
+                }
             });
         });
     }
