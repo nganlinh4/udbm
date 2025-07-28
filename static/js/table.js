@@ -309,11 +309,22 @@ function tryImageUrl(imagePath) {
     }
 
     // For absolute file paths, try direct file access and API endpoint
-    if (imagePath.startsWith('/')) {
+    const isAbsolutePath = imagePath.startsWith('/') || imagePath.match(/^[A-Za-z]:\\/);
+    if (isAbsolutePath) {
         // Direct file access
-        urls.push('file://' + imagePath);
-        // API endpoint
-        urls.push(`${window.baseUrl || ''}/api/local-image?path=${encodeURIComponent(imagePath)}`);
+        if (imagePath.startsWith('/')) {
+            // Unix-style path
+            urls.push('file://' + imagePath);
+        } else {
+            // Windows-style path - convert to file:// URL
+            const fileUrl = 'file:///' + imagePath.replace(/\\/g, '/');
+            urls.push(fileUrl);
+        }
+
+        // API endpoint with proper encoding
+        // For Windows paths, ensure backslashes are properly encoded
+        const properlyEncodedPath = encodeURIComponent(imagePath);
+        urls.push(`${window.baseUrl || ''}/api/local-image?path=${properlyEncodedPath}`);
     }
 
     // Try with each prefix
