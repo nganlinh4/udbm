@@ -251,6 +251,9 @@ export function addDownloadButtons() {
             downloadButtons.appendChild(xlsxButton);
             downloadButtons.appendChild(imageButton);
             dragHandle.insertAdjacentElement('afterend', downloadButtons);
+
+            // Update IMG button highlighting based on current settings
+            updateImageButtonHighlight(tableName);
         }
     });
 }
@@ -266,34 +269,76 @@ function downloadBlob(blob, filename) {
     URL.revokeObjectURL(link.href);
 }
 
-// Image settings functionality
-export let imageSettings = {
-    showImages: false,
+// Image settings functionality - now per table
+export let globalImageSettings = {
     pathPrefixes: [],
     imageScale: 1.0,  // Default scale (1.0 = 100px, range 0.5-3.0)
     loadingMethods: {
-        fileProtocol: true,     // file:// URLs
-        apiEndpoint: true,      // /api/local-image endpoint
-        webUrls: true,          // http/https URLs
-        pathPrefixes: true      // Try with path prefixes
+        fileProtocol: false,    // file:// URLs (disabled by default - browsers block this)
+        apiEndpoint: true,      // /api/local-image endpoint (enabled by default)
+        webUrls: false,         // http/https URLs (disabled by default)
+        pathPrefixes: true      // Try with path prefixes (enabled by default)
     }
 };
 
+// Per-table image settings
+export let tableImageSettings = {}; // tableName -> { showImages: bool, enabledColumns: Set<string> }
+
 // Load image settings from localStorage
 function loadImageSettings() {
-    const saved = localStorage.getItem('imageSettings');
-    if (saved) {
+    const savedGlobal = localStorage.getItem('globalImageSettings');
+    if (savedGlobal) {
         try {
-            imageSettings = { ...imageSettings, ...JSON.parse(saved) };
+            globalImageSettings = { ...globalImageSettings, ...JSON.parse(savedGlobal) };
         } catch (e) {
-            console.warn('Failed to load image settings:', e);
+            console.warn('Failed to load global image settings:', e);
+        }
+    }
+
+    const savedTable = localStorage.getItem('tableImageSettings');
+    if (savedTable) {
+        try {
+            const parsed = JSON.parse(savedTable);
+            // Convert enabledColumns arrays back to Sets
+            Object.keys(parsed).forEach(tableName => {
+                tableImageSettings[tableName] = {
+                    ...parsed[tableName],
+                    enabledColumns: new Set(parsed[tableName].enabledColumns || [])
+                };
+            });
+        } catch (e) {
+            console.warn('Failed to load table image settings:', e);
         }
     }
 }
 
 // Save image settings to localStorage
 function saveImageSettings() {
-    localStorage.setItem('imageSettings', JSON.stringify(imageSettings));
+    localStorage.setItem('globalImageSettings', JSON.stringify(globalImageSettings));
+    saveTableImageSettings();
+}
+
+// Get table-specific image settings
+function getTableImageSettings(tableName) {
+    if (!tableImageSettings[tableName]) {
+        tableImageSettings[tableName] = {
+            showImages: false,
+            enabledColumns: new Set()
+        };
+    }
+    return tableImageSettings[tableName];
+}
+
+// Save table settings with Set serialization
+function saveTableImageSettings() {
+    const serializable = {};
+    Object.keys(tableImageSettings).forEach(tableName => {
+        serializable[tableName] = {
+            ...tableImageSettings[tableName],
+            enabledColumns: Array.from(tableImageSettings[tableName].enabledColumns)
+        };
+    });
+    localStorage.setItem('tableImageSettings', JSON.stringify(serializable));
 }
 
 // Check if a value looks like an image path
@@ -310,7 +355,7 @@ function tryImageUrl(imagePath) {
     const urls = [];
 
     // Try the path as-is first (for web URLs only)
-    if (imageSettings.loadingMethods.webUrls && (imagePath.startsWith('http://') || imagePath.startsWith('https://'))) {
+    if (globalImageSettings.loadingMethods.webUrls && (imagePath.startsWith('http://') || imagePath.startsWith('https://'))) {
         urls.push(imagePath);
     }
 
@@ -321,7 +366,7 @@ function tryImageUrl(imagePath) {
 
     if (isCompleteAbsolutePath) {
         // Direct file access
-        if (imageSettings.loadingMethods.fileProtocol) {
+        if (globalImageSettings.loadingMethods.fileProtocol) {
             if (imagePath.startsWith('/')) {
                 // Unix-style path
                 urls.push('file://' + imagePath);
@@ -333,7 +378,7 @@ function tryImageUrl(imagePath) {
         }
 
         // API endpoint with proper encoding
-        if (imageSettings.loadingMethods.apiEndpoint) {
+        if (globalImageSettings.loadingMethods.apiEndpoint) {
             // For Windows paths, ensure backslashes are properly encoded
             const properlyEncodedPath = encodeURIComponent(imagePath);
             urls.push(`${window.baseUrl || ''}/api/local-image?path=${properlyEncodedPath}`);
@@ -341,8 +386,8 @@ function tryImageUrl(imagePath) {
     }
 
     // Try with each prefix (if enabled)
-    if (imageSettings.loadingMethods.pathPrefixes) {
-        imageSettings.pathPrefixes.forEach(prefix => {
+    if (globalImageSettings.loadingMethods.pathPrefixes) {
+        globalImageSettings.pathPrefixes.forEach(prefix => {
             if (prefix) {
             let fullPath;
 
@@ -357,7 +402,7 @@ function tryImageUrl(imagePath) {
                 fullPath = cleanPrefix + cleanPath;
 
                 // Convert Windows paths to file:// URLs for local access
-                if (imageSettings.loadingMethods.fileProtocol) {
+                if (globalImageSettings.loadingMethods.fileProtocol) {
                     if (fullPath.match(/^[A-Za-z]:\\/)) {
                         // Windows path - convert to file:// URL
                         const fileUrl = 'file:///' + fullPath.replace(/\\/g, '/');
@@ -370,7 +415,7 @@ function tryImageUrl(imagePath) {
                 }
 
                 // Also try the backend endpoint with proper encoding
-                if (imageSettings.loadingMethods.apiEndpoint) {
+                if (globalImageSettings.loadingMethods.apiEndpoint) {
                     // Encode each path component separately to preserve path structure
                     const pathComponents = fullPath.split(separator);
                     const encodedComponents = pathComponents.map(component => encodeURIComponent(component));
@@ -395,7 +440,15 @@ function tryImageUrl(imagePath) {
 }
 
 // Create image element with fallback
-function createImageElement(imagePath) {
+function createImageElement(imagePath, tableName = null, columnName = null) {
+    // Check if images should be shown for this table and column
+    if (tableName && columnName) {
+        const tableSettings = getTableImageSettings(tableName);
+        if (!tableSettings.showImages || !tableSettings.enabledColumns.has(columnName)) {
+            return null; // Don't create image element
+        }
+    }
+
     // Clean up the image path - remove carriage returns and extra whitespace
     const cleanPath = imagePath.trim().replace(/\r/g, '').replace(/\n/g, '');
     const urls = tryImageUrl(cleanPath);
@@ -408,7 +461,7 @@ function createImageElement(imagePath) {
 
     const img = document.createElement('img');
     const baseSize = 100; // Base size in pixels
-    const scaledSize = Math.round(baseSize * imageSettings.imageScale);
+    const scaledSize = Math.round(baseSize * globalImageSettings.imageScale);
     img.style.maxWidth = `${scaledSize}px`;
     img.style.maxHeight = `${scaledSize}px`;
     img.style.objectFit = 'contain';
@@ -567,6 +620,22 @@ function createImageSettingsModal() {
 
                 <div class="setting-group">
                     <label class="setting-label">
+                        <span class="lang-ko">이미지를 표시할 열:</span>
+                        <span class="lang-en">Columns to Show Images:</span>
+                        <span class="lang-vi">Cột hiển thị hình ảnh:</span>
+                    </label>
+                    <div class="column-pills-container" id="columnPillsContainer">
+                        <!-- Column pills will be added here dynamically -->
+                    </div>
+                    <div class="column-pills-help">
+                        <span class="lang-ko">이미지로 표시할 열을 선택하세요. 선택하지 않은 열은 텍스트로 표시됩니다.</span>
+                        <span class="lang-en">Select columns to display as images. Unselected columns will show as text.</span>
+                        <span class="lang-vi">Chọn các cột để hiển thị dưới dạng hình ảnh. Các cột không được chọn sẽ hiển thị dưới dạng văn bản.</span>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">
                         <span class="lang-ko">이미지 경로 접두사:</span>
                         <span class="lang-en">Image Path Prefixes:</span>
                         <span class="lang-vi">Tiền tố đường dẫn hình ảnh:</span>
@@ -620,30 +689,35 @@ function updateImageSettingsModal(modal, tableName) {
     // Load current settings
     loadImageSettings();
 
+    const tableSettings = getTableImageSettings(tableName);
+
     // Update toggle state
     const toggle = modal.querySelector('#showImagesToggle');
-    toggle.selected = imageSettings.showImages;
+    toggle.selected = tableSettings.showImages;
 
     // Update scale slider
     const scaleSlider = modal.querySelector('#imageScaleSlider');
     const scaleValueText = modal.querySelector('#scaleValueText');
     const scaleSizeHint = modal.querySelector('#scaleSizeHint');
     if (scaleSlider) {
-        scaleSlider.value = imageSettings.imageScale;
-        scaleValueText.textContent = Math.round(imageSettings.imageScale * 100) + '%';
-        scaleSizeHint.textContent = Math.round(100 * imageSettings.imageScale) + 'px';
+        scaleSlider.value = globalImageSettings.imageScale;
+        scaleValueText.textContent = Math.round(globalImageSettings.imageScale * 100) + '%';
+        scaleSizeHint.textContent = Math.round(100 * globalImageSettings.imageScale) + 'px';
     }
 
     // Update loading method pills
     const methodPills = modal.querySelectorAll('.method-pill');
     methodPills.forEach(pill => {
         const method = pill.getAttribute('data-method');
-        if (imageSettings.loadingMethods[method]) {
+        if (globalImageSettings.loadingMethods[method]) {
             pill.classList.add('active');
         } else {
             pill.classList.remove('active');
         }
     });
+
+    // Update column pills
+    updateColumnPills(modal, tableName);
 
     // Update prefix list
     updatePrefixList(modal);
@@ -652,12 +726,71 @@ function updateImageSettingsModal(modal, tableName) {
     modal.dataset.tableName = tableName;
 }
 
+// Update column pills for the specific table
+function updateColumnPills(modal, tableName) {
+    const container = modal.querySelector('#columnPillsContainer');
+    if (!container) return;
+
+    // Clear existing pills
+    container.innerHTML = '';
+
+    // Get table element and its columns
+    const tableSection = document.querySelector(`[data-table-name="${tableName}"]`);
+    if (!tableSection) return;
+
+    const table = tableSection.querySelector('table');
+    if (!table) return;
+
+    const headers = table.querySelectorAll('thead th');
+    const tableSettings = getTableImageSettings(tableName);
+
+    headers.forEach((header, index) => {
+        const columnName = header.textContent.trim();
+        if (!columnName) return;
+
+        // Check if this column contains image-like data
+        const sampleCells = table.querySelectorAll(`tbody tr td:nth-child(${index + 1})`);
+        let hasImageData = false;
+
+        // Check first few cells for image-like content
+        for (let i = 0; i < Math.min(5, sampleCells.length); i++) {
+            const cellText = sampleCells[i].textContent.trim();
+            if (isImagePath(cellText)) {
+                hasImageData = true;
+                break;
+            }
+        }
+
+        const pill = document.createElement('div');
+        pill.className = 'column-pill';
+        pill.setAttribute('data-column', columnName);
+
+        // Add icon based on whether column has image data
+        const icon = document.createElement('span');
+        icon.className = 'column-pill-icon';
+        icon.textContent = hasImageData ? '🖼️' : '📄';
+
+        const text = document.createElement('span');
+        text.textContent = columnName;
+
+        pill.appendChild(icon);
+        pill.appendChild(text);
+
+        // Set active state
+        if (tableSettings.enabledColumns.has(columnName)) {
+            pill.classList.add('active');
+        }
+
+        container.appendChild(pill);
+    });
+}
+
 // Update the prefix list display
 function updatePrefixList(modal) {
     const prefixList = modal.querySelector('#prefixList');
     prefixList.innerHTML = '';
 
-    imageSettings.pathPrefixes.forEach((prefix, index) => {
+    globalImageSettings.pathPrefixes.forEach((prefix, index) => {
         const prefixItem = document.createElement('div');
         prefixItem.className = 'prefix-item';
         prefixItem.innerHTML = `
@@ -673,12 +806,14 @@ function setupImageSettingsEventListeners(modal) {
     // Close button
     modal.querySelector('.image-settings-close').addEventListener('click', () => {
         modal.classList.remove('visible');
+        updateAllImageButtonHighlights();
     });
 
     // Click outside to close
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.classList.remove('visible');
+            updateAllImageButtonHighlights();
         }
     });
 
@@ -686,16 +821,18 @@ function setupImageSettingsEventListeners(modal) {
     const showImagesToggle = modal.querySelector('#showImagesToggle');
     if (showImagesToggle) {
         showImagesToggle.addEventListener('change', (e) => {
-            imageSettings.showImages = e.target.selected;
-            saveImageSettings();
+            const tableName = modal.dataset.tableName;
+            if (tableName) {
+                const tableSettings = getTableImageSettings(tableName);
+                tableSettings.showImages = e.target.selected;
+                saveTableImageSettings();
 
-            // Refresh all tables to apply image settings immediately
-            document.querySelectorAll('.table-section').forEach(section => {
-                const tableName = section.getAttribute('data-table-name');
-                if (tableName) {
-                    refreshTableWithImageSettings(tableName);
-                }
-            });
+                // Update IMG button highlighting
+                updateImageButtonHighlight(tableName);
+
+                // Refresh only the specific table
+                refreshTableWithImageSettings(tableName);
+            }
         });
     }
 
@@ -706,7 +843,7 @@ function setupImageSettingsEventListeners(modal) {
     if (scaleSlider) {
         scaleSlider.addEventListener('input', (e) => {
             const scale = parseFloat(e.target.value);
-            imageSettings.imageScale = scale;
+            globalImageSettings.imageScale = scale;
             saveImageSettings();
 
             // Update display values
@@ -731,7 +868,7 @@ function setupImageSettingsEventListeners(modal) {
             const isActive = pill.classList.contains('active');
 
             // Toggle the method
-            imageSettings.loadingMethods[method] = !isActive;
+            globalImageSettings.loadingMethods[method] = !isActive;
             saveImageSettings();
 
             // Update UI
@@ -751,12 +888,42 @@ function setupImageSettingsEventListeners(modal) {
         });
     });
 
+    // Column pill toggles
+    const columnPillsContainer = modal.querySelector('#columnPillsContainer');
+    if (columnPillsContainer) {
+        columnPillsContainer.addEventListener('click', (e) => {
+            const pill = e.target.closest('.column-pill');
+            if (!pill) return;
+
+            const columnName = pill.getAttribute('data-column');
+            const tableName = modal.dataset.tableName;
+            if (!columnName || !tableName) return;
+
+            const tableSettings = getTableImageSettings(tableName);
+            const isActive = pill.classList.contains('active');
+
+            // Toggle the column
+            if (isActive) {
+                tableSettings.enabledColumns.delete(columnName);
+                pill.classList.remove('active');
+            } else {
+                tableSettings.enabledColumns.add(columnName);
+                pill.classList.add('active');
+            }
+
+            saveTableImageSettings();
+
+            // Refresh only the specific table
+            refreshTableWithImageSettings(tableName);
+        });
+    }
+
     // Add prefix button
     modal.querySelector('#addPrefixBtn').addEventListener('click', () => {
         const input = modal.querySelector('#newPrefixInput');
         const prefix = input.value.trim();
-        if (prefix && !imageSettings.pathPrefixes.includes(prefix)) {
-            imageSettings.pathPrefixes.push(prefix);
+        if (prefix && !globalImageSettings.pathPrefixes.includes(prefix)) {
+            globalImageSettings.pathPrefixes.push(prefix);
             saveImageSettings();
             updatePrefixList(modal);
             input.value = '';
@@ -782,7 +949,7 @@ function setupImageSettingsEventListeners(modal) {
     modal.querySelector('#prefixList').addEventListener('click', (e) => {
         if (e.target.classList.contains('remove-prefix-btn')) {
             const index = parseInt(e.target.dataset.index);
-            imageSettings.pathPrefixes.splice(index, 1);
+            globalImageSettings.pathPrefixes.splice(index, 1);
             saveImageSettings();
             updatePrefixList(modal);
 
@@ -805,9 +972,10 @@ function refreshTableWithImageSettings(tableName) {
     const tbody = tableSection.querySelector('tbody');
     if (!tbody) return;
 
-    // Get current table data and columns
+    // Get column names from headers
     const table = tableSection.querySelector('table');
-    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+    const headers = tableSection.querySelectorAll('thead th');
+    const columnNames = Array.from(headers).map(th => th.textContent.trim());
 
     // Re-render all cells to apply image settings
     tbody.querySelectorAll('tr').forEach(row => {
@@ -833,18 +1001,19 @@ function refreshTableWithImageSettings(tableName) {
                 cell.dataset.originalValue = originalValue;
             }
 
-            if (imageSettings.showImages && isImagePath(originalValue)) {
-                const imageElement = createImageElement(originalValue);
+            const columnName = columnNames[index];
+            if (isImagePath(originalValue)) {
+                const imageElement = createImageElement(originalValue, tableName, columnName);
                 if (imageElement) {
                     cell.innerHTML = '';
                     cell.appendChild(imageElement);
                 } else {
-                    // Image element creation failed (image not found), show as text
+                    // Image element creation failed or not enabled for this table/column
                     cell.innerHTML = '';
                     cell.textContent = originalValue;
                 }
-            } else if (!imageSettings.showImages && cell.querySelector('.table-image-container')) {
-                // Convert back to text if images are disabled
+            } else if (cell.querySelector('.table-image-container')) {
+                // Convert back to text if no longer an image path
                 cell.innerHTML = '';
                 cell.textContent = originalValue;
             }
@@ -855,6 +1024,37 @@ function refreshTableWithImageSettings(tableName) {
 // Initialize image settings on page load
 function initializeImageSettings() {
     loadImageSettings();
+    // Update button highlights after a short delay to ensure tables are loaded
+    setTimeout(() => {
+        updateAllImageButtonHighlights();
+    }, 100);
+}
+
+// Update IMG button highlighting based on table settings
+function updateImageButtonHighlight(tableName) {
+    const tableSection = document.querySelector(`[data-table-name="${tableName}"]`);
+    if (!tableSection) return;
+
+    const imageButton = tableSection.querySelector('.image-settings-button');
+    if (!imageButton) return;
+
+    const tableSettings = getTableImageSettings(tableName);
+
+    if (tableSettings.showImages) {
+        imageButton.classList.add('images-enabled');
+    } else {
+        imageButton.classList.remove('images-enabled');
+    }
+}
+
+// Update all IMG button highlights
+function updateAllImageButtonHighlights() {
+    document.querySelectorAll('.table-section').forEach(section => {
+        const tableName = section.getAttribute('data-table-name');
+        if (tableName) {
+            updateImageButtonHighlight(tableName);
+        }
+    });
 }
 
 // Set up global query handler (independent of table state)
@@ -1705,7 +1905,7 @@ function formatJsonCell(value) {
     }
 }
 
-function updateTableRows(tbody, tableData, columns) {
+function updateTableRows(tbody, tableData, columns, tableName = null) {
     const currentRows = Array.from(tbody.querySelectorAll('tr')).length;
     const newRowCount = tableData.length;
     const hasRowCountChanged = currentRows !== newRowCount;
@@ -1726,47 +1926,40 @@ function updateTableRows(tbody, tableData, columns) {
     // Store current view for comparison using stored raw data when available
     const existingRows = new Map();
 
-    // Try to use stored raw data from previous update (avoids DOM extraction issues with images)
-    if (tbody.dataset.lastRawData && tbody.dataset.lastColumns) {
-        try {
-            const lastRawData = JSON.parse(tbody.dataset.lastRawData);
-            const lastColumns = JSON.parse(tbody.dataset.lastColumns);
-
-            lastRawData.forEach((row) => {
-                const rowKey = String(row[lastColumns[0]]);
-                existingRows.set(rowKey, {
-                    data: lastColumns.map(col => row[col])
-                });
-            });
-
-
-        } catch (e) {
-            console.warn('Failed to parse stored raw data, falling back to DOM extraction:', e);
-        }
-    }
-
-    // Fallback to DOM extraction if no stored data (first load or error)
-    if (existingRows.size === 0) {
-        tbody.querySelectorAll('tr').forEach(tr => {
-            const cells = tr.querySelectorAll('td');
-            const rowKey = cells[0]?.textContent;
-            existingRows.set(rowKey, {
-                element: tr,
-                data: Array.from(cells).map(cell => {
-                    const jsonCell = cell.querySelector('.json-cell');
-                    if (jsonCell) {
-                        try {
-                            return JSON.parse(jsonCell.textContent);
-                        } catch (e) {
-                            return jsonCell.textContent;
+    // Always use DOM extraction to preserve existing elements (including images)
+    tbody.querySelectorAll('tr').forEach(tr => {
+        const cells = tr.querySelectorAll('td');
+        const rowKey = cells[0]?.textContent;
+        existingRows.set(rowKey, {
+            element: tr,
+            data: Array.from(cells).map(cell => {
+                // Get original value if stored, otherwise extract from DOM
+                const originalValue = cell.dataset.originalValue;
+                if (originalValue !== undefined) {
+                    try {
+                        // Try to parse as JSON if it looks like JSON
+                        if (originalValue.trim().startsWith('{') || originalValue.trim().startsWith('[')) {
+                            return JSON.parse(originalValue);
                         }
+                        return originalValue;
+                    } catch (e) {
+                        return originalValue;
                     }
-                    return cell.textContent;
-                })
-            });
-        });
+                }
 
-    }
+                // Fallback to DOM extraction
+                const jsonCell = cell.querySelector('.json-cell');
+                if (jsonCell) {
+                    try {
+                        return JSON.parse(jsonCell.textContent);
+                    } catch (e) {
+                        return jsonCell.textContent;
+                    }
+                }
+                return cell.textContent;
+            })
+        });
+    });
 
     const fragment = document.createDocumentFragment();
     let animateAll = hasRowCountChanged && currentRows > 0; // Only animate if not initial load
@@ -1800,30 +1993,51 @@ function updateTableRows(tbody, tableData, columns) {
             }
             
             columns.forEach((col, idx) => {
-                const td = document.createElement('td');
                 const val = row[col];
-                
-                if (val !== null) {
-                    // Store original value for image refresh functionality
-                    td.dataset.originalValue = String(val);
+                const existingVal = existing.data[idx];
+                let td;
 
-                    if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
-                        const jsonView = formatJsonCell(val);
-                        td.appendChild(jsonView);
-                    } else if (imageSettings.showImages && isImagePath(String(val))) {
-                        const imageElement = createImageElement(String(val));
-                        if (imageElement) {
-                            td.appendChild(imageElement);
+                // Check if this specific cell's data has changed
+                const cellChanged = (typeof val === 'object' && val !== null) ?
+                    JSON.stringify(val) !== JSON.stringify(existingVal) :
+                    String(val !== null ? val : '') !== String(existingVal !== null ? existingVal : '');
+
+                if (!cellChanged && existing.element) {
+                    // Data hasn't changed, reuse existing cell to preserve image elements
+                    const existingCell = existing.element.cells[idx];
+                    if (existingCell) {
+                        td = existingCell.cloneNode(true);
+                    } else {
+                        td = document.createElement('td');
+                    }
+                } else {
+                    // Data has changed, create new cell
+                    td = document.createElement('td');
+
+                    if (val !== null) {
+                        // Store original value for image refresh functionality
+                        td.dataset.originalValue = String(val);
+
+                        if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
+                            const jsonView = formatJsonCell(val);
+                            td.appendChild(jsonView);
+                        } else if (isImagePath(String(val))) {
+                            const columnName = col;
+                            const imageElement = createImageElement(String(val), tableName, columnName);
+                            if (imageElement) {
+                                td.appendChild(imageElement);
+                            } else {
+                                td.textContent = String(val);
+                            }
                         } else {
                             td.textContent = String(val);
                         }
                     } else {
-                        td.textContent = String(val);
+                        td.textContent = '';
+                        td.dataset.originalValue = '';
                     }
-                } else {
-                    td.textContent = '';
-                    td.dataset.originalValue = '';
                 }
+
                 tr.appendChild(td);
             });
             
@@ -1845,8 +2059,9 @@ function updateTableRows(tbody, tableData, columns) {
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
                         td.appendChild(jsonView);
-                    } else if (imageSettings.showImages && isImagePath(String(val))) {
-                        const imageElement = createImageElement(String(val));
+                    } else if (isImagePath(String(val))) {
+                        const columnName = col;
+                        const imageElement = createImageElement(String(val), tableName, columnName);
                         if (imageElement) {
                             td.appendChild(imageElement);
                         } else {
@@ -2006,7 +2221,7 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
         return;
     }
 
-    updateTableRows(tbody, tableData, columns);
+    updateTableRows(tbody, tableData, columns, tableDiv.id);
 }
 
 export function updateSingleTable(tableName, tableInfo, translations, currentLang, fetchTableData, baseUrl) {
@@ -2133,6 +2348,9 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
             downloadButtons.appendChild(xlsxButton);
             downloadButtons.appendChild(imageButton);
             dragHandle.insertAdjacentElement('afterend', downloadButtons);
+
+            // Update IMG button highlighting based on current settings
+            updateImageButtonHighlight(tableName);
         }
     }
 
@@ -2181,7 +2399,7 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
                 noDataRow.appendChild(noDataCell);
                 tbody.appendChild(noDataRow);
             } else {
-                updateTableRows(tbody, tableInfo.data, tableInfo.columns);
+                updateTableRows(tbody, tableInfo.data, tableInfo.columns, tableName);
             }
         }
     } else {
@@ -2411,8 +2629,9 @@ function appendTableData(tableName, tableInfo, translations, currentLang) {
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
                         td.appendChild(jsonView);
-                    } else if (imageSettings.showImages && isImagePath(String(val))) {
-                        const imageElement = createImageElement(String(val));
+                    } else if (isImagePath(String(val))) {
+                        const columnName = col;
+                        const imageElement = createImageElement(String(val), tableName, columnName);
                         if (imageElement) {
                             td.appendChild(imageElement);
                         } else {
@@ -2981,11 +3200,15 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     // Handle monitoring updates preserving edit state
     const originalUpdateTableRows = window.updateTableRows;
     window.updateTableRows = (tbody, tableData, columns) => {
+        // Get table name from the table section
+        const tableSection = tbody.closest('.table-section');
+        const tableName = tableSection ? tableSection.getAttribute('data-table-name') : null;
+
         if (isEditing && currentEditCell) {
             const editingRowId = currentEditCell.closest('tr').cells[0].textContent;
             const editingColIndex = Array.from(currentEditCell.closest('tr').cells).indexOf(currentEditCell);
-            
-            originalUpdateTableRows(tbody, tableData, columns);
+
+            originalUpdateTableRows(tbody, tableData, columns, tableName);
             
             // Restore editing state
             const newRow = Array.from(tbody.querySelectorAll('tr')).find(tr => tr.cells[0].textContent === editingRowId);
@@ -3002,7 +3225,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                 }
             }
         } else {
-            originalUpdateTableRows(tbody, tableData, columns);
+            originalUpdateTableRows(tbody, tableData, columns, tableName);
         }
     };
 }
@@ -3449,7 +3672,7 @@ async function applyDatabaseSort(table) {
         // Update table with sorted data
         if (data.data) {
             const tbody = table.querySelector('tbody');
-            updateTableRows(tbody, data.data, data.columns);
+            updateTableRows(tbody, data.data, data.columns, tableId);
 
             // Reset chunk tracking for sorted data
             if (typeof tableChunks !== 'undefined' && tableChunks[tableId]) {
@@ -3608,7 +3831,7 @@ async function applyDatabaseFilter(table) {
         // Update table with filtered data
         if (data.data) {
             const tbody = table.querySelector('tbody');
-            updateTableRows(tbody, data.data, data.columns);
+            updateTableRows(tbody, data.data, data.columns, tableId);
 
             // Reset chunk tracking for filtered data
             if (typeof tableChunks !== 'undefined' && tableChunks[tableId]) {
@@ -4043,6 +4266,7 @@ function closeImageSettingsModal() {
     const modal = document.getElementById('imageSettingsModal');
     if (modal) {
         modal.classList.remove('visible');
+        updateAllImageButtonHighlights();
     }
 }
 

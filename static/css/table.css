@@ -1274,6 +1274,134 @@ tr {
     color: var(--md-sys-color-on-surface-variant);
 }
 
+/* Column selection pills */
+.column-pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 8px;
+    background: var(--md-sys-color-surface-container-lowest);
+}
+
+.column-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 16px;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.column-pill:hover {
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    transform: translateY(-1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.column-pill.active {
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.column-pill.active:hover {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.column-pill-icon {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.column-pills-help {
+    font-size: 11px;
+    color: var(--md-sys-color-on-surface-variant);
+    line-height: 1.4;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: var(--md-sys-color-surface-variant);
+    border-radius: 6px;
+}
+
+/* Dark theme adjustments for column pills */
+[data-theme="dark"] .column-pills-container {
+    border-color: var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container-lowest);
+}
+
+[data-theme="dark"] .column-pill {
+    border-color: var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface);
+}
+
+[data-theme="dark"] .column-pill:hover {
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary-container);
+}
+
+[data-theme="dark"] .column-pill.active {
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary);
+}
+
+[data-theme="dark"] .column-pills-help {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+/* IMG button highlighting when images are enabled */
+.image-settings-button.images-enabled {
+    background: var(--md-sys-color-primary-container) !important;
+    color: var(--md-sys-color-on-primary-container) !important;
+    border: 2px solid var(--md-sys-color-primary) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.image-settings-button.images-enabled svg {
+    fill: var(--md-sys-color-on-primary-container) !important;
+}
+
+.image-settings-button.images-enabled:hover {
+    background: var(--md-sys-color-primary) !important;
+    color: var(--md-sys-color-on-primary) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.image-settings-button.images-enabled:hover svg {
+    fill: var(--md-sys-color-on-primary) !important;
+}
+
+/* Dark theme adjustments for highlighted IMG button */
+[data-theme="dark"] .image-settings-button.images-enabled {
+    background: var(--md-sys-color-primary-container) !important;
+    color: var(--md-sys-color-on-primary-container) !important;
+    border-color: var(--md-sys-color-primary) !important;
+}
+
+[data-theme="dark"] .image-settings-button.images-enabled:hover {
+    background: var(--md-sys-color-primary) !important;
+    color: var(--md-sys-color-on-primary) !important;
+}
+
 .prefix-list {
     display: flex;
     flex-direction: column;
