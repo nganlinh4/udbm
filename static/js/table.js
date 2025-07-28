@@ -269,7 +269,8 @@ function downloadBlob(blob, filename) {
 // Image settings functionality
 export let imageSettings = {
     showImages: false,
-    pathPrefixes: []
+    pathPrefixes: [],
+    imageScale: 1.0  // Default scale (1.0 = 100px, range 0.5-3.0)
 };
 
 // Load image settings from localStorage
@@ -359,8 +360,10 @@ function createImageElement(imagePath) {
     container.style.position = 'relative';
 
     const img = document.createElement('img');
-    img.style.maxWidth = '100px';
-    img.style.maxHeight = '100px';
+    const baseSize = 100; // Base size in pixels
+    const scaledSize = Math.round(baseSize * imageSettings.imageScale);
+    img.style.maxWidth = `${scaledSize}px`;
+    img.style.maxHeight = `${scaledSize}px`;
     img.style.objectFit = 'contain';
     img.style.border = '1px solid var(--md-sys-color-outline-variant)';
     img.style.borderRadius = '4px';
@@ -377,18 +380,8 @@ function createImageElement(imagePath) {
             img.src = urls[currentUrlIndex];
             currentUrlIndex++;
         } else if (!hasLoaded) {
-            // All URLs failed, show error message
-            container.innerHTML = '';
-            const errorSpan = document.createElement('span');
-            errorSpan.textContent = '🖼️ ' + imagePath;
-            errorSpan.style.color = 'var(--md-sys-color-error)';
-            errorSpan.style.fontSize = '12px';
-            errorSpan.style.padding = '4px';
-            errorSpan.style.border = '1px dashed var(--md-sys-color-error)';
-            errorSpan.style.borderRadius = '4px';
-            errorSpan.style.display = 'inline-block';
-            errorSpan.title = `Image not found. Tried ${urls.length} URL(s):\n${urls.join('\n')}`;
-            container.appendChild(errorSpan);
+            // All URLs failed, return null to show as normal text
+            return null;
         }
     };
 
@@ -461,6 +454,25 @@ function createImageSettingsModal() {
 
                 <div class="setting-group">
                     <label class="setting-label">
+                        <span class="lang-ko">이미지 크기:</span>
+                        <span class="lang-en">Image Scale:</span>
+                        <span class="lang-vi">Tỷ lệ hình ảnh:</span>
+                    </label>
+                    <div class="scale-slider-container">
+                        <div class="scale-slider-wrapper">
+                            <span class="scale-label-min">50%</span>
+                            <input type="range" id="imageScaleSlider" min="0.5" max="3.0" step="0.1" value="1.0" class="scale-slider">
+                            <span class="scale-label-max">300%</span>
+                        </div>
+                        <div class="scale-value-display">
+                            <span id="scaleValueText">100%</span>
+                            <span class="scale-size-hint">(<span id="scaleSizeHint">100px</span>)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">
                         <span class="lang-ko">이미지 경로 접두사:</span>
                         <span class="lang-en">Image Path Prefixes:</span>
                         <span class="lang-vi">Tiền tố đường dẫn hình ảnh:</span>
@@ -518,6 +530,16 @@ function updateImageSettingsModal(modal, tableName) {
     const toggle = modal.querySelector('#showImagesToggle');
     toggle.selected = imageSettings.showImages;
 
+    // Update scale slider
+    const scaleSlider = modal.querySelector('#imageScaleSlider');
+    const scaleValueText = modal.querySelector('#scaleValueText');
+    const scaleSizeHint = modal.querySelector('#scaleSizeHint');
+    if (scaleSlider) {
+        scaleSlider.value = imageSettings.imageScale;
+        scaleValueText.textContent = Math.round(imageSettings.imageScale * 100) + '%';
+        scaleSizeHint.textContent = Math.round(100 * imageSettings.imageScale) + 'px';
+    }
+
     // Update prefix list
     updatePrefixList(modal);
 
@@ -563,6 +585,30 @@ function setupImageSettingsEventListeners(modal) {
             saveImageSettings();
 
             // Refresh all tables to apply image settings immediately
+            document.querySelectorAll('.table-section').forEach(section => {
+                const tableName = section.getAttribute('data-table-name');
+                if (tableName) {
+                    refreshTableWithImageSettings(tableName);
+                }
+            });
+        });
+    }
+
+    // Image scale slider
+    const scaleSlider = modal.querySelector('#imageScaleSlider');
+    const scaleValueText = modal.querySelector('#scaleValueText');
+    const scaleSizeHint = modal.querySelector('#scaleSizeHint');
+    if (scaleSlider) {
+        scaleSlider.addEventListener('input', (e) => {
+            const scale = parseFloat(e.target.value);
+            imageSettings.imageScale = scale;
+            saveImageSettings();
+
+            // Update display values
+            scaleValueText.textContent = Math.round(scale * 100) + '%';
+            scaleSizeHint.textContent = Math.round(100 * scale) + 'px';
+
+            // Refresh all tables to apply new scale immediately
             document.querySelectorAll('.table-section').forEach(section => {
                 const tableName = section.getAttribute('data-table-name');
                 if (tableName) {
@@ -634,19 +680,40 @@ function refreshTableWithImageSettings(tableName) {
     tbody.querySelectorAll('tr').forEach(row => {
         const cells = row.querySelectorAll('td');
         cells.forEach((cell, index) => {
-            const value = cell.textContent;
-            if (imageSettings.showImages && isImagePath(value)) {
-                const imageElement = createImageElement(value);
+            // Get the original data value, not the current display content
+            let originalValue = cell.dataset.originalValue;
+
+            // If no original value is stored, try to extract it from current content
+            if (!originalValue) {
+                const imageContainer = cell.querySelector('.table-image-container');
+                if (imageContainer) {
+                    // If there's an image container, get the original path from img alt
+                    const img = imageContainer.querySelector('img');
+                    if (img) {
+                        originalValue = img.alt;
+                    }
+                } else {
+                    // No image container, use text content as original value
+                    originalValue = cell.textContent;
+                }
+                // Store the original value for future use
+                cell.dataset.originalValue = originalValue;
+            }
+
+            if (imageSettings.showImages && isImagePath(originalValue)) {
+                const imageElement = createImageElement(originalValue);
                 if (imageElement) {
                     cell.innerHTML = '';
                     cell.appendChild(imageElement);
+                } else {
+                    // Image element creation failed (image not found), show as text
+                    cell.innerHTML = '';
+                    cell.textContent = originalValue;
                 }
-            } else if (!imageSettings.showImages && cell.querySelector('img')) {
+            } else if (!imageSettings.showImages && cell.querySelector('.table-image-container')) {
                 // Convert back to text if images are disabled
-                const img = cell.querySelector('img');
-                if (img) {
-                    cell.textContent = img.alt || img.title || '';
-                }
+                cell.innerHTML = '';
+                cell.textContent = originalValue;
             }
         });
     });
@@ -1547,6 +1614,9 @@ function updateTableRows(tbody, tableData, columns) {
                 const val = row[col];
                 
                 if (val !== null) {
+                    // Store original value for image refresh functionality
+                    td.dataset.originalValue = String(val);
+
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
                         td.appendChild(jsonView);
@@ -1562,6 +1632,7 @@ function updateTableRows(tbody, tableData, columns) {
                     }
                 } else {
                     td.textContent = '';
+                    td.dataset.originalValue = '';
                 }
                 tr.appendChild(td);
             });
@@ -1578,6 +1649,9 @@ function updateTableRows(tbody, tableData, columns) {
                 const val = row[col];
                 
                 if (val !== null) {
+                    // Store original value for image refresh functionality
+                    td.dataset.originalValue = String(val);
+
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
                         td.appendChild(jsonView);
@@ -1593,6 +1667,7 @@ function updateTableRows(tbody, tableData, columns) {
                     }
                 } else {
                     td.textContent = '';
+                    td.dataset.originalValue = '';
                 }
                 tr.appendChild(td);
             });
@@ -2140,6 +2215,9 @@ function appendTableData(tableName, tableInfo, translations, currentLang) {
                 const val = row[col];
                 
                 if (val !== null) {
+                    // Store original value for image refresh functionality
+                    td.dataset.originalValue = String(val);
+
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
                         td.appendChild(jsonView);
@@ -2155,6 +2233,7 @@ function appendTableData(tableName, tableInfo, translations, currentLang) {
                     }
                 } else {
                     td.textContent = '';
+                    td.dataset.originalValue = '';
                 }
                 tr.appendChild(td);
             });

@@ -1092,6 +1092,104 @@ tr {
     margin-bottom: 8px;
 }
 
+/* Image scale slider styles */
+.scale-slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scale-slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.scale-label-min,
+.scale-label-max {
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-weight: 500;
+    min-width: 30px;
+    text-align: center;
+}
+
+.scale-slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--md-sys-color-surface-variant);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.scale-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.scale-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.scale-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.scale-slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.scale-value-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface);
+}
+
+#scaleValueText {
+    font-weight: 600;
+    color: var(--md-sys-color-primary);
+}
+
+.scale-size-hint {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 12px;
+}
+
+/* Dark theme adjustments for slider */
+[data-theme="dark"] .scale-slider {
+    background: var(--md-sys-color-surface-variant);
+}
+
+[data-theme="dark"] .scale-slider::-webkit-slider-thumb {
+    background: var(--md-sys-color-primary);
+}
+
+[data-theme="dark"] .scale-slider::-moz-range-thumb {
+    background: var(--md-sys-color-primary);
+}
+
 .prefix-list {
     display: flex;
     flex-direction: column;
