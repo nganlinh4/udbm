@@ -481,36 +481,24 @@ function createImageSettingsModal() {
                             <span class="lang-ko">
                                 <strong>이미지를 찾기 위한 URL 접두사 추가:</strong><br>
                                 • 웹 이미지: <code>https://example.com/images/</code><br>
-                                • 로컬 파일: <code>C:\\work\\categorizing\\</code> 또는 <code>/home/user/images/</code><br>
+                                • 로컬 파일: <code>C:\\path\\to\\images\\</code> 또는 <code>/home/user/images/</code><br>
                                 <em>참고: 로컬 파일 접근은 브라우저 보안에 의해 제한될 수 있습니다. 로컬 파일의 최상의 결과를 위해 로컬 웹 서버 설정을 고려하세요.</em>
                             </span>
                             <span class="lang-en">
                                 <strong>Add URL prefixes to help locate images:</strong><br>
                                 • For web images: <code>https://example.com/images/</code><br>
-                                • For local files: <code>C:\\work\\categorizing\\</code> or <code>/home/user/images/</code><br>
+                                • For local files: <code>C:\\path\\to\\images\\</code> or <code>/home/user/images/</code><br>
                                 <em>Note: Local file access may be limited by browser security. For best results with local files, consider setting up a local web server.</em>
                             </span>
                             <span class="lang-vi">
                                 <strong>Thêm tiền tố URL để giúp định vị hình ảnh:</strong><br>
                                 • Cho hình ảnh web: <code>https://example.com/images/</code><br>
-                                • Cho tệp cục bộ: <code>C:\\work\\categorizing\\</code> hoặc <code>/home/user/images/</code><br>
+                                • Cho tệp cục bộ: <code>C:\\path\\to\\images\\</code> hoặc <code>/home/user/images/</code><br>
                                 <em>Lưu ý: Truy cập tệp cục bộ có thể bị hạn chế bởi bảo mật trình duyệt. Để có kết quả tốt nhất với tệp cục bộ, hãy xem xét thiết lập máy chủ web cục bộ.</em>
                             </span>
                         </small>
                     </div>
                 </div>
-            </div>
-            <div class="image-settings-footer">
-                <button type="button" id="applyImageSettings" class="apply-btn">
-                    <span class="lang-ko">적용</span>
-                    <span class="lang-en">Apply</span>
-                    <span class="lang-vi">Áp dụng</span>
-                </button>
-                <button type="button" id="cancelImageSettings" class="cancel-btn">
-                    <span class="lang-ko">취소</span>
-                    <span class="lang-en">Cancel</span>
-                    <span class="lang-vi">Hủy</span>
-                </button>
             </div>
         </div>
     `;
@@ -528,7 +516,7 @@ function updateImageSettingsModal(modal, tableName) {
 
     // Update toggle state
     const toggle = modal.querySelector('#showImagesToggle');
-    toggle.checked = imageSettings.showImages;
+    toggle.selected = imageSettings.showImages;
 
     // Update prefix list
     updatePrefixList(modal);
@@ -567,14 +555,40 @@ function setupImageSettingsEventListeners(modal) {
         }
     });
 
+    // Show images toggle switch
+    const showImagesToggle = modal.querySelector('#showImagesToggle');
+    if (showImagesToggle) {
+        showImagesToggle.addEventListener('change', (e) => {
+            imageSettings.showImages = e.target.selected;
+            saveImageSettings();
+
+            // Refresh all tables to apply image settings immediately
+            document.querySelectorAll('.table-section').forEach(section => {
+                const tableName = section.getAttribute('data-table-name');
+                if (tableName) {
+                    refreshTableWithImageSettings(tableName);
+                }
+            });
+        });
+    }
+
     // Add prefix button
     modal.querySelector('#addPrefixBtn').addEventListener('click', () => {
         const input = modal.querySelector('#newPrefixInput');
         const prefix = input.value.trim();
         if (prefix && !imageSettings.pathPrefixes.includes(prefix)) {
             imageSettings.pathPrefixes.push(prefix);
+            saveImageSettings();
             updatePrefixList(modal);
             input.value = '';
+
+            // Refresh all tables to apply new prefix immediately
+            document.querySelectorAll('.table-section').forEach(section => {
+                const tableName = section.getAttribute('data-table-name');
+                if (tableName) {
+                    refreshTableWithImageSettings(tableName);
+                }
+            });
         }
     });
 
@@ -590,15 +604,18 @@ function setupImageSettingsEventListeners(modal) {
         if (e.target.classList.contains('remove-prefix-btn')) {
             const index = parseInt(e.target.dataset.index);
             imageSettings.pathPrefixes.splice(index, 1);
+            saveImageSettings();
             updatePrefixList(modal);
+
+            // Refresh all tables to apply prefix removal immediately
+            document.querySelectorAll('.table-section').forEach(section => {
+                const tableName = section.getAttribute('data-table-name');
+                if (tableName) {
+                    refreshTableWithImageSettings(tableName);
+                }
+            });
         }
     });
-
-    // Apply button
-    modal.querySelector('#applyImageSettings').addEventListener('click', applyImageSettings);
-
-    // Cancel button
-    modal.querySelector('#cancelImageSettings').addEventListener('click', closeImageSettingsModal);
 }
 
 // Refresh table with image settings applied
@@ -3711,25 +3728,6 @@ function closeImageSettingsModal() {
     }
 }
 
-function applyImageSettings() {
-    const modal = document.getElementById('imageSettingsModal');
-    if (!modal) return;
-
-    const toggle = modal.querySelector('#showImagesToggle');
-    imageSettings.showImages = toggle.checked;
-    saveImageSettings();
-
-    // Refresh all tables to apply image settings
-    document.querySelectorAll('.table-section').forEach(section => {
-        const tableName = section.getAttribute('data-table-name');
-        if (tableName) {
-            refreshTableWithImageSettings(tableName);
-        }
-    });
-
-    closeImageSettingsModal();
-}
-
 // Full-view image modal functions
 function openImageFullview(imagePath, imageUrl) {
     const modal = document.getElementById('imageFullviewModal');
@@ -3891,7 +3889,6 @@ function downloadFullviewImage() {
 // Make functions globally available
 window.openImageSettingsModal = openImageSettingsModal;
 window.closeImageSettingsModal = closeImageSettingsModal;
-window.applyImageSettings = applyImageSettings;
 window.openImageFullview = openImageFullview;
 window.closeImageFullview = closeImageFullview;
 window.downloadFullviewImage = downloadFullviewImage;

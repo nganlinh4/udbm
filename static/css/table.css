@@ -1192,43 +1192,7 @@ tr {
     line-height: 1.4;
 }
 
-.image-settings-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid var(--md-sys-color-outline-variant);
-}
 
-.apply-btn, .cancel-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-}
-
-.apply-btn {
-    background: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary);
-}
-
-.apply-btn:hover {
-    background: var(--md-sys-color-primary-container);
-    color: var(--md-sys-color-on-primary-container);
-}
-
-.cancel-btn {
-    background: var(--md-sys-color-surface-variant);
-    color: var(--md-sys-color-on-surface-variant);
-}
-
-.cancel-btn:hover {
-    background: var(--md-sys-color-outline);
-}
 
 .table-container.theme-0 thead th {
     background-color: #C5CAE9;
