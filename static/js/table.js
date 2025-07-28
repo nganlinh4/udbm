@@ -303,9 +303,17 @@ function tryImageUrl(imagePath) {
 
     const urls = [];
 
-    // Try the path as-is first (for web URLs and absolute paths)
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('/')) {
+    // Try the path as-is first (for web URLs only)
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         urls.push(imagePath);
+    }
+
+    // For absolute file paths, try direct file access and API endpoint
+    if (imagePath.startsWith('/')) {
+        // Direct file access
+        urls.push('file://' + imagePath);
+        // API endpoint
+        urls.push(`${window.baseUrl || ''}/api/local-image?path=${encodeURIComponent(imagePath)}`);
     }
 
     // Try with each prefix
