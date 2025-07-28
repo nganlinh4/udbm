@@ -330,9 +330,14 @@ function updateSingleTable(tableName, tableInfo) {
                 existingTable = tableDiv.querySelector('table');
             }
 
-            // Re-apply column widths after the table has been updated
+            // Preserve current column widths during monitoring updates
             if (existingTable) {
-                applySavedColumnWidths(existingTable, tableInfo.columns);
+                // Only apply saved widths if the table doesn't have explicit widths set
+                const firstTh = existingTable.querySelector('th');
+                if (!firstTh || !firstTh.style.width) {
+                    applySavedColumnWidths(existingTable, tableInfo.columns);
+                }
+                // If widths are already set, don't change them during monitoring updates
             }
 
             tableDiv.classList.add('initialized');
@@ -901,12 +906,7 @@ function toggleTable(tableName) {
     }
 }
 
-// Add a function to adjust column widths to fit content
-function adjustColumnWidths(table) {
-    // Simply use the improved version from table.js
-    const tableClass = window.require('./table.js');
-    tableClass.adjustColumnWidths(table);
-}
+
 
 // Add new function to update language display
 function updateLanguage() {

@@ -3510,6 +3510,10 @@ export function adjustColumnWidths(table) {
     const INDENT_SIZE = 2;
     const NESTING_PADDING = 10; // Reduced padding per nesting level
 
+    // Get column names for saving widths
+    const columnNames = columns.map(th => th.textContent.trim());
+    const calculatedWidths = {};
+
     columns.forEach((th, index) => {
         th.style.width = '';
         const cells = Array.from(table.querySelectorAll(`td:nth-child(${index + 1})`));
@@ -3571,7 +3575,17 @@ export function adjustColumnWidths(table) {
                 cell.style.maxWidth = `${finalWidth}px`;
             }
         });
+
+        // Store the calculated width for saving
+        calculatedWidths[columnNames[index]] = finalWidth;
     });
+
+    // Save the calculated widths to cookies
+    const tableName = table.closest('.table-container')?.id || table.closest('.table-section')?.getAttribute('data-table-name');
+    if (tableName) {
+        const cookieName = `table_${tableName}_widths`;
+        setCookie(cookieName, JSON.stringify(calculatedWidths), 365);
+    }
 }
 
 export function handleTableScroll(wrapper, tableName) {
