@@ -1103,12 +1103,53 @@ function setupQueryHandler() {
 setupQueryHandler();
 let schemaData = null;
 
+// Helper function to get current database key
+function getCurrentDatabaseKey() {
+    const dbConfigsCookie = getCookie('db_configs');
+    const lastUsedDb = getCookie('last_used_db');
+
+    if (dbConfigsCookie && lastUsedDb) {
+        try {
+            const dbConfigs = JSON.parse(decodeURIComponent(dbConfigsCookie));
+            return lastUsedDb;
+        } catch (e) {
+            console.error('Error parsing database configuration:', e);
+        }
+    }
+    return null;
+}
+
+// Helper function to save table order to cookies
+function saveTableOrderFromArrangement() {
+    const currentDb = getCurrentDatabaseKey();
+    if (!currentDb) {
+        console.log('No current database, using simple cookie key');
+        // Fallback for monitor.js compatibility
+        const tableOrder = Array.from(document.querySelectorAll('.table-section'))
+            .map(section => section.dataset.tableName);
+        setCookie('tableOrder', JSON.stringify(tableOrder), 365);
+        return;
+    }
+
+    const tableOrder = Array.from(document.querySelectorAll('.table-section'))
+        .map(section => section.dataset.tableName);
+    setCookie(`tableOrder_${currentDb}`, JSON.stringify(tableOrder), 365);
+    console.log('Saved table order:', tableOrder);
+}
+
 // Helper function to get sorted table order based on relationships
 function getSortedTableOrder() {
+    console.log('getSortedTableOrder() called');
+    console.log('schemaData available:', !!schemaData);
+    console.log('relationships available:', !!schemaData?.relationships);
+
     if (!schemaData || !schemaData.relationships) {
+        console.log('No schema data, returning alphabetical order');
         return Array.from(document.querySelectorAll('.table-section'))
             .map(section => section.getAttribute('data-table-name'));
     }
+
+    console.log('Building relationship graph from', schemaData.relationships.length, 'relationships');
 
     // Build relationship graph
     const relationGraph = new Map();
@@ -1166,6 +1207,7 @@ function getSortedTableOrder() {
         }
     });
 
+    console.log('Final sorted table order:', sortedTables);
     return sortedTables;
 }
 
@@ -1462,16 +1504,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         const savedArrangement = localStorage.getItem('arrangementMode');
         const initialArrangement = savedArrangement !== null ? JSON.parse(savedArrangement) : false;
         
-        arrangementToggle.checked = initialArrangement;
+        arrangementToggle.selected = initialArrangement;
         isRelationMode = initialArrangement;
+
+        // Apply initial arrangement based on saved state
+        console.log('Applying initial arrangement:', initialArrangement ? 'smart' : 'alphabetical');
+        if (initialArrangement) {
+            arrangeByRelations();
+        } else {
+            arrangeAlphabetically();
+        }
 
         // Add change event listener
         arrangementToggle.addEventListener('change', (e) => {
-            isRelationMode = e.target.checked;
-            localStorage.setItem('arrangementMode', JSON.stringify(e.target.checked));
+            const isSmartMode = e.target.selected;
+            console.log('Arrangement toggle changed to:', isSmartMode ? 'SMART ORDER (ON)' : 'ALPHABETICAL (OFF)');
+            isRelationMode = isSmartMode;
+            localStorage.setItem('arrangementMode', JSON.stringify(isSmartMode));
             const tableSections = document.querySelectorAll('.table-section');
             const tablePills = document.querySelectorAll('.table-button');
-            
+
+            console.log('Found tableSections:', tableSections.length);
+            console.log('Found tablePills:', tablePills.length);
+
             // Add transitions for smooth reordering
             tableSections.forEach(section => {
                 section.style.transition = 'all 0.3s ease-out';
@@ -1479,10 +1534,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             tablePills.forEach(pill => {
                 pill.style.transition = 'all 0.3s ease-out';
             });
-            
+
             if (isRelationMode) {
+                console.log('Switching to SMART ORDER (relation mode)');
                 arrangeByRelations();
             } else {
+                console.log('Switching to ALPHABETICAL mode');
                 arrangeAlphabetically();
             }
             
@@ -3712,15 +3769,25 @@ export function scrollAllTablesToTop() {
 
 // Function to arrange tables by relations
 function arrangeByRelations() {
+    console.log('arrangeByRelations() called');
+    console.log('schemaData:', schemaData);
+    console.log('schemaData.relationships:', schemaData?.relationships);
+
     if (!schemaData || !schemaData.relationships) {
-        console.error('Schema data not available');
+        console.warn('Schema data not available for relation arrangement, falling back to alphabetical');
+        console.warn('schemaData:', schemaData);
+        arrangeAlphabetically();
         return;
     }
 
     const tablesContainer = document.getElementById('tables-container');
     const buttonsLine = document.querySelector('.table-buttons-line');
     const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
-    
+
+    console.log('tablesContainer:', tablesContainer);
+    console.log('buttonsLine:', buttonsLine);
+    console.log('tableSections count:', tableSections.length);
+
     // Reset all groups
     tableSections.forEach(section => {
         section.classList.remove('relation-group');
@@ -3728,12 +3795,15 @@ function arrangeByRelations() {
     });
 
     const sortedOrder = getSortedTableOrder();
-    
+    console.log('sortedOrder:', sortedOrder);
+
     // Update DOM with animation
     sortedOrder.forEach((tableName, index) => {
         const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
         const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
-        
+
+        console.log(`Processing table ${tableName}: section=${!!section}, pill=${!!pill}`);
+
         if (section) {
             section.style.transition = 'all 0.3s ease-out';
             section.style.transitionDelay = `${index * 0.05}s`;
@@ -3745,11 +3815,17 @@ function arrangeByRelations() {
                 section.style.opacity = '1';
             });
         }
-        
+
         if (pill) {
+            console.log(`Reordering pill for ${tableName}`);
             buttonsLine.appendChild(pill);
+        } else {
+            console.warn(`No pill found for table ${tableName}`);
         }
     });
+
+    // Save the new table order to cookies
+    saveTableOrderFromArrangement();
 
     // Clean up transitions
     setTimeout(() => {
@@ -3762,23 +3838,32 @@ function arrangeByRelations() {
 
 // Function to arrange tables alphabetically
 function arrangeAlphabetically() {
+    console.log('arrangeAlphabetically() called');
+
     const tablesContainer = document.getElementById('tables-container');
     const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
     const buttonsLine = document.querySelector('.table-buttons-line');
     const tablePills = Array.from(buttonsLine.querySelectorAll('.table-button'));
-    
+
+    console.log('tablesContainer:', tablesContainer);
+    console.log('buttonsLine:', buttonsLine);
+    console.log('tableSections count:', tableSections.length);
+    console.log('tablePills count:', tablePills.length);
+
     // Remove relation-group class and reset margins
     tableSections.forEach(section => {
         section.classList.remove('relation-group');
         section.style.marginBottom = '';
         section.style.opacity = '0';
     });
-    
+
     // Get alphabetically sorted table names
     const sortedNames = tableSections
         .map(section => section.getAttribute('data-table-name'))
         .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    
+
+    console.log('sortedNames:', sortedNames);
+
     // Reorder table sections with animation
     sortedNames.forEach((tableName, index) => {
         const section = tableSections.find(s =>
@@ -3793,17 +3878,24 @@ function arrangeAlphabetically() {
             });
         }
     });
-    
+
     // Reorder table pills
     sortedNames.forEach((tableName) => {
         const pill = tablePills.find(p =>
             p.getAttribute('data-table') === tableName
         );
+        console.log(`Processing pill for ${tableName}: found=${!!pill}`);
         if (pill) {
+            console.log(`Reordering pill for ${tableName}`);
             buttonsLine.appendChild(pill);
+        } else {
+            console.warn(`No pill found for table ${tableName}`);
         }
     });
-    
+
+    // Save the new table order to cookies
+    saveTableOrderFromArrangement();
+
     // Clean up transitions
     setTimeout(() => {
         tableSections.forEach(section => {
