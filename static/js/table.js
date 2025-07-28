@@ -270,7 +270,13 @@ function downloadBlob(blob, filename) {
 export let imageSettings = {
     showImages: false,
     pathPrefixes: [],
-    imageScale: 1.0  // Default scale (1.0 = 100px, range 0.5-3.0)
+    imageScale: 1.0,  // Default scale (1.0 = 100px, range 0.5-3.0)
+    loadingMethods: {
+        fileProtocol: true,     // file:// URLs
+        apiEndpoint: true,      // /api/local-image endpoint
+        webUrls: true,          // http/https URLs
+        pathPrefixes: true      // Try with path prefixes
+    }
 };
 
 // Load image settings from localStorage
@@ -304,7 +310,7 @@ function tryImageUrl(imagePath) {
     const urls = [];
 
     // Try the path as-is first (for web URLs only)
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    if (imageSettings.loadingMethods.webUrls && (imagePath.startsWith('http://') || imagePath.startsWith('https://'))) {
         urls.push(imagePath);
     }
 
@@ -315,24 +321,29 @@ function tryImageUrl(imagePath) {
 
     if (isCompleteAbsolutePath) {
         // Direct file access
-        if (imagePath.startsWith('/')) {
-            // Unix-style path
-            urls.push('file://' + imagePath);
-        } else {
-            // Windows-style path - convert to file:// URL
-            const fileUrl = 'file:///' + imagePath.replace(/\\/g, '/');
-            urls.push(fileUrl);
+        if (imageSettings.loadingMethods.fileProtocol) {
+            if (imagePath.startsWith('/')) {
+                // Unix-style path
+                urls.push('file://' + imagePath);
+            } else {
+                // Windows-style path - convert to file:// URL
+                const fileUrl = 'file:///' + imagePath.replace(/\\/g, '/');
+                urls.push(fileUrl);
+            }
         }
 
         // API endpoint with proper encoding
-        // For Windows paths, ensure backslashes are properly encoded
-        const properlyEncodedPath = encodeURIComponent(imagePath);
-        urls.push(`${window.baseUrl || ''}/api/local-image?path=${properlyEncodedPath}`);
+        if (imageSettings.loadingMethods.apiEndpoint) {
+            // For Windows paths, ensure backslashes are properly encoded
+            const properlyEncodedPath = encodeURIComponent(imagePath);
+            urls.push(`${window.baseUrl || ''}/api/local-image?path=${properlyEncodedPath}`);
+        }
     }
 
-    // Try with each prefix
-    imageSettings.pathPrefixes.forEach(prefix => {
-        if (prefix) {
+    // Try with each prefix (if enabled)
+    if (imageSettings.loadingMethods.pathPrefixes) {
+        imageSettings.pathPrefixes.forEach(prefix => {
+            if (prefix) {
             let fullPath;
 
             // Check if prefix is a local file path (Windows or Unix style)
@@ -346,25 +357,29 @@ function tryImageUrl(imagePath) {
                 fullPath = cleanPrefix + cleanPath;
 
                 // Convert Windows paths to file:// URLs for local access
-                if (fullPath.match(/^[A-Za-z]:\\/)) {
-                    // Windows path - convert to file:// URL
-                    const fileUrl = 'file:///' + fullPath.replace(/\\/g, '/');
-                    urls.push(fileUrl);
-                } else {
-                    // Unix-style path - handle special characters properly
-                    const fileUrl = 'file://' + fullPath;
-                    urls.push(fileUrl);
+                if (imageSettings.loadingMethods.fileProtocol) {
+                    if (fullPath.match(/^[A-Za-z]:\\/)) {
+                        // Windows path - convert to file:// URL
+                        const fileUrl = 'file:///' + fullPath.replace(/\\/g, '/');
+                        urls.push(fileUrl);
+                    } else {
+                        // Unix-style path - handle special characters properly
+                        const fileUrl = 'file://' + fullPath;
+                        urls.push(fileUrl);
+                    }
                 }
 
                 // Also try the backend endpoint with proper encoding
-                // Encode each path component separately to preserve path structure
-                const pathComponents = fullPath.split(separator);
-                const encodedComponents = pathComponents.map(component => encodeURIComponent(component));
-                const encodedPath = encodedComponents.join(separator);
-                urls.push(`${window.baseUrl}/api/local-image?path=${encodeURIComponent(fullPath)}`);
+                if (imageSettings.loadingMethods.apiEndpoint) {
+                    // Encode each path component separately to preserve path structure
+                    const pathComponents = fullPath.split(separator);
+                    const encodedComponents = pathComponents.map(component => encodeURIComponent(component));
+                    const encodedPath = encodedComponents.join(separator);
+                    urls.push(`${window.baseUrl}/api/local-image?path=${encodeURIComponent(fullPath)}`);
 
-                // Also try with component-wise encoding for better compatibility
-                urls.push(`${window.baseUrl}/api/local-image?path=${encodedPath}`);
+                    // Also try with component-wise encoding for better compatibility
+                    urls.push(`${window.baseUrl}/api/local-image?path=${encodedPath}`);
+                }
             } else {
                 // For web URLs, handle normally
                 const cleanPrefix = prefix.endsWith('/') ? prefix : prefix + '/';
@@ -372,8 +387,9 @@ function tryImageUrl(imagePath) {
                 fullPath = cleanPrefix + cleanPath;
                 urls.push(fullPath);
             }
-        }
-    });
+            }
+        });
+    }
 
     return urls;
 }
@@ -384,9 +400,6 @@ function createImageElement(imagePath) {
     const cleanPath = imagePath.trim().replace(/\r/g, '').replace(/\n/g, '');
     const urls = tryImageUrl(cleanPath);
     if (!urls || urls.length === 0) return null;
-
-    // Debug logging
-    console.log(`Image path: "${cleanPath}" -> Generated ${urls.length} URLs:`, urls);
 
     const container = document.createElement('div');
     container.className = 'table-image-container';
@@ -507,6 +520,53 @@ function createImageSettingsModal() {
 
                 <div class="setting-group">
                     <label class="setting-label">
+                        <span class="lang-ko">이미지 로딩 방법:</span>
+                        <span class="lang-en">Image Loading Methods:</span>
+                        <span class="lang-vi">Phương pháp tải hình ảnh:</span>
+                    </label>
+                    <div class="loading-methods-container">
+                        <div class="method-pill" data-method="fileProtocol">
+                            <span class="pill-icon">📁</span>
+                            <span class="pill-text">
+                                <span class="lang-ko">파일 프로토콜</span>
+                                <span class="lang-en">File Protocol</span>
+                                <span class="lang-vi">Giao thức tệp</span>
+                            </span>
+                        </div>
+                        <div class="method-pill" data-method="apiEndpoint">
+                            <span class="pill-icon">🌐</span>
+                            <span class="pill-text">
+                                <span class="lang-ko">API 엔드포인트</span>
+                                <span class="lang-en">API Endpoint</span>
+                                <span class="lang-vi">Điểm cuối API</span>
+                            </span>
+                        </div>
+                        <div class="method-pill" data-method="webUrls">
+                            <span class="pill-icon">🔗</span>
+                            <span class="pill-text">
+                                <span class="lang-ko">웹 URL</span>
+                                <span class="lang-en">Web URLs</span>
+                                <span class="lang-vi">URL web</span>
+                            </span>
+                        </div>
+                        <div class="method-pill" data-method="pathPrefixes">
+                            <span class="pill-icon">📂</span>
+                            <span class="pill-text">
+                                <span class="lang-ko">경로 접두사</span>
+                                <span class="lang-en">Path Prefixes</span>
+                                <span class="lang-vi">Tiền tố đường dẫn</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="loading-methods-help">
+                        <span class="lang-ko">• 파일 프로토콜: 로컬 파일 직접 접근 (빠름, 보안 제한 있음)<br>• API 엔드포인트: 서버를 통한 이미지 제공 (안전함)<br>• 웹 URL: HTTP/HTTPS 이미지<br>• 경로 접두사: 설정된 접두사와 결합</span>
+                        <span class="lang-en">• File Protocol: Direct local file access (fast, security limited)<br>• API Endpoint: Server-served images (secure)<br>• Web URLs: HTTP/HTTPS images<br>• Path Prefixes: Combine with configured prefixes</span>
+                        <span class="lang-vi">• Giao thức tệp: Truy cập tệp cục bộ trực tiếp (nhanh, bảo mật hạn chế)<br>• Điểm cuối API: Hình ảnh được phục vụ qua máy chủ (an toàn)<br>• URL web: Hình ảnh HTTP/HTTPS<br>• Tiền tố đường dẫn: Kết hợp với tiền tố đã cấu hình</span>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">
                         <span class="lang-ko">이미지 경로 접두사:</span>
                         <span class="lang-en">Image Path Prefixes:</span>
                         <span class="lang-vi">Tiền tố đường dẫn hình ảnh:</span>
@@ -573,6 +633,17 @@ function updateImageSettingsModal(modal, tableName) {
         scaleValueText.textContent = Math.round(imageSettings.imageScale * 100) + '%';
         scaleSizeHint.textContent = Math.round(100 * imageSettings.imageScale) + 'px';
     }
+
+    // Update loading method pills
+    const methodPills = modal.querySelectorAll('.method-pill');
+    methodPills.forEach(pill => {
+        const method = pill.getAttribute('data-method');
+        if (imageSettings.loadingMethods[method]) {
+            pill.classList.add('active');
+        } else {
+            pill.classList.remove('active');
+        }
+    });
 
     // Update prefix list
     updatePrefixList(modal);
@@ -651,6 +722,34 @@ function setupImageSettingsEventListeners(modal) {
             });
         });
     }
+
+    // Loading method pill toggles
+    const methodPills = modal.querySelectorAll('.method-pill');
+    methodPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            const method = pill.getAttribute('data-method');
+            const isActive = pill.classList.contains('active');
+
+            // Toggle the method
+            imageSettings.loadingMethods[method] = !isActive;
+            saveImageSettings();
+
+            // Update UI
+            if (!isActive) {
+                pill.classList.add('active');
+            } else {
+                pill.classList.remove('active');
+            }
+
+            // Refresh all tables to apply new loading method settings immediately
+            document.querySelectorAll('.table-section').forEach(section => {
+                const tableName = section.getAttribute('data-table-name');
+                if (tableName) {
+                    refreshTableWithImageSettings(tableName);
+                }
+            });
+        });
+    });
 
     // Add prefix button
     modal.querySelector('#addPrefixBtn').addEventListener('click', () => {
