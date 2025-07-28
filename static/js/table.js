@@ -303,7 +303,7 @@ function tryImageUrl(imagePath) {
 
     const urls = [];
 
-    // Try the path as-is first (for web URLs)
+    // Try the path as-is first (for web URLs and absolute paths)
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('/')) {
         urls.push(imagePath);
     }
@@ -329,12 +329,19 @@ function tryImageUrl(imagePath) {
                     const fileUrl = 'file:///' + fullPath.replace(/\\/g, '/');
                     urls.push(fileUrl);
                 } else {
-                    // Unix-style path
-                    urls.push('file://' + fullPath);
+                    // Unix-style path - handle special characters properly
+                    const fileUrl = 'file://' + fullPath;
+                    urls.push(fileUrl);
                 }
 
-                // Also try the backend endpoint (if available)
-                const encodedPath = encodeURIComponent(fullPath);
+                // Also try the backend endpoint with proper encoding
+                // Encode each path component separately to preserve path structure
+                const pathComponents = fullPath.split(separator);
+                const encodedComponents = pathComponents.map(component => encodeURIComponent(component));
+                const encodedPath = encodedComponents.join(separator);
+                urls.push(`${window.baseUrl}/api/local-image?path=${encodeURIComponent(fullPath)}`);
+
+                // Also try with component-wise encoding for better compatibility
                 urls.push(`${window.baseUrl}/api/local-image?path=${encodedPath}`);
             } else {
                 // For web URLs, handle normally
