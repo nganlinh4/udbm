@@ -308,9 +308,12 @@ function tryImageUrl(imagePath) {
         urls.push(imagePath);
     }
 
-    // For absolute file paths, try direct file access and API endpoint
-    const isAbsolutePath = imagePath.startsWith('/') || imagePath.match(/^[A-Za-z]:\\/);
-    if (isAbsolutePath) {
+    // For absolute file paths that look complete (contain multiple path segments)
+    // Only treat as absolute if it looks like a complete system path
+    const isCompleteAbsolutePath = (imagePath.match(/^[A-Za-z]:\\/) ||
+                                   (imagePath.startsWith('/') && imagePath.split('/').length > 3));
+
+    if (isCompleteAbsolutePath) {
         // Direct file access
         if (imagePath.startsWith('/')) {
             // Unix-style path
@@ -377,8 +380,13 @@ function tryImageUrl(imagePath) {
 
 // Create image element with fallback
 function createImageElement(imagePath) {
-    const urls = tryImageUrl(imagePath);
+    // Clean up the image path - remove carriage returns and extra whitespace
+    const cleanPath = imagePath.trim().replace(/\r/g, '').replace(/\n/g, '');
+    const urls = tryImageUrl(cleanPath);
     if (!urls || urls.length === 0) return null;
+
+    // Debug logging
+    console.log(`Image path: "${cleanPath}" -> Generated ${urls.length} URLs:`, urls);
 
     const container = document.createElement('div');
     container.className = 'table-image-container';
