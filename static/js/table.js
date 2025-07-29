@@ -1487,6 +1487,7 @@ function setupQueryHandler() {
     if (queryHandler) return; // Only set up once
 
     queryHandler = (e) => {
+        console.log('setupQueryHandler Q handler triggered!');
         if (!isAdminMode) return;
         if (!e.key || e.key.toLowerCase() !== 'q') return;
         
@@ -1769,15 +1770,183 @@ loadSchemaData().then(() => {
     }
 });
 
+// Function to set up execute button and global Ctrl+Enter (can be called manually)
+function setupExecuteButton() {
+    const executeButton = document.getElementById('executeQuery');
+    const queryInput = document.getElementById('queryInput');
+    const resultArea = document.getElementById('queryResult');
+    const queryPopup = document.getElementById('queryPopup');
+
+    if (!executeButton || !queryInput || !resultArea || !queryPopup) {
+        console.error('Query popup elements not found:', {
+            executeButton: !!executeButton,
+            queryInput: !!queryInput,
+            resultArea: !!resultArea,
+            queryPopup: !!queryPopup
+        });
+        return false;
+    }
+
+
+
+    // Load saved query history
+    const queryHistory = JSON.parse(localStorage.getItem('queryHistory') || '[]');
+    let historyIndex = -1;
+
+    // Handle execute function
+    const handleExecute = async () => {
+        const query = queryInput.value.trim();
+        if (!query) return;
+
+
+
+        // Save to history
+        if (!queryHistory.includes(query)) {
+            queryHistory.unshift(query);
+            if (queryHistory.length > 50) queryHistory.pop();
+            localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+        }
+
+        try {
+            const response = await fetch(`${window.baseUrl}/execute_query`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+
+            const data = await response.json();
+            if (data.error) {
+                resultArea.textContent = `Error: ${data.error}`;
+                return;
+            }
+
+            if (data.results) {
+                // Handle multiple result sets
+                if (data.hasMultipleResultSets) {
+                    resultArea.innerHTML = '';
+                    data.results.forEach((resultSet, index) => {
+                        const setHeader = document.createElement('h4');
+                        setHeader.textContent = `Result Set ${index + 1}:`;
+                        setHeader.style.marginTop = index > 0 ? '20px' : '0';
+                        resultArea.appendChild(setHeader);
+
+                        const setContainer = document.createElement('div');
+                        if (Array.isArray(resultSet) && resultSet.length > 0 && typeof resultSet[0] === 'object') {
+                            createQueryResultTable(setContainer, resultSet);
+                        } else {
+                            setContainer.textContent = JSON.stringify(resultSet, null, 2);
+                        }
+                        resultArea.appendChild(setContainer);
+                    });
+                } else {
+                    // Single result set
+                    if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                        createQueryResultTable(resultArea, data.results);
+                    } else {
+                        resultArea.textContent = JSON.stringify(data.results, null, 2);
+                    }
+                }
+            } else if (data.message) {
+                // For non-SELECT queries, show the success message
+                resultArea.textContent = data.message;
+            }
+        } catch (error) {
+            resultArea.textContent = `Error: ${error.message}`;
+        }
+    };
+
+    // Clear any existing event listeners by cloning the button
+    const newExecuteButton = executeButton.cloneNode(true);
+    executeButton.parentNode.replaceChild(newExecuteButton, executeButton);
+
+    // Get fresh reference
+    const currentExecuteButton = document.getElementById('executeQuery');
+
+    // Set up click handler for button
+    currentExecuteButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleExecute();
+    });
+
+
+
+    // Set up global Ctrl+Enter handler that works when modal is open
+    // Remove any existing global handler first
+    if (window.globalQueryExecuteHandler) {
+        document.removeEventListener('keydown', window.globalQueryExecuteHandler);
+    }
+
+    // Create new global handler
+    window.globalQueryExecuteHandler = (e) => {
+        // Only trigger if query popup is visible and Ctrl+Enter is pressed
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && queryPopup.classList.contains('visible')) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleExecute();
+        }
+    };
+
+    // Add global handler
+    document.addEventListener('keydown', window.globalQueryExecuteHandler);
+
+    // Set up query history navigation (only when focused on input)
+    queryInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (historyIndex < queryHistory.length - 1) {
+                historyIndex++;
+                queryInput.value = queryHistory[historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIndex > -1) {
+                historyIndex--;
+                queryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+            }
+        }
+    });
+
+    return true;
+}
+
 // Move query popup handler to module level for global availability
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if popup is already visible and set up button
+    const queryPopup = document.getElementById('queryPopup');
+
+    if (queryPopup && queryPopup.classList.contains('visible')) {
+        setupExecuteButton();
+    }
+
+    // Set up MutationObserver to watch for popup visibility changes
+    const queryPopupForObserver = document.getElementById('queryPopup');
+    if (queryPopupForObserver) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const target = mutation.target;
+                    if (target.classList.contains('visible')) {
+                        setupExecuteButton();
+                    }
+                }
+            });
+        });
+
+        observer.observe(queryPopupForObserver, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+    }
     document.addEventListener('keydown', async (e) => {
         // Handle Q key for query popup
         // Prevent query popup when typing in query input or when query popup is visible
         const queryPopup = document.getElementById('queryPopup');
         const isQueryInputFocused = document.activeElement && document.activeElement.id === 'queryInput';
         const isQueryPopupVisible = queryPopup && queryPopup.classList.contains('visible');
-        
+
+
+
         if (e.key && e.key.toLowerCase() === 'q' && isAdminMode && !isQueryInputFocused && !isQueryPopupVisible) {
             e.preventDefault();
             
@@ -1791,12 +1960,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let historyIndex = -1;
             
             queryPopup.classList.add('visible');
-            console.log('Query popup opened, elements found:', {
-                queryPopup: !!queryPopup,
-                queryInput: !!queryInput,
-                executeButton: !!executeButton,
-                resultArea: !!resultArea
-            });
+
             queryInput.focus();
             
             // Clear previous result
@@ -1809,203 +1973,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="lang-vi">(Ctrl+Enter) Thực thi</span>
             `;
 
-            // Clean up previous event listeners by cloning elements
-            const newExecuteButton = executeButton.cloneNode(true);
-            const newQueryInput = queryInput.cloneNode(true);
-            executeButton.parentNode.replaceChild(newExecuteButton, executeButton);
-            queryInput.parentNode.replaceChild(newQueryInput, queryInput);
+            // Set up execute button using our centralized function
+            setupExecuteButton();
 
-            // Update references to the new elements
-            const currentExecuteButton = document.getElementById('executeQuery');
+            // Get references for other handlers
             const currentQueryInput = document.getElementById('queryInput');
             
-            currentQueryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'q' && e.ctrlKey) {
-                    e.stopPropagation(); // Prevent triggering the global Q handler
-                }
-            });
-
-            // Handle query history navigation
-            currentQueryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    if (historyIndex < queryHistory.length - 1) {
-                        historyIndex++;
-                        currentQueryInput.value = queryHistory[historyIndex];
-                    }
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (historyIndex > -1) {
-                        historyIndex--;
-                        currentQueryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
-                    }
-                }
-            });
+            // Query input handlers (Ctrl+Q prevention and history navigation) are now handled by setupExecuteButton()
             
-            // Handle execute button click
-            const handleExecute = async () => {
-                const query = currentQueryInput.value.trim();
-                if (!query) return;
-                
-                // Save to history (if not already the most recent)
-                if (!queryHistory.includes(query)) {
-                    queryHistory.unshift(query);
-                    if (queryHistory.length > 50) queryHistory.pop(); // Keep last 50 queries
-                    localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
-                }
-                historyIndex = -1;
+            // Execute button is now set up by setupExecuteButton() function above
 
-                try {
-                    const response = await fetch(`${window.baseUrl}/execute_query`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ query: currentQueryInput.value })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.error) {
-                        resultArea.textContent = `Error: ${data.error}`;
-                        return;
-                    }
-                    
-                    if (data.results) {
-                        // Handle multiple result sets
-                        if (data.hasMultipleResultSets) {
-                            resultArea.innerHTML = '';
-                            data.results.forEach((resultSet, index) => {
-                                const setHeader = document.createElement('h4');
-                                setHeader.textContent = `Result Set ${index + 1}:`;
-                                setHeader.style.marginTop = index > 0 ? '20px' : '0';
-                                resultArea.appendChild(setHeader);
-
-                                if (Array.isArray(resultSet) && resultSet.length > 0 && typeof resultSet[0] === 'object') {
-                                    const tableWrapper = document.createElement('div');
-                                    tableWrapper.className = 'table-scroll-wrapper';
-                                    const table = document.createElement('table');
-                                    table.className = 'query-result-table';
-
-                                    // Create header
-                                    const thead = document.createElement('thead');
-                                    const headerRow = document.createElement('tr');
-                                    Object.keys(resultSet[0]).forEach(key => {
-                                        const th = document.createElement('th');
-                                        th.textContent = key;
-                                        headerRow.appendChild(th);
-                                    });
-                                    thead.appendChild(headerRow);
-                                    table.appendChild(thead);
-
-                                    // Create body
-                                    const tbody = document.createElement('tbody');
-                                    resultSet.forEach(row => {
-                                        const tr = document.createElement('tr');
-                                        Object.values(row).forEach(value => {
-                                            const td = createTableCell(value);
-                                            tr.appendChild(td);
-                                        });
-                                        tbody.appendChild(tr);
-                                    });
-                                    table.appendChild(tbody);
-
-                                    tableWrapper.appendChild(table);
-                                    resultArea.appendChild(tableWrapper);
-                                    setTimeout(() => adjustColumnWidths(table), 0);
-                                } else {
-                                    const setContainer = document.createElement('div');
-                                    setContainer.textContent = JSON.stringify(resultSet, null, 2);
-                                    resultArea.appendChild(setContainer);
-                                }
-                            });
-                        } else if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
-                            // Single result set with tabular data
-                            resultArea.innerHTML = '';
-                            const tableWrapper = document.createElement('div');
-                            tableWrapper.className = 'table-scroll-wrapper';
-                            const table = document.createElement('table');
-                            table.className = 'query-result-table';
-
-                            // Create header
-                            const thead = document.createElement('thead');
-                            const headerRow = document.createElement('tr');
-                            Object.keys(data.results[0]).forEach(key => {
-                                const th = document.createElement('th');
-                                th.textContent = key;
-                                headerRow.appendChild(th);
-                            });
-                            thead.appendChild(headerRow);
-                            table.appendChild(thead);
-
-                            // Create body
-                            const tbody = document.createElement('tbody');
-                            data.results.forEach(row => {
-                                const tr = document.createElement('tr');
-                                Object.values(row).forEach(value => {
-                                    const td = createTableCell(value);
-                                    tr.appendChild(td);
-                                });
-                                tbody.appendChild(tr);
-                            });
-                            table.appendChild(tbody);
-
-                            tableWrapper.appendChild(table);
-                            resultArea.appendChild(tableWrapper);
-                            setTimeout(() => adjustColumnWidths(table), 0);
-                        } else {
-                            // Non-tabular results
-                            resultArea.textContent = JSON.stringify(data.results, null, 2);
-                        }
-                    } else if (data.message) {
-                        resultArea.textContent = data.message;
-                    } else {
-                        resultArea.textContent = 'Query executed successfully';
-                    }
-                } catch (error) {
-                    resultArea.textContent = `Error: ${error.message}`;
-                }
-            };
-            
-            // Debug: Check if button exists
-            console.log('Setting up execute button:', currentExecuteButton);
-            console.log('Button ID:', currentExecuteButton?.id);
-
-            if (currentExecuteButton) {
-                // Make button globally accessible for debugging
-                window.debugExecuteButton = currentExecuteButton;
-                window.debugHandleExecute = handleExecute;
-
-                currentExecuteButton.addEventListener('click', (e) => {
-                    console.log('Execute button clicked!', e);
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleExecute();
-                });
-
-                // Also add a direct onclick as backup
-                currentExecuteButton.onclick = (e) => {
-                    console.log('Execute button onclick triggered!', e);
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleExecute();
-                };
-
-                console.log('Execute button setup complete. Test with: window.debugExecuteButton.click()');
-            } else {
-                console.error('Execute button not found!');
-            }
-
-            // Handle Ctrl+Enter for execution
-            let isExecuting = false;
-            currentQueryInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !isExecuting) {
-                    e.preventDefault();
-                    isExecuting = true;
-                    handleExecute().finally(() => {
-                        isExecuting = false;
-                    });
-                }
-            });
+            // Ctrl+Enter is now handled globally by setupExecuteButton() function
             
             // Handle close button
             const closeButton = queryPopup.querySelector('.query-close');
@@ -3262,8 +3240,13 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
 
     // Add document click handler for deselection
     document.addEventListener('click', (e) => {
+        // Don't interfere with execute button
+        if (e.target.id === 'executeQuery' || e.target.closest('#executeQuery')) {
+            return;
+        }
+
         if (!isAdminMode) return;
-        
+
         // Check if click was outside any table cell
         const clickedCell = e.target.closest('td');
         if (!clickedCell) {
@@ -3525,6 +3508,11 @@ function addFilterListeners(table, columns) {
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', function(e) {
+        // Don't interfere with execute button
+        if (e.target.id === 'executeQuery' || e.target.closest('#executeQuery')) {
+            return;
+        }
+
         if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-btn')) {
             closeAllFilterDropdowns();
         }
