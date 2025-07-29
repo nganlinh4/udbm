@@ -1223,6 +1223,43 @@ document.addEventListener('keydown', (e) => {
          }
     };
 
+    // Helper function to create table cell with long text handling
+    function createTableCell(value) {
+        const td = document.createElement('td');
+        if (value === null) {
+            td.textContent = 'NULL';
+        } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
+            const jsonView = formatJsonCell(value);
+            td.appendChild(jsonView);
+        } else {
+            const textValue = String(value);
+            td.textContent = textValue;
+
+            // Add special styling for long text (like CREATE TABLE statements)
+            if (textValue.length > 100 || textValue.includes('\n') || textValue.toUpperCase().includes('CREATE TABLE')) {
+                td.classList.add('long-text');
+
+                // Add click-to-copy functionality
+                td.style.cursor = 'pointer';
+                td.title = 'Click to copy to clipboard';
+                td.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(textValue);
+                        // Show temporary feedback
+                        const originalTitle = td.title;
+                        td.title = 'Copied!';
+                        setTimeout(() => {
+                            td.title = originalTitle;
+                        }, 1000);
+                    } catch (err) {
+                        console.error('Failed to copy text: ', err);
+                    }
+                });
+            }
+        }
+        return td;
+    }
+
     // Create query result table function
     function createQueryResultTable(resultArea, results) {
         resultArea.innerHTML = '';
@@ -1347,6 +1384,7 @@ document.addEventListener('keydown', (e) => {
         queryButtons.insertBefore(downloadButtons, queryButtons.firstChild);
     }
         const table = document.createElement('table');
+        table.className = 'query-result-table';
         
         // Create header
         const thead = document.createElement('thead');
@@ -1364,15 +1402,7 @@ document.addEventListener('keydown', (e) => {
         results.forEach(row => {
             const tr = document.createElement('tr');
             Object.values(row).forEach(value => {
-                const td = document.createElement('td');
-                if (value === null) {
-                    td.textContent = 'NULL';
-                } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
-                    const jsonView = formatJsonCell(value);
-                    td.appendChild(jsonView);
-                } else {
-                    td.textContent = value;
-                }
+                const td = createTableCell(value);
                 tr.appendChild(td);
             });
             tbody.appendChild(tr);
@@ -1808,6 +1838,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     const tableWrapper = document.createElement('div');
                                     tableWrapper.className = 'table-scroll-wrapper';
                                     const table = document.createElement('table');
+                                    table.className = 'query-result-table';
 
                                     // Create header
                                     const thead = document.createElement('thead');
@@ -1825,15 +1856,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     resultSet.forEach(row => {
                                         const tr = document.createElement('tr');
                                         Object.values(row).forEach(value => {
-                                            const td = document.createElement('td');
-                                            if (value === null) {
-                                                td.textContent = 'NULL';
-                                            } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
-                                                const jsonView = formatJsonCell(value);
-                                                td.appendChild(jsonView);
-                                            } else {
-                                                td.textContent = value;
-                                            }
+                                            const td = createTableCell(value);
                                             tr.appendChild(td);
                                         });
                                         tbody.appendChild(tr);
@@ -1855,6 +1878,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const tableWrapper = document.createElement('div');
                             tableWrapper.className = 'table-scroll-wrapper';
                             const table = document.createElement('table');
+                            table.className = 'query-result-table';
 
                             // Create header
                             const thead = document.createElement('thead');
@@ -1872,15 +1896,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             data.results.forEach(row => {
                                 const tr = document.createElement('tr');
                                 Object.values(row).forEach(value => {
-                                    const td = document.createElement('td');
-                                    if (value === null) {
-                                        td.textContent = 'NULL';
-                                    } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
-                                        const jsonView = formatJsonCell(value);
-                                        td.appendChild(jsonView);
-                                    } else {
-                                        td.textContent = value;
-                                    }
+                                    const td = createTableCell(value);
                                     tr.appendChild(td);
                                 });
                                 tbody.appendChild(tr);

@@ -150,10 +150,122 @@ td {
 
 .table-scroll-wrapper td {
     max-width: none !important;  /* Override previous max-width constraints */
-    vertical-align: middle;  /* Center align content vertically */
+    vertical-align: top;  /* Top align content for better readability with wrapped text */
     padding: 8px;  /* Reduce base padding to better handle JSON cells */
     box-sizing: border-box;
     position: relative;
+    /* Allow text wrapping for long content */
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    /* Set reasonable max-width to prevent extremely wide cells */
+    max-width: 400px !important;
+    /* Remove text-overflow ellipsis to show full content */
+    text-overflow: unset !important;
+    overflow: visible !important;
+}
+
+/* Specific styling for query result tables to handle long content better */
+.query-result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Roboto Mono', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.query-result-table td {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    padding: 12px 8px;
+    vertical-align: top;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 500px; /* Slightly larger for query results */
+    min-width: 100px;
+    background-color: var(--md-sys-color-surface);
+}
+
+.query-result-table th {
+    border: 1px solid var(--md-sys-color-outline);
+    padding: 12px 8px;
+    background-color: var(--md-sys-color-surface-variant);
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.query-result-table tr:nth-child(even) {
+    background-color: var(--md-sys-color-surface-container-lowest);
+}
+
+.query-result-table tr:hover {
+    background-color: var(--md-sys-color-surface-container-low);
+}
+
+/* Special styling for cells with very long text (like CREATE TABLE statements) */
+.query-result-table td.long-text {
+    max-width: 600px;
+    font-family: 'Roboto Mono', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    background-color: var(--md-sys-color-surface-container-lowest);
+    border-left: 3px solid var(--md-sys-color-primary);
+    padding: 16px 12px;
+}
+
+/* Add copy button for long text cells */
+.query-result-table td.long-text {
+    position: relative;
+}
+
+.query-result-table td.long-text:hover::after {
+    content: "📋";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.8;
+    z-index: 5;
+}
+
+/* Responsive design for query result tables */
+@media (max-width: 768px) {
+    .query-result-table td {
+        max-width: 300px;
+        font-size: 11px;
+        padding: 8px 6px;
+    }
+
+    .query-result-table td.long-text {
+        max-width: 250px;
+        font-size: 10px;
+        line-height: 1.4;
+    }
+}
+
+@media (max-width: 480px) {
+    .query-result-table td {
+        max-width: 200px;
+        font-size: 10px;
+        padding: 6px 4px;
+    }
+
+    .query-result-table td.long-text {
+        max-width: 180px;
+        font-size: 9px;
+        line-height: 1.3;
+    }
 }
 
 .hidden-table {
