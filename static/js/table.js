@@ -1047,6 +1047,46 @@ function applyImageSettingsToAllTables() {
     });
 }
 
+// Apply image settings to newly appended rows (last N rows)
+function applyImageSettingsToNewRows(tableName, tbody, newRowCount) {
+    if (!tbody || newRowCount <= 0) return;
+
+    const tableSettings = getTableImageSettings(tableName);
+    if (!tableSettings.showImages) return;
+
+    // Get the last N rows that were just added
+    const allRows = tbody.querySelectorAll('tr');
+    const startIndex = Math.max(0, allRows.length - newRowCount);
+
+    for (let i = startIndex; i < allRows.length; i++) {
+        const row = allRows[i];
+        const cells = row.querySelectorAll('td');
+
+        // Get column names from table headers
+        const tableSection = tbody.closest('.table-section');
+        const headers = tableSection.querySelectorAll('thead th');
+
+        cells.forEach((cell, cellIndex) => {
+            if (cellIndex >= headers.length) return;
+
+            const columnName = headers[cellIndex].textContent.trim();
+            const originalValue = cell.dataset.originalValue;
+
+            // Check if this column should show images and if the cell contains an image path
+            if (tableSettings.enabledColumns.has(columnName) && originalValue && isImagePath(originalValue)) {
+                // Check if cell already has an image element
+                if (!cell.querySelector('.table-image-container')) {
+                    const imageElement = createImageElement(originalValue, tableName, columnName);
+                    if (imageElement) {
+                        cell.innerHTML = '';
+                        cell.appendChild(imageElement);
+                    }
+                }
+            }
+        });
+    }
+}
+
 // Update IMG button highlighting based on table settings
 function updateImageButtonHighlight(tableName) {
     const tableSection = document.querySelector(`[data-table-name="${tableName}"]`);
@@ -2672,6 +2712,13 @@ function appendTableData(tableName, tableInfo, translations, currentLang) {
             });
             tbody.appendChild(tr);
         });
+
+        // Ensure image settings are applied to newly appended rows
+        // Note: Image settings should already be applied during row creation above,
+        // but this is a safety net in case there are timing issues
+        setTimeout(() => {
+            applyImageSettingsToNewRows(tableName, tbody, tableInfo.data.length);
+        }, 50);
     }
 
     const countSpan = document.getElementById(`${tableName}_count`);
