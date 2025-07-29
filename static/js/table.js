@@ -1244,7 +1244,23 @@ document.addEventListener('keydown', (e) => {
                 td.title = 'Click to copy to clipboard';
                 td.addEventListener('click', async () => {
                     try {
-                        await navigator.clipboard.writeText(textValue);
+                        // Try modern clipboard API first
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(textValue);
+                        } else {
+                            // Fallback for older browsers or non-HTTPS
+                            const textArea = document.createElement('textarea');
+                            textArea.value = textValue;
+                            textArea.style.position = 'fixed';
+                            textArea.style.left = '-999999px';
+                            textArea.style.top = '-999999px';
+                            document.body.appendChild(textArea);
+                            textArea.focus();
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                        }
+
                         // Show temporary feedback
                         const originalTitle = td.title;
                         td.title = 'Copied!';
@@ -1253,6 +1269,12 @@ document.addEventListener('keydown', (e) => {
                         }, 1000);
                     } catch (err) {
                         console.error('Failed to copy text: ', err);
+                        // Show error feedback
+                        const originalTitle = td.title;
+                        td.title = 'Copy failed - try selecting text manually';
+                        setTimeout(() => {
+                            td.title = originalTitle;
+                        }, 2000);
                     }
                 });
             }
@@ -1493,9 +1515,13 @@ function setupQueryHandler() {
         const newQueryInput = queryInput.cloneNode(true);
         executeButton.parentNode.replaceChild(newExecuteButton, executeButton);
         queryInput.parentNode.replaceChild(newQueryInput, queryInput);
-        
+
+        // Update references to the new elements
+        const currentExecuteButton = document.getElementById('executeQuery');
+        const currentQueryInput = document.getElementById('queryInput');
+
         // Set up new event listeners
-        newQueryInput.addEventListener('keydown', (e) => {
+        currentQueryInput.addEventListener('keydown', (e) => {
             if (e.key === 'q' && e.ctrlKey) {
                 e.stopPropagation();
             }
@@ -1504,13 +1530,13 @@ function setupQueryHandler() {
                 e.preventDefault();
                 if (historyIndex < queryHistory.length - 1) {
                     historyIndex++;
-                    newQueryInput.value = queryHistory[historyIndex];
+                    currentQueryInput.value = queryHistory[historyIndex];
                 }
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 if (historyIndex > -1) {
                     historyIndex--;
-                    newQueryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+                    currentQueryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
                 }
             } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
@@ -1519,7 +1545,7 @@ function setupQueryHandler() {
         });
         
         const handleExecute = async () => {
-            const query = newQueryInput.value.trim();
+            const query = currentQueryInput.value.trim();
             if (!query) return;
             
             // Save to history
@@ -1551,15 +1577,18 @@ function setupQueryHandler() {
             }
         };
         
-        newExecuteButton.addEventListener('click', handleExecute);
+        currentExecuteButton.addEventListener('click', (e) => {
+            console.log('Execute button clicked! (handler 1)');
+            handleExecute();
+        });
     };
 
     // Add global keydown listener
     document.addEventListener('keydown', queryHandler);
 }
 
-// Call setup when module loads
-setupQueryHandler();
+// Call setup when module loads - DISABLED to avoid conflicts
+// setupQueryHandler();
 let schemaData = null;
 
 // Helper function to get current database key
@@ -1755,6 +1784,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let historyIndex = -1;
             
             queryPopup.classList.add('visible');
+            console.log('Query popup opened, elements found:', {
+                queryPopup: !!queryPopup,
+                queryInput: !!queryInput,
+                executeButton: !!executeButton,
+                resultArea: !!resultArea
+            });
             queryInput.focus();
             
             // Clear previous result
@@ -1767,38 +1802,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="lang-vi">(Ctrl+Enter) Thực thi</span>
             `;
 
-            // Clean up previous event listeners
+            // Clean up previous event listeners by cloning elements
             const newExecuteButton = executeButton.cloneNode(true);
             const newQueryInput = queryInput.cloneNode(true);
             executeButton.parentNode.replaceChild(newExecuteButton, executeButton);
             queryInput.parentNode.replaceChild(newQueryInput, queryInput);
+
+            // Update references to the new elements
+            const currentExecuteButton = document.getElementById('executeQuery');
+            const currentQueryInput = document.getElementById('queryInput');
             
-            newQueryInput.addEventListener('keydown', (e) => {
+            currentQueryInput.addEventListener('keydown', (e) => {
                 if (e.key === 'q' && e.ctrlKey) {
                     e.stopPropagation(); // Prevent triggering the global Q handler
                 }
             });
 
             // Handle query history navigation
-            newQueryInput.addEventListener('keydown', (e) => {
+            currentQueryInput.addEventListener('keydown', (e) => {
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     if (historyIndex < queryHistory.length - 1) {
                         historyIndex++;
-                        newQueryInput.value = queryHistory[historyIndex];
+                        currentQueryInput.value = queryHistory[historyIndex];
                     }
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
                     if (historyIndex > -1) {
                         historyIndex--;
-                        newQueryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
+                        currentQueryInput.value = historyIndex === -1 ? '' : queryHistory[historyIndex];
                     }
                 }
             });
             
             // Handle execute button click
             const handleExecute = async () => {
-                const query = newQueryInput.value.trim();
+                const query = currentQueryInput.value.trim();
                 if (!query) return;
                 
                 // Save to history (if not already the most recent)
@@ -1815,7 +1854,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ query: newQueryInput.value })
+                        body: JSON.stringify({ query: currentQueryInput.value })
                     });
                     
                     const data = await response.json();
@@ -1920,11 +1959,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
             
-            newExecuteButton.addEventListener('click', handleExecute);
-            
+            // Debug: Check if button exists
+            console.log('Setting up execute button:', currentExecuteButton);
+            console.log('Button ID:', currentExecuteButton?.id);
+
+            if (currentExecuteButton) {
+                // Make button globally accessible for debugging
+                window.debugExecuteButton = currentExecuteButton;
+                window.debugHandleExecute = handleExecute;
+
+                currentExecuteButton.addEventListener('click', (e) => {
+                    console.log('Execute button clicked!', e);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleExecute();
+                });
+
+                // Also add a direct onclick as backup
+                currentExecuteButton.onclick = (e) => {
+                    console.log('Execute button onclick triggered!', e);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleExecute();
+                };
+
+                console.log('Execute button setup complete. Test with: window.debugExecuteButton.click()');
+            } else {
+                console.error('Execute button not found!');
+            }
+
             // Handle Ctrl+Enter for execution
             let isExecuting = false;
-            newQueryInput.addEventListener('keydown', (e) => {
+            currentQueryInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !isExecuting) {
                     e.preventDefault();
                     isExecuting = true;
@@ -4470,13 +4536,12 @@ function openImageFullview(imagePath, imageUrl) {
     image.alt = imagePath;
 
     // Set image path
-    const fullPath = imageSettings.prefix ? `${imageSettings.prefix}\\${imagePath}` : imagePath;
-    pathElement.textContent = fullPath;
+    pathElement.textContent = imagePath;
 
     // Store current image path for other functions
     modal.dataset.imagePath = imagePath;
     modal.dataset.imageUrl = imageUrl;
-    modal.dataset.fullPath = fullPath;
+    modal.dataset.fullPath = imagePath;
 
     // Show modal
     modal.classList.add('show');
