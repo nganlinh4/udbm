@@ -1540,52 +1540,74 @@ def download_table_xlsx(table_name):
 def execute_query():
     if not current_db_config:
         return jsonify({'error': 'No database configured'}), 400
-        
+
     try:
         data = request.json
         if not data or 'query' not in data:
             return jsonify({'error': 'No query provided'}), 400
-            
+
         query = data['query'].strip()
         if not query:
             return jsonify({'error': 'Empty query'}), 400
-            
+
         connection = get_db_connection()
         cursor = None
-        
+
         try:
+            # Use buffered cursor to prevent "Unread result found" errors
             if current_db_config.get('db_type') == 'postgresql':
                 cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             else:
-                cursor = connection.cursor(dictionary=True)
-                
+                cursor = connection.cursor(dictionary=True, buffered=True)
+
             cursor.execute(query)
-            
-            # For SELECT queries, fetch results
-            if query.strip().lower().startswith('select'):
+
+            # Check if query returns results by examining cursor description
+            if cursor.description:
+                # Query returns results (SELECT, SHOW, DESCRIBE, EXPLAIN, etc.)
                 results = cursor.fetchall()
                 if isinstance(results, list):
                     results = [dict(row) for row in results]
+
+                # For queries that return results, also check if there are more result sets
+                # This handles cases like stored procedures with multiple result sets
+                all_results = [results]
+                if hasattr(cursor, 'nextset'):
+                    try:
+                        while cursor.nextset():
+                            if cursor.description:
+                                more_results = cursor.fetchall()
+                                if isinstance(more_results, list):
+                                    more_results = [dict(row) for row in more_results]
+                                all_results.append(more_results)
+                    except Exception:
+                        # No more result sets or error - that's fine
+                        pass
+
+                # If only one result set, return it directly; otherwise return all
+                final_results = all_results[0] if len(all_results) == 1 else all_results
+
                 return jsonify({
                     'success': True,
-                    'results': results,
-                    'rowCount': len(results)
+                    'results': final_results,
+                    'rowCount': len(final_results) if isinstance(final_results, list) else sum(len(r) for r in final_results),
+                    'hasMultipleResultSets': len(all_results) > 1
                 })
-            
-            # For other queries that modify data
-            connection.commit()
-            rowcount = cursor.rowcount
-            return jsonify({
-                'success': True,
-                'message': f'Query executed successfully. Rows affected: {rowcount}',
-                'rowCount': rowcount
-            })
-            
+            else:
+                # Query doesn't return results (INSERT, UPDATE, DELETE, etc.)
+                connection.commit()
+                rowcount = cursor.rowcount if cursor.rowcount >= 0 else 0
+                return jsonify({
+                    'success': True,
+                    'message': f'Query executed successfully. Rows affected: {rowcount}',
+                    'rowCount': rowcount
+                })
+
         finally:
             if cursor:
                 cursor.close()
             connection.close()
-            
+
     except Exception as e:
         logger.error(f"Error executing custom query: {e}")
         return jsonify({'error': str(e)}), 500

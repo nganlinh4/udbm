@@ -1189,11 +1189,34 @@ document.addEventListener('keydown', (e) => {
             }
 
             if (data.results) {
-                if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
-                    createQueryResultTable(resultArea, data.results);
+                // Handle multiple result sets
+                if (data.hasMultipleResultSets) {
+                    resultArea.innerHTML = '';
+                    data.results.forEach((resultSet, index) => {
+                        const setHeader = document.createElement('h4');
+                        setHeader.textContent = `Result Set ${index + 1}:`;
+                        setHeader.style.marginTop = index > 0 ? '20px' : '0';
+                        resultArea.appendChild(setHeader);
+
+                        const setContainer = document.createElement('div');
+                        if (Array.isArray(resultSet) && resultSet.length > 0 && typeof resultSet[0] === 'object') {
+                            createQueryResultTable(setContainer, resultSet);
+                        } else {
+                            setContainer.textContent = JSON.stringify(resultSet, null, 2);
+                        }
+                        resultArea.appendChild(setContainer);
+                    });
                 } else {
-                    resultArea.textContent = JSON.stringify(data.results, null, 2);
+                    // Single result set
+                    if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                        createQueryResultTable(resultArea, data.results);
+                    } else {
+                        resultArea.textContent = JSON.stringify(data.results, null, 2);
+                    }
                 }
+            } else if (data.message) {
+                // For non-SELECT queries, show the success message
+                resultArea.textContent = data.message;
             }
          } catch (error) {
              resultArea.textContent = `Error: ${error.message}`;
@@ -1484,9 +1507,15 @@ function setupQueryHandler() {
                 });
                 
                 const data = await response.json();
-                resultArea.textContent = data.error 
-                    ? `Error: ${data.error}` 
-                    : JSON.stringify(data.results, null, 2);
+                if (data.error) {
+                    resultArea.textContent = `Error: ${data.error}`;
+                } else if (data.results) {
+                    resultArea.textContent = JSON.stringify(data.results, null, 2);
+                } else if (data.message) {
+                    resultArea.textContent = data.message;
+                } else {
+                    resultArea.textContent = 'Query executed successfully';
+                }
             } catch (error) {
                 resultArea.textContent = `Error: ${error.message}`;
             }
@@ -1766,12 +1795,67 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     if (data.results) {
-                        if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                        // Handle multiple result sets
+                        if (data.hasMultipleResultSets) {
+                            resultArea.innerHTML = '';
+                            data.results.forEach((resultSet, index) => {
+                                const setHeader = document.createElement('h4');
+                                setHeader.textContent = `Result Set ${index + 1}:`;
+                                setHeader.style.marginTop = index > 0 ? '20px' : '0';
+                                resultArea.appendChild(setHeader);
+
+                                if (Array.isArray(resultSet) && resultSet.length > 0 && typeof resultSet[0] === 'object') {
+                                    const tableWrapper = document.createElement('div');
+                                    tableWrapper.className = 'table-scroll-wrapper';
+                                    const table = document.createElement('table');
+
+                                    // Create header
+                                    const thead = document.createElement('thead');
+                                    const headerRow = document.createElement('tr');
+                                    Object.keys(resultSet[0]).forEach(key => {
+                                        const th = document.createElement('th');
+                                        th.textContent = key;
+                                        headerRow.appendChild(th);
+                                    });
+                                    thead.appendChild(headerRow);
+                                    table.appendChild(thead);
+
+                                    // Create body
+                                    const tbody = document.createElement('tbody');
+                                    resultSet.forEach(row => {
+                                        const tr = document.createElement('tr');
+                                        Object.values(row).forEach(value => {
+                                            const td = document.createElement('td');
+                                            if (value === null) {
+                                                td.textContent = 'NULL';
+                                            } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
+                                                const jsonView = formatJsonCell(value);
+                                                td.appendChild(jsonView);
+                                            } else {
+                                                td.textContent = value;
+                                            }
+                                            tr.appendChild(td);
+                                        });
+                                        tbody.appendChild(tr);
+                                    });
+                                    table.appendChild(tbody);
+
+                                    tableWrapper.appendChild(table);
+                                    resultArea.appendChild(tableWrapper);
+                                    setTimeout(() => adjustColumnWidths(table), 0);
+                                } else {
+                                    const setContainer = document.createElement('div');
+                                    setContainer.textContent = JSON.stringify(resultSet, null, 2);
+                                    resultArea.appendChild(setContainer);
+                                }
+                            });
+                        } else if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                            // Single result set with tabular data
                             resultArea.innerHTML = '';
                             const tableWrapper = document.createElement('div');
                             tableWrapper.className = 'table-scroll-wrapper';
                             const table = document.createElement('table');
-                            
+
                             // Create header
                             const thead = document.createElement('thead');
                             const headerRow = document.createElement('tr');
@@ -1782,7 +1866,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                             thead.appendChild(headerRow);
                             table.appendChild(thead);
-                            
+
                             // Create body
                             const tbody = document.createElement('tbody');
                             data.results.forEach(row => {
@@ -1802,15 +1886,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 tbody.appendChild(tr);
                             });
                             table.appendChild(tbody);
-                            
+
                             tableWrapper.appendChild(table);
                             resultArea.appendChild(tableWrapper);
                             setTimeout(() => adjustColumnWidths(table), 0);
                         } else {
+                            // Non-tabular results
                             resultArea.textContent = JSON.stringify(data.results, null, 2);
                         }
-                    } else {
+                    } else if (data.message) {
                         resultArea.textContent = data.message;
+                    } else {
+                        resultArea.textContent = 'Query executed successfully';
                     }
                 } catch (error) {
                     resultArea.textContent = `Error: ${error.message}`;
