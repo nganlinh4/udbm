@@ -541,137 +541,145 @@ function createImageSettingsModal() {
                 <button class="image-settings-close" type="button">×</button>
             </div>
             <div class="image-settings-body">
-                <div class="setting-group">
-                    <div class="switch-container">
-                        <span class="switch-label">
-                            <span class="lang-ko">경로 대신 테이블에 이미지 표시</span>
-                            <span class="lang-en">Show images in table instead of paths</span>
-                            <span class="lang-vi">Hiển thị hình ảnh trong bảng thay vì đường dẫn</span>
-                        </span>
-                        <md-switch id="showImagesToggle" aria-label="Show Images Toggle"></md-switch>
+                <!-- Left Column -->
+                <div class="image-settings-column">
+
+                    <div class="setting-group">
+                        <div class="switch-container">
+                            <span class="switch-label">
+                                <span class="lang-ko">경로 대신 테이블에 이미지 표시</span>
+                                <span class="lang-en">Show images in table instead of paths</span>
+                                <span class="lang-vi">Hiển thị hình ảnh trong bảng thay vì đường dẫn</span>
+                            </span>
+                            <md-switch id="showImagesToggle" aria-label="Show Images Toggle"></md-switch>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <span class="lang-ko">이미지 크기:</span>
+                            <span class="lang-en">Image Scale:</span>
+                            <span class="lang-vi">Tỷ lệ hình ảnh:</span>
+                        </label>
+                        <div class="scale-slider-container">
+                            <div class="scale-slider-wrapper">
+                                <span class="scale-label-min">50%</span>
+                                <input type="range" id="imageScaleSlider" min="0.5" max="3.0" step="0.1" value="1.0" class="scale-slider">
+                                <span class="scale-label-max">300%</span>
+                            </div>
+                            <div class="scale-value-display">
+                                <span id="scaleValueText">100%</span>
+                                <span class="scale-size-hint">(<span id="scaleSizeHint">100px</span>)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <span class="lang-ko">이미지를 표시할 열:</span>
+                            <span class="lang-en">Columns to Show Images:</span>
+                            <span class="lang-vi">Cột hiển thị hình ảnh:</span>
+                        </label>
+                        <div class="column-pills-container" id="columnPillsContainer">
+                            <!-- Column pills will be added here dynamically -->
+                        </div>
+                        <div class="column-pills-help">
+                            <span class="lang-ko">이미지로 표시할 열을 선택하세요. 선택하지 않은 열은 텍스트로 표시됩니다.</span>
+                            <span class="lang-en">Select columns to display as images. Unselected columns will show as text.</span>
+                            <span class="lang-vi">Chọn các cột để hiển thị dưới dạng hình ảnh. Các cột không được chọn sẽ hiển thị dưới dạng văn bản.</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="setting-group">
-                    <label class="setting-label">
-                        <span class="lang-ko">이미지 크기:</span>
-                        <span class="lang-en">Image Scale:</span>
-                        <span class="lang-vi">Tỷ lệ hình ảnh:</span>
-                    </label>
-                    <div class="scale-slider-container">
-                        <div class="scale-slider-wrapper">
-                            <span class="scale-label-min">50%</span>
-                            <input type="range" id="imageScaleSlider" min="0.5" max="3.0" step="0.1" value="1.0" class="scale-slider">
-                            <span class="scale-label-max">300%</span>
-                        </div>
-                        <div class="scale-value-display">
-                            <span id="scaleValueText">100%</span>
-                            <span class="scale-size-hint">(<span id="scaleSizeHint">100px</span>)</span>
-                        </div>
-                    </div>
-                </div>
+                <!-- Right Column -->
+                <div class="image-settings-column">
 
-                <div class="setting-group">
-                    <label class="setting-label">
-                        <span class="lang-ko">이미지 로딩 방법:</span>
-                        <span class="lang-en">Image Loading Methods:</span>
-                        <span class="lang-vi">Phương pháp tải hình ảnh:</span>
-                    </label>
-                    <div class="loading-methods-container">
-                        <div class="method-pill" data-method="fileProtocol">
-                            <span class="pill-icon">📁</span>
-                            <span class="pill-text">
-                                <span class="lang-ko">파일 프로토콜</span>
-                                <span class="lang-en">File Protocol</span>
-                                <span class="lang-vi">Giao thức tệp</span>
-                            </span>
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <span class="lang-ko">이미지 로딩 방법:</span>
+                            <span class="lang-en">Image Loading Methods:</span>
+                            <span class="lang-vi">Phương pháp tải hình ảnh:</span>
+                        </label>
+                        <div class="loading-methods-container">
+                            <div class="method-pill" data-method="fileProtocol">
+                                <span class="pill-icon">📁</span>
+                                <span class="pill-text">
+                                    <span class="lang-ko">파일 프로토콜</span>
+                                    <span class="lang-en">File Protocol</span>
+                                    <span class="lang-vi">Giao thức tệp</span>
+                                </span>
+                            </div>
+                            <div class="method-pill" data-method="apiEndpoint">
+                                <span class="pill-icon">🌐</span>
+                                <span class="pill-text">
+                                    <span class="lang-ko">API 엔드포인트</span>
+                                    <span class="lang-en">API Endpoint</span>
+                                    <span class="lang-vi">Điểm cuối API</span>
+                                </span>
+                            </div>
+                            <div class="method-pill" data-method="webUrls">
+                                <span class="pill-icon">🔗</span>
+                                <span class="pill-text">
+                                    <span class="lang-ko">웹 URL</span>
+                                    <span class="lang-en">Web URLs</span>
+                                    <span class="lang-vi">URL web</span>
+                                </span>
+                            </div>
+                            <div class="method-pill" data-method="pathPrefixes">
+                                <span class="pill-icon">📂</span>
+                                <span class="pill-text">
+                                    <span class="lang-ko">경로 접두사</span>
+                                    <span class="lang-en">Path Prefixes</span>
+                                    <span class="lang-vi">Tiền tố đường dẫn</span>
+                                </span>
+                            </div>
                         </div>
-                        <div class="method-pill" data-method="apiEndpoint">
-                            <span class="pill-icon">🌐</span>
-                            <span class="pill-text">
-                                <span class="lang-ko">API 엔드포인트</span>
-                                <span class="lang-en">API Endpoint</span>
-                                <span class="lang-vi">Điểm cuối API</span>
-                            </span>
-                        </div>
-                        <div class="method-pill" data-method="webUrls">
-                            <span class="pill-icon">🔗</span>
-                            <span class="pill-text">
-                                <span class="lang-ko">웹 URL</span>
-                                <span class="lang-en">Web URLs</span>
-                                <span class="lang-vi">URL web</span>
-                            </span>
-                        </div>
-                        <div class="method-pill" data-method="pathPrefixes">
-                            <span class="pill-icon">📂</span>
-                            <span class="pill-text">
-                                <span class="lang-ko">경로 접두사</span>
-                                <span class="lang-en">Path Prefixes</span>
-                                <span class="lang-vi">Tiền tố đường dẫn</span>
-                            </span>
+                        <div class="loading-methods-help">
+                            <span class="lang-ko">• 파일 프로토콜: 로컬 파일 직접 접근 (빠름, 보안 제한 있음)<br>• API 엔드포인트: 서버를 통한 이미지 제공 (안전함)<br>• 웹 URL: HTTP/HTTPS 이미지<br>• 경로 접두사: 설정된 접두사와 결합</span>
+                            <span class="lang-en">• File Protocol: Direct local file access (fast, security limited)<br>• API Endpoint: Server-served images (secure)<br>• Web URLs: HTTP/HTTPS images<br>• Path Prefixes: Combine with configured prefixes</span>
+                            <span class="lang-vi">• Giao thức tệp: Truy cập tệp cục bộ trực tiếp (nhanh, bảo mật hạn chế)<br>• Điểm cuối API: Hình ảnh được phục vụ qua máy chủ (an toàn)<br>• URL web: Hình ảnh HTTP/HTTPS<br>• Tiền tố đường dẫn: Kết hợp với tiền tố đã cấu hình</span>
                         </div>
                     </div>
-                    <div class="loading-methods-help">
-                        <span class="lang-ko">• 파일 프로토콜: 로컬 파일 직접 접근 (빠름, 보안 제한 있음)<br>• API 엔드포인트: 서버를 통한 이미지 제공 (안전함)<br>• 웹 URL: HTTP/HTTPS 이미지<br>• 경로 접두사: 설정된 접두사와 결합</span>
-                        <span class="lang-en">• File Protocol: Direct local file access (fast, security limited)<br>• API Endpoint: Server-served images (secure)<br>• Web URLs: HTTP/HTTPS images<br>• Path Prefixes: Combine with configured prefixes</span>
-                        <span class="lang-vi">• Giao thức tệp: Truy cập tệp cục bộ trực tiếp (nhanh, bảo mật hạn chế)<br>• Điểm cuối API: Hình ảnh được phục vụ qua máy chủ (an toàn)<br>• URL web: Hình ảnh HTTP/HTTPS<br>• Tiền tố đường dẫn: Kết hợp với tiền tố đã cấu hình</span>
-                    </div>
-                </div>
 
-                <div class="setting-group">
-                    <label class="setting-label">
-                        <span class="lang-ko">이미지를 표시할 열:</span>
-                        <span class="lang-en">Columns to Show Images:</span>
-                        <span class="lang-vi">Cột hiển thị hình ảnh:</span>
-                    </label>
-                    <div class="column-pills-container" id="columnPillsContainer">
-                        <!-- Column pills will be added here dynamically -->
-                    </div>
-                    <div class="column-pills-help">
-                        <span class="lang-ko">이미지로 표시할 열을 선택하세요. 선택하지 않은 열은 텍스트로 표시됩니다.</span>
-                        <span class="lang-en">Select columns to display as images. Unselected columns will show as text.</span>
-                        <span class="lang-vi">Chọn các cột để hiển thị dưới dạng hình ảnh. Các cột không được chọn sẽ hiển thị dưới dạng văn bản.</span>
-                    </div>
-                </div>
-
-                <div class="setting-group">
-                    <label class="setting-label">
-                        <span class="lang-ko">이미지 경로 접두사:</span>
-                        <span class="lang-en">Image Path Prefixes:</span>
-                        <span class="lang-vi">Tiền tố đường dẫn hình ảnh:</span>
-                    </label>
-                    <div class="prefix-list" id="prefixList">
-                        <!-- Prefixes will be added here -->
-                    </div>
-                    <div class="prefix-input-group">
-                        <input type="text" id="newPrefixInput" placeholder="Enter image path prefix (e.g., https://example.com/images/)" class="prefix-input">
-                        <button type="button" id="addPrefixBtn" class="add-prefix-btn">
-                            <span class="lang-ko">추가</span>
-                            <span class="lang-en">Add</span>
-                            <span class="lang-vi">Thêm</span>
-                        </button>
-                    </div>
-                    <div class="prefix-help">
-                        <small>
-                            <span class="lang-ko">
-                                <strong>이미지를 찾기 위한 URL 접두사 추가:</strong><br>
-                                • 웹 이미지: <code>https://example.com/images/</code><br>
-                                • 로컬 파일: <code>C:\\path\\to\\images\\</code> 또는 <code>/home/user/images/</code><br>
-                                <em>참고: 로컬 파일 접근은 브라우저 보안에 의해 제한될 수 있습니다. 로컬 파일의 최상의 결과를 위해 로컬 웹 서버 설정을 고려하세요.</em>
-                            </span>
-                            <span class="lang-en">
-                                <strong>Add URL prefixes to help locate images:</strong><br>
-                                • For web images: <code>https://example.com/images/</code><br>
-                                • For local files: <code>C:\\path\\to\\images\\</code> or <code>/home/user/images/</code><br>
-                                <em>Note: Local file access may be limited by browser security. For best results with local files, consider setting up a local web server.</em>
-                            </span>
-                            <span class="lang-vi">
-                                <strong>Thêm tiền tố URL để giúp định vị hình ảnh:</strong><br>
-                                • Cho hình ảnh web: <code>https://example.com/images/</code><br>
-                                • Cho tệp cục bộ: <code>C:\\path\\to\\images\\</code> hoặc <code>/home/user/images/</code><br>
-                                <em>Lưu ý: Truy cập tệp cục bộ có thể bị hạn chế bởi bảo mật trình duyệt. Để có kết quả tốt nhất với tệp cục bộ, hãy xem xét thiết lập máy chủ web cục bộ.</em>
-                            </span>
-                        </small>
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <span class="lang-ko">이미지 경로 접두사:</span>
+                            <span class="lang-en">Image Path Prefixes:</span>
+                            <span class="lang-vi">Tiền tố đường dẫn hình ảnh:</span>
+                        </label>
+                        <div class="prefix-list" id="prefixList">
+                            <!-- Prefixes will be added here -->
+                        </div>
+                        <div class="prefix-input-group">
+                            <input type="text" id="newPrefixInput" placeholder="Enter image path prefix (e.g., https://example.com/images/)" class="prefix-input">
+                            <button type="button" id="addPrefixBtn" class="add-prefix-btn">
+                                <span class="lang-ko">추가</span>
+                                <span class="lang-en">Add</span>
+                                <span class="lang-vi">Thêm</span>
+                            </button>
+                        </div>
+                        <div class="prefix-help">
+                            <small>
+                                <span class="lang-ko">
+                                    <strong>이미지를 찾기 위한 URL 접두사 추가:</strong><br>
+                                    • 웹 이미지: <code>https://example.com/images/</code><br>
+                                    • 로컬 파일: <code>C:\\path\\to\\images\\</code> 또는 <code>/home/user/images/</code><br>
+                                    <em>참고: 로컬 파일 접근은 브라우저 보안에 의해 제한될 수 있습니다. 로컬 파일의 최상의 결과를 위해 로컬 웹 서버 설정을 고려하세요.</em>
+                                </span>
+                                <span class="lang-en">
+                                    <strong>Add URL prefixes to help locate images:</strong><br>
+                                    • For web images: <code>https://example.com/images/</code><br>
+                                    • For local files: <code>C:\\path\\to\\images\\</code> or <code>/home/user/images/</code><br>
+                                    <em>Note: Local file access may be limited by browser security. For best results with local files, consider setting up a local web server.</em>
+                                </span>
+                                <span class="lang-vi">
+                                    <strong>Thêm tiền tố URL để giúp định vị hình ảnh:</strong><br>
+                                    • Cho hình ảnh web: <code>https://example.com/images/</code><br>
+                                    • Cho tệp cục bộ: <code>C:\\path\\to\\images\\</code> hoặc <code>/home/user/images/</code><br>
+                                    <em>Lưu ý: Truy cập tệp cục bộ có thể bị hạn chế bởi bảo mật trình duyệt. Để có kết quả tốt nhất với tệp cục bộ, hãy xem xét thiết lập máy chủ web cục bộ.</em>
+                                </span>
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -745,7 +753,9 @@ function updateColumnPills(modal, tableName) {
     const tableSettings = getTableImageSettings(tableName);
 
     headers.forEach((header, index) => {
-        const columnName = header.textContent.trim();
+        // Get only the column name, not the sort/filter button text
+        const headerText = header.querySelector('.header-text');
+        const columnName = headerText ? headerText.textContent.trim() : header.textContent.trim();
         if (!columnName) return;
 
         // Check if this column contains image-like data

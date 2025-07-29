@@ -757,9 +757,9 @@ tr {
     padding: 24px;
     border-radius: 16px;
     box-shadow: var(--md-elevation-level3);
-    width: 500px;
-    max-width: 90vw;
-    max-height: 80vh;
+    width: 1200px;
+    max-width: 95vw;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
     transform: scale(0.95);
@@ -775,13 +775,125 @@ tr {
     opacity: 1;
 }
 
+/* Two-column grid layout for the modal content */
+.image-settings-modal .image-settings-body {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 40px;
+    margin-top: 20px;
+    align-items: start; /* Align columns to top */
+    min-height: 400px; /* Ensure minimum height for proper layout */
+}
+
+.image-settings-modal .image-settings-column {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 24px;
+    padding: 20px;
+    background: var(--md-sys-color-surface-container-lowest);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    min-height: 300px;
+    width: 95%; /* Ensure columns take full width of their grid cell */
+}
+
+.image-settings-column:hover {
+    background: var(--md-sys-color-surface-container-low);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.image-settings-column h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--md-sys-color-primary);
+    border-bottom: 2px solid var(--md-sys-color-primary);
+    padding-bottom: 8px;
+    text-align: center;
+}
+
+/* Visual separator between columns */
+.image-settings-column:first-child {
+    position: relative;
+}
+
+.image-settings-column:first-child::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -20px;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom,
+        transparent 0%,
+        var(--md-sys-color-outline-variant) 20%,
+        var(--md-sys-color-outline-variant) 80%,
+        transparent 100%);
+    opacity: 0.5;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 1400px) {
+    .image-settings-content {
+        width: 1000px;
+    }
+
+    .image-settings-body {
+        gap: 30px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .image-settings-content {
+        width: 900px;
+    }
+
+    .image-settings-body {
+        gap: 25px;
+    }
+}
+
+@media (max-width: 700px) {
+    .image-settings-content {
+        width: 95vw;
+    }
+
+    .image-settings-body {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .image-settings-column:first-child::after {
+        display: none;
+    }
+
+    .image-settings-column h3 {
+        font-size: 16px;
+    }
+}
+
+/* Force two-column layout for larger screens */
+@media (min-width: 701px) {
+    .image-settings-modal .image-settings-body {
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+/* Dark theme support */
+[data-theme="dark"] .image-settings-column:first-child::after {
+    background: linear-gradient(to bottom,
+        transparent 0%,
+        var(--md-sys-color-outline-variant) 20%,
+        var(--md-sys-color-outline-variant) 80%,
+        transparent 100%);
+}
+
 .image-settings-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--md-sys-color-outline);
 }
 
 .image-settings-header h3 {
@@ -1365,6 +1477,55 @@ tr {
     background: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface-variant);
 }
+
+/* Improved spacing for the column layout */
+.image-settings-column .setting-group {
+    margin-bottom: 24px;
+}
+
+.image-settings-column .setting-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Make help text more compact and visually appealing */
+.loading-methods-help,
+.column-pills-help,
+.prefix-help {
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: var(--md-sys-color-surface-container);
+    border-radius: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    border-left: 3px solid var(--md-sys-color-primary);
+}
+
+/* Adjust column pills container for better fit */
+.column-pills-container {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+/* Dark theme for help text */
+[data-theme="dark"] .loading-methods-help,
+[data-theme="dark"] .column-pills-help,
+[data-theme="dark"] .prefix-help {
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Dark theme for columns */
+[data-theme="dark"] .image-settings-column {
+    background: var(--md-sys-color-surface-container-lowest);
+}
+
+[data-theme="dark"] .image-settings-column:hover {
+    background: var(--md-sys-color-surface-container-low);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+
 
 /* IMG button highlighting when images are enabled */
 .image-settings-button.images-enabled {
