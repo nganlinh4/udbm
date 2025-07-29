@@ -907,18 +907,22 @@ function setupImageSettingsEventListeners(modal) {
 
             const columnName = pill.getAttribute('data-column');
             const tableName = modal.dataset.tableName;
+            console.log('Column pill clicked:', columnName, 'for table:', tableName);
             if (!columnName || !tableName) return;
 
             const tableSettings = getTableImageSettings(tableName);
             const isActive = pill.classList.contains('active');
+            console.log('Toggling column:', columnName, 'was active:', isActive);
 
             // Toggle the column
             if (isActive) {
                 tableSettings.enabledColumns.delete(columnName);
                 pill.classList.remove('active');
+                console.log('Disabled column:', columnName);
             } else {
                 tableSettings.enabledColumns.add(columnName);
                 pill.classList.add('active');
+                console.log('Enabled column:', columnName);
             }
 
             saveTableImageSettings();
@@ -985,7 +989,10 @@ function refreshTableWithImageSettings(tableName) {
     // Get column names from headers
     const table = tableSection.querySelector('table');
     const headers = tableSection.querySelectorAll('thead th');
-    const columnNames = Array.from(headers).map(th => th.textContent.trim());
+    const columnNames = Array.from(headers).map(th => {
+        const headerText = th.querySelector('.header-text');
+        return headerText ? headerText.textContent.trim() : th.textContent.trim();
+    });
 
     // Re-render all cells to apply image settings
     tbody.querySelectorAll('tr').forEach(row => {
