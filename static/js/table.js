@@ -2130,6 +2130,19 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
     const currentRows = Array.from(tbody.querySelectorAll('tr')).length;
     const newRowCount = tableData.length;
     const hasRowCountChanged = currentRows !== newRowCount;
+
+    // Preserve existing header column widths
+    const currentTableSection = tbody.closest('.table-section');
+    const currentHeaderTable = currentTableSection ? currentTableSection.querySelector('.header-table') : null;
+    const existingHeaderWidths = [];
+
+    if (currentHeaderTable) {
+        const headerCells = currentHeaderTable.querySelectorAll('th');
+        headerCells.forEach((th, index) => {
+            existingHeaderWidths[index] = th.offsetWidth;
+        });
+        console.log(`📏 Preserved ${existingHeaderWidths.length} header widths for updateTableRows`);
+    }
     
     // Store focused cell info before update
     const focusedCell = tbody.querySelector('td.focused');
@@ -2358,6 +2371,24 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
         // Only apply frontend filtering if no database filters are active
         if (Object.keys(allFilters).length === 0) {
             filterTableFrontend(headerTable, bodyTable);
+        }
+    }
+
+    // Apply preserved header widths to new body cells
+    if (existingHeaderWidths.length > 0) {
+        const bodyTable = tbody.closest('.body-table');
+        if (bodyTable) {
+            existingHeaderWidths.forEach((width, columnIndex) => {
+                if (width > 0) {
+                    // Apply width to all cells in this column
+                    bodyTable.querySelectorAll(`td:nth-child(${columnIndex + 1})`).forEach(td => {
+                        td.style.width = `${width}px`;
+                        td.style.minWidth = `${width}px`;
+                        td.style.maxWidth = `${width}px`;
+                    });
+                }
+            });
+            console.log(`📏 Applied preserved widths to ${existingHeaderWidths.length} columns in body`);
         }
     }
 }
@@ -3024,16 +3055,8 @@ function addResizerListeners(headerTable, bodyTable, columns) {
                 cell.style.maxWidth = `${currentWidth}px`;
             });
 
-            // Synchronize table widths after column resize
-            const headerTable = th.closest('.header-table');
-            const bodyWrapper = bodyTable.closest('.table-scroll-wrapper');
-            if (headerTable && bodyWrapper) {
-                setTimeout(() => {
-                    const bodyTableTargetWidth = bodyWrapper.clientWidth; // Available width without scrollbar
-                    headerTable.style.width = `${bodyTableTargetWidth}px`;
-                    bodyTable.style.width = `${bodyTableTargetWidth}px`;
-                }, 0);
-            }
+            // Removed table width synchronization - let tables size naturally
+            // This was forcing tables to span container width during resize
         };
 
         const onMouseUp = () => {
@@ -3982,7 +4005,15 @@ async function createFilterDropdown(table, columnName, columnIndex) {
         createVirtualizedList(content, uniqueValues, currentFilters, async (selectedValues) => {
             setColumnFilter(table, columnIndex, selectedValues);
             updateFilterButton(table, columnIndex);
-            await applyDatabaseFilter(table);
+
+            // Trigger immediate refetch using the proper fetch mechanism
+            const container = table.closest('.table-container');
+            const tableName = container ? container.id : 'default-table';
+            const baseUrl = window.baseUrl;
+            const currentLang = getCurrentLanguage();
+            if (baseUrl && window.fetchTableData) {
+                await window.fetchTableData(tableName, false, baseUrl, null, currentLang, updateSingleTable);
+            }
         });
     } catch (error) {
         content.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--md-sys-color-error);">Error loading values</div>';
@@ -4224,8 +4255,12 @@ async function toggleSort(table, columnName) {
     // Update button appearance
     updateSortButton(table, columnName);
 
-    // Apply database-level sorting
-    await applyDatabaseSort(table);
+    // Trigger immediate refetch using the proper fetch mechanism
+    const baseUrl = window.baseUrl;
+    const currentLang = getCurrentLanguage();
+    if (baseUrl && window.fetchTableData) {
+        await window.fetchTableData(tableName, false, baseUrl, null, currentLang, updateSingleTable);
+    }
 }
 
 // Apply database-level sorting

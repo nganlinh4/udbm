@@ -80,9 +80,7 @@ table {
     margin: 20px 0;
     width: max-content; /* Size based on content, no constraints */
     background-color: var(--md-sys-color-surface-container);
-    border-radius: 16px 16px 0 0;
     /* Round only top corners */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     table-layout: auto; /* Allow natural column sizing based on content */
     transition: var(--theme-transition);
