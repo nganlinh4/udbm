@@ -78,15 +78,13 @@ table {
     border-collapse: separate;
     border-spacing: 0;
     margin: 20px 0;
-    width: auto;
-    min-width: 100%;
+    width: max-content; /* Size based on content, no constraints */
     background-color: var(--md-sys-color-surface-container);
     border-radius: 16px 16px 0 0;
     /* Round only top corners */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    table-layout: fixed;
-    width: 100%;
+    table-layout: auto; /* Allow natural column sizing based on content */
     transition: var(--theme-transition);
 }
 
@@ -99,7 +97,7 @@ td {
     overflow: hidden;
     text-overflow: ellipsis;
     display: table-cell !important;
-    transition: var(--theme-transition);
+    transition: background-color 0.3s ease, color 0.3s ease; /* Only transition colors, not width */
 }
 
 .table-container {
@@ -133,19 +131,59 @@ td {
     overflow-y: auto;
 }
 
+/* Fixed header wrapper - stays at top */
+.table-header-wrapper {
+    position: relative;
+    width: 100%; /* Constrained by container to enable horizontal scroll */
+    background: var(--md-sys-color-surface-container);
+    border-radius: 16px 16px 0 0;
+    overflow-x: auto; /* Allow horizontal scrolling */
+    overflow-y: hidden;
+    z-index: 10;
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.table-header-wrapper::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.table-header-wrapper .header-table {
+    width: max-content; /* Size based on header content, avoid truncation */
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0;
+    background-color: var(--md-sys-color-surface-container);
+    table-layout: auto; /* Allow natural column sizing based on content */
+}
+
+/* Scrollable body wrapper - contains only tbody */
 .table-scroll-wrapper {
-    max-height: 100vh;
+    max-height: 400px; /* Reduced from 500px to account for header */
     height: auto;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto !important;
     overflow-x: auto !important;
-    width: 100%;
+    width: 100%; /* Constrained by container to enable horizontal scroll */
     scrollbar-gutter: stable;
     border-radius: 0 0 8px 8px;
-    /* Only round bottom corners */
     position: relative;
-    margin-top: -1px;
-    /* Align with table border */
+    background: var(--md-sys-color-surface-container);
+}
+
+.table-scroll-wrapper .body-table {
+    width: max-content; /* Size to match header table */
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0;
+    background-color: var(--md-sys-color-surface-container);
+    table-layout: auto; /* Allow natural column sizing to match header */
+}
+
+/* Remove top border from body table to avoid double border with header */
+.table-scroll-wrapper .body-table tbody tr:first-child td {
+    border-top: none;
 }
 
 .table-scroll-wrapper td {
@@ -332,12 +370,11 @@ th .resizer::after {
 
 td {
     cursor: text;
-    border: none;
-    border-bottom: 1px solid #ddd;
-    font-size: 1em;
-    padding: 12px 16px;
-    transition: all 0.2s;
+    /* Removed border: none to allow th,td rule to apply */
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 1em;
+    padding: 8px; /* Match header padding */
+    transition: all 0.2s;
 }
 
 /* Show hand pointer cursor in admin mode */
@@ -513,19 +550,20 @@ thead tr th {
     letter-spacing: 0.3px;
     text-align: left !important;
     border-color: rgba(0, 0, 0, 0.12);
-    padding: 12px 24px 12px 8px;
+    padding: 8px; /* Match body cell padding exactly */
     position: sticky;
     top: 0;
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     background: inherit;
-    border: none;
+    border: 1px solid var(--md-sys-color-outline); /* Match body cell border */
     border-bottom: 1px solid #ddd;
     display: table-cell !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 100px;
+    box-sizing: border-box; /* Ensure consistent box model */
 }
 
 thead {
@@ -547,6 +585,17 @@ tr {
     justify-content: space-between;
     width: 100%;
     gap: 4px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Force header text to take remaining space after buttons */
+.header-text {
+    flex: 1;
+    min-width: 0; /* Allow text to shrink */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .header-text {

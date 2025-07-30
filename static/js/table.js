@@ -746,10 +746,10 @@ function updateColumnPills(modal, tableName) {
     const tableSection = document.querySelector(`[data-table-name="${tableName}"]`);
     if (!tableSection) return;
 
-    const table = tableSection.querySelector('table');
-    if (!table) return;
+    const headerTable = tableSection.querySelector('.header-table');
+    if (!headerTable) return;
 
-    const headers = table.querySelectorAll('thead th');
+    const headers = headerTable.querySelectorAll('thead th');
     const tableSettings = getTableImageSettings(tableName);
 
     headers.forEach((header, index) => {
@@ -983,12 +983,12 @@ function refreshTableWithImageSettings(tableName) {
     const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
     if (!tableSection) return;
 
-    const tbody = tableSection.querySelector('tbody');
+    const tbody = tableSection.querySelector('.body-table tbody');
     if (!tbody) return;
 
     // Get column names from headers
-    const table = tableSection.querySelector('table');
-    const headers = tableSection.querySelectorAll('thead th');
+    const headerTable = tableSection.querySelector('.header-table');
+    const headers = tableSection.querySelectorAll('.header-table thead th');
     const columnNames = Array.from(headers).map(th => {
         const headerText = th.querySelector('.header-text');
         return headerText ? headerText.textContent.trim() : th.textContent.trim();
@@ -2347,26 +2347,36 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
     }
 
     // Reapply filters after updating rows (only if not already filtered by database)
-    const table = tbody.closest('table');
-    if (table && table.querySelectorAll('.filter-btn').length > 0) {
-        const container = table.closest('.table-container');
+    const bodyTable = tbody.closest('.body-table');
+    const tableSection = tbody.closest('.table-section');
+    const headerTable = tableSection ? tableSection.querySelector('.header-table') : null;
+    if (headerTable && headerTable.querySelectorAll('.filter-btn').length > 0) {
+        const container = bodyTable.closest('.table-container');
         const tableId = container ? container.id : 'default-table';
         const allFilters = tableFilters.get(tableId) || {};
 
         // Only apply frontend filtering if no database filters are active
         if (Object.keys(allFilters).length === 0) {
-            filterTableFrontend(table);
+            filterTableFrontend(headerTable, bodyTable);
         }
     }
 }
 
 export function createNewTable(tableDiv, tableData, columns, baseUrl) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'table-scroll-wrapper';
+    // Create header wrapper and table
+    const headerWrapper = document.createElement('div');
+    headerWrapper.className = 'table-header-wrapper';
 
-    
-    const table = document.createElement('table');
+    const headerTable = document.createElement('table');
+    headerTable.className = 'header-table';
     const thead = document.createElement('thead');
+
+    // Create body wrapper and table
+    const bodyWrapper = document.createElement('div');
+    bodyWrapper.className = 'table-scroll-wrapper';
+
+    const bodyTable = document.createElement('table');
+    bodyTable.className = 'body-table';
     const tbody = document.createElement('tbody');
 
     // Create header row
@@ -2410,22 +2420,40 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
         headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
-    table.appendChild(thead);
-    table.appendChild(tbody);
+    headerTable.appendChild(thead);
+    headerWrapper.appendChild(headerTable);
 
-    wrapper.appendChild(table);
+    bodyTable.appendChild(tbody);
+    bodyWrapper.appendChild(bodyTable);
+
     tableDiv.innerHTML = '';
-    tableDiv.appendChild(wrapper);
+    tableDiv.appendChild(headerWrapper);
+    tableDiv.appendChild(bodyWrapper);
+
+    // Calculate optimal column widths based on both header and data content
+    setTimeout(() => {
+        calculateOptimalColumnWidths(headerTable, bodyTable, columns, tableData);
+
+        // Add padding to header table to account for body's vertical scrollbar
+        const bodyScrollbarWidth = bodyWrapper.offsetWidth - bodyWrapper.clientWidth;
+        if (bodyScrollbarWidth > 0) {
+            headerTable.style.paddingRight = `${bodyScrollbarWidth}px`;
+            console.log(`📜 Added ${bodyScrollbarWidth}px padding to header for scrollbar alignment`);
+        }
+    }, 100);
 
     // Add event listeners
-    addResizerListeners(table, columns);
+    addResizerListeners(headerTable, bodyTable, columns);
     handleRowDeletion(tableDiv, tableDiv.id, baseUrl);
-    wrapper.addEventListener('scroll', function () {
+    bodyWrapper.addEventListener('scroll', function () {
         handleTableScroll(this, tableDiv.id);
+
+        // Simple scroll synchronization
+        headerWrapper.scrollLeft = this.scrollLeft;
     });
 
     // Add filter functionality
-    addFilterListeners(table, columns);
+    addFilterListeners(headerTable, columns);
 
     if (!tableData || !tableData.length) {
         const noDataRow = document.createElement('tr');
@@ -2607,9 +2635,11 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
         limitedInfoSpan.classList.remove('visible');
     }
 
-    let existingTable = tableDiv.querySelector('table');
-    if (existingTable) {
-        const tbody = existingTable.querySelector('tbody');
+    let existingBodyTable = tableDiv.querySelector('.body-table');
+
+    // Direct table update without preservation mechanism to avoid triggering alignment
+    if (existingBodyTable) {
+        const tbody = existingBodyTable.querySelector('tbody');
         const wasFocused = tbody?.querySelector('td.focused') !== null;
         if (tbody) {
             if (!tableInfo.data || !tableInfo.data.length) {
@@ -2630,11 +2660,15 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
         }
     } else {
         createNewTable(tableDiv, tableInfo.data, tableInfo.columns, baseUrl);
-        existingTable = tableDiv.querySelector('table');
+        existingBodyTable = tableDiv.querySelector('.body-table');
     }
 
-    if (existingTable && tableInfo.data && tableInfo.data.length) {
-        applySavedColumnWidths(existingTable, tableInfo.columns);
+    if (existingBodyTable && tableInfo.data && tableInfo.data.length) {
+        const headerTable = tableDiv.querySelector('.header-table');
+        // Removed applySavedColumnWidths call - it interferes with our alignment
+        // if (headerTable) {
+        //     applySavedColumnWidths(headerTable, existingBodyTable, tableInfo.columns);
+        // }
     }
 
     tableDiv.classList.add('initialized');
@@ -2643,14 +2677,313 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
             tableDiv.classList.add('expanded');
             // Apply current image settings after table is fully rendered
             refreshTableWithImageSettings(tableName);
+
+            // Removed automatic alignment trigger - it causes bad widths during monitoring
+            // Alignment should only be triggered manually or on initial table show
+            // setTimeout(() => {
+            //     triggerTableAlignment(tableName);
+            // }, 50);
         });
     });
 }
 
+// Function to preserve and restore alignment during table updates
+function preserveTableAlignment(tableName, callback) {
+    const tableDiv = document.getElementById(tableName);
+    if (!tableDiv) {
+        callback();
+        return;
+    }
+
+    const headerTable = tableDiv.querySelector('.header-table');
+    const bodyTable = tableDiv.querySelector('.body-table');
+
+    // Store current alignment state
+    let preservedWidths = null;
+    if (headerTable && bodyTable) {
+        preservedWidths = {
+            headerCells: [],
+            bodyCells: []
+        };
+
+        // Store header cell widths
+        headerTable.querySelectorAll('th').forEach((th, index) => {
+            preservedWidths.headerCells[index] = {
+                width: th.style.width,
+                minWidth: th.style.minWidth
+            };
+        });
+
+        // Store body cell widths from first row
+        const firstBodyRow = bodyTable.querySelector('tbody tr:first-child');
+        if (firstBodyRow) {
+            firstBodyRow.querySelectorAll('td').forEach((td, index) => {
+                preservedWidths.bodyCells[index] = {
+                    width: td.style.width,
+                    minWidth: td.style.minWidth,
+                    maxWidth: td.style.maxWidth
+                };
+            });
+        }
+    }
+
+    // Execute the callback (table update)
+    callback();
+
+    // Restore alignment after update
+    if (preservedWidths) {
+        setTimeout(() => {
+            const newHeaderTable = tableDiv.querySelector('.header-table');
+            const newBodyTable = tableDiv.querySelector('.body-table');
+
+            if (newHeaderTable && newBodyTable) {
+                // Restore header cell widths
+                newHeaderTable.querySelectorAll('th').forEach((th, index) => {
+                    if (preservedWidths.headerCells[index]) {
+                        const preserved = preservedWidths.headerCells[index];
+                        if (preserved.width) th.style.width = preserved.width;
+                        if (preserved.minWidth) th.style.minWidth = preserved.minWidth;
+                    }
+                });
+
+                // Restore body cell widths to all rows
+                if (preservedWidths.bodyCells.length > 0) {
+                    preservedWidths.bodyCells.forEach((preserved, index) => {
+                        if (preserved.width) {
+                            newBodyTable.querySelectorAll(`td:nth-child(${index + 1})`).forEach(td => {
+                                td.style.width = preserved.width;
+                                if (preserved.minWidth) td.style.minWidth = preserved.minWidth;
+                                if (preserved.maxWidth) td.style.maxWidth = preserved.maxWidth;
+                            });
+                        }
+                    });
+                }
+
+                console.log(`🔄 Preserved alignment for table: ${tableName}`);
+            }
+        }, 10);
+    }
+}
+
+// Trigger table alignment for a specific table
+export function triggerTableAlignment(tableName) {
+    const tableDiv = document.getElementById(tableName);
+    if (!tableDiv) return;
+
+    const headerTable = tableDiv.querySelector('.header-table');
+    const bodyTable = tableDiv.querySelector('.body-table');
+    const bodyWrapper = tableDiv.querySelector('.table-scroll-wrapper');
+
+    if (!headerTable || !bodyTable || !bodyWrapper) return;
+
+    console.log(`🔧 Triggering alignment for table: ${tableName}`);
+
+    // Use the same alignment logic from updateSingleTable
+    setTimeout(() => {
+        // Ensure both tables have the same width accounting for scrollbar
+        const bodyTableTargetWidth = bodyWrapper.clientWidth; // Available width without scrollbar
+
+        // Set both tables to the same width (the available content width)
+        headerTable.style.width = `${bodyTableTargetWidth}px`;
+        bodyTable.style.width = `${bodyTableTargetWidth}px`;
+
+        // Synchronize column widths - force header cells to match body cell widths exactly
+        const headerCells = headerTable.querySelectorAll('th');
+        const bodyRows = bodyTable.querySelectorAll('tbody tr');
+        if (bodyRows.length > 0) {
+            const bodyCells = bodyRows[0].querySelectorAll('td');
+            headerCells.forEach((th, index) => {
+                if (bodyCells[index]) {
+                    // Get the header content area width (this is what we want to match)
+                    const headerContent = th.querySelector('.header-content');
+                    const headerContentWidth = headerContent ? headerContent.offsetWidth : th.offsetWidth;
+
+                    // Calculate the actual box model differences between header and body
+                    const bodyComputedStyle = getComputedStyle(bodyCells[index]);
+
+                    // Get body cell box model
+                    const bodyPaddingLeft = parseFloat(bodyComputedStyle.paddingLeft) || 0;
+                    const bodyPaddingRight = parseFloat(bodyComputedStyle.paddingRight) || 0;
+                    const bodyBorderLeft = parseFloat(bodyComputedStyle.borderLeftWidth) || 0;
+                    const bodyBorderRight = parseFloat(bodyComputedStyle.borderRightWidth) || 0;
+                    const bodyBoxOverhead = bodyPaddingLeft + bodyPaddingRight + bodyBorderLeft + bodyBorderRight;
+
+                    // Calculate the target: header content width adjusted for box model differences
+                    const targetBodyStyleWidth = headerContentWidth - bodyBoxOverhead;
+
+                    // Set body cells to match header content area
+                    bodyCells[index].style.width = `${targetBodyStyleWidth}px`;
+                    bodyCells[index].style.minWidth = `${targetBodyStyleWidth}px`;
+                    bodyCells[index].style.maxWidth = `${targetBodyStyleWidth}px`;
+
+                    // Apply to all body cells in this column
+                    bodyTable.querySelectorAll(`td:nth-child(${index + 1})`).forEach(td => {
+                        td.style.width = `${targetBodyStyleWidth}px`;
+                        td.style.minWidth = `${targetBodyStyleWidth}px`;
+                        td.style.maxWidth = `${targetBodyStyleWidth}px`;
+                    });
+                }
+            });
+        }
+
+        console.log(`✅ Alignment completed for table: ${tableName}`);
+    }, 100);
+}
+
+// Synchronize header scroll with body scroll, accounting for scrollbar width differences
+function synchronizeHeaderScroll(headerWrapper, bodyWrapper) {
+    // Calculate scrollbar width difference
+    const bodyScrollbarWidth = bodyWrapper.offsetWidth - bodyWrapper.clientWidth;
+    const headerScrollbarWidth = headerWrapper.offsetWidth - headerWrapper.clientWidth;
+    const scrollbarDifference = bodyScrollbarWidth - headerScrollbarWidth;
+
+    // Get the body's scroll position
+    const bodyScrollLeft = bodyWrapper.scrollLeft;
+
+    // Calculate the maximum scroll positions
+    const bodyMaxScroll = bodyWrapper.scrollWidth - bodyWrapper.clientWidth;
+    const headerMaxScroll = headerWrapper.scrollWidth - headerWrapper.clientWidth;
+
+    // If body is at maximum scroll, adjust header to account for scrollbar difference
+    if (bodyScrollLeft >= bodyMaxScroll - 1) { // -1 for rounding tolerance
+        // At rightmost position, header should scroll to its max minus scrollbar difference
+        headerWrapper.scrollLeft = headerMaxScroll - scrollbarDifference;
+    } else {
+        // For other positions, use proportional scrolling
+        const scrollRatio = bodyScrollLeft / bodyMaxScroll;
+        const adjustedHeaderScroll = scrollRatio * (headerMaxScroll - scrollbarDifference);
+        headerWrapper.scrollLeft = Math.max(0, adjustedHeaderScroll);
+    }
+
+    console.log(`📜 Scroll sync: Body: ${bodyScrollLeft}px (max: ${bodyMaxScroll}px), Header: ${headerWrapper.scrollLeft}px (max: ${headerMaxScroll}px), Scrollbar diff: ${scrollbarDifference}px`);
+}
+
+// Calculate optimal column widths based on header and data content
+function calculateOptimalColumnWidths(headerTable, bodyTable, columns, tableData) {
+    const headerCells = headerTable.querySelectorAll('th');
+    const bodyRows = bodyTable.querySelectorAll('tbody tr');
+
+    if (!headerCells.length || !bodyRows.length) return;
+
+    console.log(`🔍 Calculating optimal widths for ${columns.length} columns with ${tableData.length} rows`);
+
+    // Create a temporary measurement element
+    const measureDiv = document.createElement('div');
+    measureDiv.style.position = 'absolute';
+    measureDiv.style.visibility = 'hidden';
+    measureDiv.style.whiteSpace = 'nowrap';
+    measureDiv.style.fontSize = '0.95em'; // Match table font size
+    measureDiv.style.fontFamily = getComputedStyle(headerTable).fontFamily;
+    measureDiv.style.padding = '8px'; // Match cell padding
+    document.body.appendChild(measureDiv);
+
+    const optimalWidths = [];
+
+    headerCells.forEach((th, index) => {
+        const column = columns[index];
+        if (!column) return;
+
+        // 1. Measure header content width (including buttons)
+        const headerText = th.querySelector('.header-text');
+        const headerTextContent = headerText ? headerText.textContent.trim() : column;
+
+        measureDiv.textContent = headerTextContent;
+        const headerTextWidth = measureDiv.offsetWidth;
+
+        // Add space for sort/filter buttons (24px each + gaps)
+        const sortBtn = th.querySelector('.sort-btn');
+        const filterBtn = th.querySelector('.filter-btn');
+        const buttonSpace = (sortBtn ? 28 : 0) + (filterBtn ? 28 : 0);
+        const headerRequiredWidth = headerTextWidth + buttonSpace;
+
+        // 2. Analyze data content for this column
+        let maxDataWidth = 0;
+        let avgDataWidth = 0;
+        let totalWidth = 0;
+        let sampleCount = 0;
+
+        // Sample up to 20 rows to determine data width needs
+        const sampleSize = Math.min(20, tableData.length);
+        for (let i = 0; i < sampleSize; i++) {
+            const rowData = tableData[i];
+            const cellValue = rowData[column];
+
+            if (cellValue !== null && cellValue !== undefined) {
+                let displayValue = String(cellValue);
+
+                // Handle different data types
+                if (typeof cellValue === 'object') {
+                    displayValue = JSON.stringify(cellValue);
+                } else if (typeof cellValue === 'number') {
+                    displayValue = cellValue.toLocaleString();
+                }
+
+                // Limit very long content for width calculation
+                if (displayValue.length > 100) {
+                    displayValue = displayValue.substring(0, 100) + '...';
+                }
+
+                measureDiv.textContent = displayValue;
+                const dataWidth = measureDiv.offsetWidth;
+
+                maxDataWidth = Math.max(maxDataWidth, dataWidth);
+                totalWidth += dataWidth;
+                sampleCount++;
+            }
+        }
+
+        if (sampleCount > 0) {
+            avgDataWidth = totalWidth / sampleCount;
+        }
+
+        // 3. Determine optimal width
+        // Use the larger of: header width, max data width, or 1.2x average data width
+        const dataBasedWidth = Math.max(maxDataWidth, avgDataWidth * 1.2);
+        const optimalWidth = Math.max(headerRequiredWidth, dataBasedWidth);
+
+        // Apply reasonable limits
+        const minWidth = 80;  // Minimum usable width
+        const maxWidth = 400; // Maximum to prevent extremely wide columns
+        const finalWidth = Math.max(minWidth, Math.min(maxWidth, optimalWidth));
+
+        optimalWidths[index] = finalWidth;
+
+        console.log(`  Col ${index + 1} (${column}): Header: ${headerRequiredWidth}px, Data: ${Math.round(dataBasedWidth)}px, Final: ${finalWidth}px`);
+    });
+
+    // 4. Apply the calculated widths
+    headerCells.forEach((th, index) => {
+        if (optimalWidths[index]) {
+            const width = optimalWidths[index];
+
+            // Set header cell width
+            th.style.width = `${width}px`;
+            th.style.minWidth = `${width}px`;
+            th.style.maxWidth = `${width}px`;
+
+            // Set all body cells in this column
+            bodyTable.querySelectorAll(`td:nth-child(${index + 1})`).forEach(td => {
+                td.style.width = `${width}px`;
+                td.style.minWidth = `${width}px`;
+                td.style.maxWidth = `${width}px`;
+            });
+        }
+    });
+
+    // Clean up
+    document.body.removeChild(measureDiv);
+
+    console.log(`✅ Applied optimal widths based on header and data analysis`);
+}
+
+// Make functions available globally
+window.triggerTableAlignment = triggerTableAlignment;
+window.synchronizeHeaderScroll = synchronizeHeaderScroll;
+
 // Helper functions
-function addResizerListeners(table, columns) {
+function addResizerListeners(headerTable, bodyTable, columns) {
     // Only get header cells from the first row (not filter row)
-    const headerRow = table.querySelector('thead tr:first-child');
+    const headerRow = headerTable.querySelector('thead tr:first-child');
     const thElements = headerRow.querySelectorAll('th');
 
     thElements.forEach((th, index) => {
@@ -2662,17 +2995,18 @@ function addResizerListeners(table, columns) {
         let startX, startWidth;
         let currentWidth;
 
-        const initialWidth = th.offsetWidth;
-        th.style.width = `${initialWidth}px`;
-        th.style.minWidth = `${initialWidth}px`;
+        // Removed initial width setting - it interferes with our alignment
+        // The alignment is handled by triggerTableAlignment function
+        // const initialWidth = th.offsetWidth;
+        // th.style.width = `${initialWidth}px`;
+        // th.style.minWidth = `${initialWidth}px`;
 
-
-
-        table.querySelectorAll(`td:nth-child(${index + 1})`).forEach(td => {
-            td.style.width = `${initialWidth}px`;
-            td.style.minWidth = `${initialWidth}px`;
-            td.style.maxWidth = `${initialWidth}px`;
-        });
+        // Apply initial width to all cells in the body table column
+        // bodyTable.querySelectorAll(`td:nth-child(${index + 1})`).forEach(td => {
+        //     td.style.width = `${initialWidth}px`;
+        //     td.style.minWidth = `${initialWidth}px`;
+        //     td.style.maxWidth = `${initialWidth}px`;
+        // });
 
         const onMouseMove = (e) => {
             if (!startX) return;
@@ -2683,11 +3017,23 @@ function addResizerListeners(table, columns) {
 
 
 
-            table.querySelectorAll(`td:nth-child(${index + 1})`).forEach(cell => {
+            // Update both header and body table columns
+            bodyTable.querySelectorAll(`td:nth-child(${index + 1})`).forEach(cell => {
                 cell.style.width = `${currentWidth}px`;
                 cell.style.minWidth = `${currentWidth}px`;
                 cell.style.maxWidth = `${currentWidth}px`;
             });
+
+            // Synchronize table widths after column resize
+            const headerTable = th.closest('.header-table');
+            const bodyWrapper = bodyTable.closest('.table-scroll-wrapper');
+            if (headerTable && bodyWrapper) {
+                setTimeout(() => {
+                    const bodyTableTargetWidth = bodyWrapper.clientWidth; // Available width without scrollbar
+                    headerTable.style.width = `${bodyTableTargetWidth}px`;
+                    bodyTable.style.width = `${bodyTableTargetWidth}px`;
+                }, 0);
+            }
         };
 
         const onMouseUp = () => {
@@ -2696,9 +3042,9 @@ function addResizerListeners(table, columns) {
             document.removeEventListener('mouseup', onMouseUp);
             document.body.style.cursor = '';
 
-            const widths = getSavedColumnWidths(table);
+            const widths = getSavedColumnWidths(headerTable);
             widths[columns[index]] = currentWidth;
-            saveColumnWidths(table, widths);
+            saveColumnWidths(headerTable, widths);
 
             startX = null;
             currentWidth = null;
@@ -2749,16 +3095,17 @@ function getSavedColumnWidths(table) {
     return widths ? JSON.parse(widths) : {};
 }
 
-function applySavedColumnWidths(table, columns) {
-    const widths = getSavedColumnWidths(table);
-    table.querySelectorAll('th').forEach((th, index) => {
+function applySavedColumnWidths(headerTable, bodyTable, columns) {
+    const widths = getSavedColumnWidths(headerTable);
+    headerTable.querySelectorAll('th').forEach((th, index) => {
         const colName = columns[index];
         if (widths[colName]) {
             const width = widths[colName];
             th.style.width = `${width}px`;
             th.style.minWidth = `${width}px`;
 
-            table.querySelectorAll(`td:nth-child(${index + 1})`).forEach(td => {
+            // Apply to body table cells
+            bodyTable.querySelectorAll(`td:nth-child(${index + 1})`).forEach(td => {
                 td.style.width = `${width}px`;
                 td.style.minWidth = `${width}px`;
                 td.style.maxWidth = `${width}px`;
@@ -2840,8 +3187,8 @@ export function fetchTableData(tableName, append = false, baseUrl, translations,
 
 function appendTableData(tableName, tableInfo, translations, currentLang) {
     const tableDiv = document.getElementById(tableName);
-    const existingTable = tableDiv.querySelector('table');
-    const tbody = existingTable ? existingTable.querySelector('tbody') : null;
+    const existingBodyTable = tableDiv.querySelector('.body-table');
+    const tbody = existingBodyTable ? existingBodyTable.querySelector('tbody') : null;
 
     if (tbody && Array.isArray(tableInfo.data)) {
         tableInfo.data.forEach(row => {
@@ -2945,8 +3292,8 @@ export function fetchTableCount(tableName, baseUrl, translations, currentLang) {
 
 // Function to handle row deletion and cell editing
 export function handleRowDeletion(tableDiv, tableName, baseUrl) {
-    const table = tableDiv.querySelector('table');
-    if (!table) return;
+    const bodyTable = tableDiv.querySelector('.body-table');
+    if (!bodyTable) return;
 
     let isEditing = false;
     let currentEditCell = null;
@@ -3212,7 +3559,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     };
 
     // Add click and double click handlers
-    table.addEventListener('click', (e) => {
+    bodyTable.addEventListener('click', (e) => {
         const cell = e.target.closest('td');
         if (!cell) return;
         
@@ -3224,14 +3571,14 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             startEditing(cell, e);
         } else if (!isEditing) {
             // Remove focus from any previously focused cell
-            table.querySelectorAll('td').forEach(td => td.classList.remove('focused'));
+            bodyTable.querySelectorAll('td').forEach(td => td.classList.remove('focused'));
             // Add focus to clicked cell
             cell.classList.add('focused');
         }
     });
 
     // Add double click handler
-    table.addEventListener('dblclick', (e) => {
+    bodyTable.addEventListener('dblclick', (e) => {
         const cell = e.target.closest('td');
         if (cell && !isEditing && isAdminMode && !e.target.classList.contains('no-data-message')) {
             startEditing(cell, e);
@@ -3268,7 +3615,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
         
                 if (e.key && (e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'x')
             && !isEditing && isAdminMode) {
-            const focusedCell = table.querySelector('td.focused');
+            const focusedCell = bodyTable.querySelector('td.focused');
             if (!focusedCell) return;
 
             const row = focusedCell.closest('tr');
@@ -3372,8 +3719,9 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                 }
             } else if (e.key && e.key.toLowerCase() === 'a') {
                 try {
-                    // Get table columns
-                    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+                    // Get table columns from header table
+                    const headerTable = tableDiv.querySelector('.header-table');
+                    const headers = Array.from(headerTable.querySelectorAll('th')).map(th => th.textContent);
                     
                     // Create empty row data object
                     const emptyRow = {};
@@ -4096,10 +4444,10 @@ async function applyDatabaseFilter(table) {
 }
 
 // Frontend filtering fallback (original function)
-function filterTableFrontend(table) {
-    const tbody = table.querySelector('tbody');
+function filterTableFrontend(headerTable, bodyTable) {
+    const tbody = bodyTable.querySelector('tbody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
-    const container = table.closest('.table-container');
+    const container = bodyTable.closest('.table-container');
     const tableId = container ? container.id : 'default-table';
     const allFilters = tableFilters.get(tableId) || {};
 
@@ -4116,7 +4464,7 @@ function filterTableFrontend(table) {
     }
 
     // Get column headers for mapping
-    const headers = Array.from(table.querySelectorAll('thead tr:first-child th'));
+    const headers = Array.from(headerTable.querySelectorAll('thead tr:first-child th'));
     const columnMap = {};
     headers.forEach((th, index) => {
         const filterBtn = th.querySelector('.filter-btn');
@@ -4160,8 +4508,13 @@ function filterTableFrontend(table) {
 
 
 
-export function adjustColumnWidths(table) {
-    const columns = Array.from(table.querySelectorAll('th'));
+export function adjustColumnWidths(headerTable) {
+    // Find the corresponding body table
+    const tableContainer = headerTable.closest('.table-container');
+    const bodyTable = tableContainer ? tableContainer.querySelector('.body-table') : null;
+    if (!bodyTable) return;
+
+    const columns = Array.from(headerTable.querySelectorAll('th'));
     const PADDING = 20;
     const MIN_JSON_WIDTH = 0;
     const MAX_JSON_WIDTH = 400;
@@ -4174,7 +4527,7 @@ export function adjustColumnWidths(table) {
 
     columns.forEach((th, index) => {
         th.style.width = '';
-        const cells = Array.from(table.querySelectorAll(`td:nth-child(${index + 1})`));
+        const cells = Array.from(bodyTable.querySelectorAll(`td:nth-child(${index + 1})`));
         const allCells = [th, ...cells];
         let maxWidth = 0;
         let hasJsonCells = false;
@@ -4239,7 +4592,7 @@ export function adjustColumnWidths(table) {
     });
 
     // Save the calculated widths to cookies
-    const tableName = table.closest('.table-container')?.id || table.closest('.table-section')?.getAttribute('data-table-name');
+    const tableName = headerTable.closest('.table-container')?.id || headerTable.closest('.table-section')?.getAttribute('data-table-name');
     if (tableName) {
         const cookieName = `table_${tableName}_widths`;
         setCookie(cookieName, JSON.stringify(calculatedWidths), 365);

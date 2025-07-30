@@ -536,10 +536,11 @@ function toggleTable(tableName) {
             }
         ).then(() => {
             const tableDiv = document.getElementById(tableName);
-            const tableElement = tableDiv.querySelector('table');
-            if (tableElement) {
-                adjustColumnWidths(tableElement);
-            }
+            const headerTable = tableDiv.querySelector('.header-table');
+            // Removed adjustColumnWidths call - it interferes with our alignment
+            // if (headerTable) {
+            //     adjustColumnWidths(headerTable);
+            // }
             requestAnimationFrame(() => {
                 container.classList.add('expanded');
                 // Ensure image settings are applied after table is fully loaded
@@ -548,6 +549,14 @@ function toggleTable(tableName) {
                         window.applyImageSettingsToAllTables();
                     }, 100);
                 }
+
+                // Removed triggerTableAlignment call - it overrides our intelligent width calculation
+                // The intelligent calculation in createNewTable handles alignment properly
+                // setTimeout(() => {
+                //     if (window.triggerTableAlignment) {
+                //         window.triggerTableAlignment(tableName);
+                //     }
+                // }, 150);
             });
         });
     }
