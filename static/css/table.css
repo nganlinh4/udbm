@@ -127,6 +127,7 @@ td {
     height: auto;
     max-height: 500px;
     overflow-y: auto;
+    padding-top: 10px;
 }
 
 /* Fixed header wrapper - stays at top */

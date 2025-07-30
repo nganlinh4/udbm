@@ -747,7 +747,8 @@ function updateColumnPills(modal, tableName) {
     if (!tableSection) return;
 
     const headerTable = tableSection.querySelector('.header-table');
-    if (!headerTable) return;
+    const bodyTable = tableSection.querySelector('.body-table');
+    if (!headerTable || !bodyTable) return;
 
     const headers = headerTable.querySelectorAll('thead th');
     const tableSettings = getTableImageSettings(tableName);
@@ -759,7 +760,7 @@ function updateColumnPills(modal, tableName) {
         if (!columnName) return;
 
         // Check if this column contains image-like data
-        const sampleCells = table.querySelectorAll(`tbody tr td:nth-child(${index + 1})`);
+        const sampleCells = bodyTable.querySelectorAll(`tbody tr td:nth-child(${index + 1})`);
         let hasImageData = false;
 
         // Check first few cells for image-like content
