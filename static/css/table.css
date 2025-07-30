@@ -88,7 +88,7 @@ table {
 
 th,
 td {
-    border: 1px solid var(--md-sys-color-outline);
+    border: 1px solid rgba(0, 0, 0, 0.05); /* Very thin elegant borders */
     padding: 8px;
     text-align: left;
     white-space: nowrap;
@@ -328,7 +328,7 @@ th {
     z-index: 2;
     background-color: inherit;
     white-space: nowrap;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 th span {
@@ -369,10 +369,17 @@ th .resizer::after {
 td {
     cursor: text;
     /* Removed border: none to allow th,td rule to apply */
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     font-size: 1em;
     padding: 8px; /* Match header padding */
     transition: all 0.2s;
+}
+
+/* Ensure "No data available" cell spans properly */
+td.no-data-cell {
+    width: auto !important;
+    min-width: auto !important;
+    max-width: none !important;
 }
 
 /* Show hand pointer cursor in admin mode */
@@ -547,15 +554,14 @@ thead tr th {
     font-size: 0.95em;
     letter-spacing: 0.3px;
     text-align: left !important;
-    border-color: rgba(0, 0, 0, 0.12);
+    border-color: rgba(0, 0, 0, 0.05); /* Match body cell borders */
     padding: 8px; /* Match body cell padding exactly */
     position: sticky;
     top: 0;
     z-index: 10;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     background: inherit;
-    border: 1px solid var(--md-sys-color-outline); /* Match body cell border */
-    border-bottom: 1px solid #ddd;
+    border: 1px solid rgba(0, 0, 0, 0.05); /* Consistent with body cells */
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     display: table-cell !important;
     white-space: nowrap;
     overflow: hidden;

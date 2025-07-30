@@ -2374,17 +2374,20 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
         }
     }
 
-    // Apply preserved header widths to new body cells
+    // Apply preserved header widths to new body cells (but skip "No data available" cells)
     if (existingHeaderWidths.length > 0) {
         const bodyTable = tbody.closest('.body-table');
         if (bodyTable) {
             existingHeaderWidths.forEach((width, columnIndex) => {
                 if (width > 0) {
-                    // Apply width to all cells in this column
+                    // Apply width to all cells in this column, but skip no-data cells
                     bodyTable.querySelectorAll(`td:nth-child(${columnIndex + 1})`).forEach(td => {
-                        td.style.width = `${width}px`;
-                        td.style.minWidth = `${width}px`;
-                        td.style.maxWidth = `${width}px`;
+                        // Skip no-data cells (they should span all columns)
+                        if (!td.classList.contains('no-data-cell')) {
+                            td.style.width = `${width}px`;
+                            td.style.minWidth = `${width}px`;
+                            td.style.maxWidth = `${width}px`;
+                        }
                     });
                 }
             });
@@ -2491,6 +2494,7 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
         const noDataCell = document.createElement('td');
         const wasFocused = tableDiv.querySelector('.table-scroll-wrapper td.focused') !== null;
         noDataCell.colSpan = columns.length;
+        noDataCell.className = 'no-data-cell'; // Add class for CSS styling
         noDataCell.innerHTML = `<span class="lang-ko no-data-message">데이터가 없습니다.</span><span class="lang-en no-data-message">No data available.</span>`;
         noDataCell.style.textAlign = 'center';
         if (wasFocused) {
@@ -2678,6 +2682,7 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
                 const noDataRow = document.createElement('tr');
                 const noDataCell = document.createElement('td');
                 noDataCell.colSpan = tableInfo.columns.length;
+                noDataCell.className = 'no-data-cell'; // Add class for CSS styling
                 noDataCell.innerHTML = `<span class="lang-ko no-data-message">${t('ui.noData')}</span><span class="lang-en no-data-message">${t('ui.noData')}</span><span class="lang-vi no-data-message">${t('ui.noData')}</span>`;
                 noDataCell.style.textAlign = 'center';
                 if (wasFocused) {
@@ -2921,10 +2926,10 @@ function calculateOptimalColumnWidths(headerTable, bodyTable, columns, tableData
         measureDiv.textContent = headerTextContent;
         const headerTextWidth = measureDiv.offsetWidth;
 
-        // Add space for sort/filter buttons (24px each + gaps)
+        // Add generous space for sort/filter buttons and padding
         const sortBtn = th.querySelector('.sort-btn');
         const filterBtn = th.querySelector('.filter-btn');
-        const buttonSpace = (sortBtn ? 28 : 0) + (filterBtn ? 28 : 0);
+        const buttonSpace = (sortBtn ? 35 : 0) + (filterBtn ? 35 : 0) + 20; // Extra padding
         const headerRequiredWidth = headerTextWidth + buttonSpace;
 
         // 2. Analyze data content for this column
@@ -2992,11 +2997,14 @@ function calculateOptimalColumnWidths(headerTable, bodyTable, columns, tableData
             th.style.minWidth = `${width}px`;
             th.style.maxWidth = `${width}px`;
 
-            // Set all body cells in this column
+            // Set all body cells in this column (but skip no-data cells)
             bodyTable.querySelectorAll(`td:nth-child(${index + 1})`).forEach(td => {
-                td.style.width = `${width}px`;
-                td.style.minWidth = `${width}px`;
-                td.style.maxWidth = `${width}px`;
+                // Skip no-data cells (they should span all columns)
+                if (!td.classList.contains('no-data-cell')) {
+                    td.style.width = `${width}px`;
+                    td.style.minWidth = `${width}px`;
+                    td.style.maxWidth = `${width}px`;
+                }
             });
         }
     });
