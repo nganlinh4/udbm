@@ -1508,8 +1508,10 @@ tr {
 }
 
 .method-pill.active:hover {
-    background: var(--md-sys-color-primary-container);
-    color: var(--md-sys-color-on-primary-container);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 }
 
 .pill-icon {
@@ -1599,8 +1601,10 @@ tr {
 }
 
 .column-pill.active:hover {
-    background: var(--md-sys-color-primary-container);
-    color: var(--md-sys-color-on-primary-container);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .column-pill-icon {
@@ -1693,40 +1697,20 @@ tr {
 
 
 
-/* IMG button highlighting when images are enabled */
+/* IMG button highlighting when images are enabled - blue pill style */
 .image-settings-button.images-enabled {
-    background: var(--md-sys-color-primary-container) !important;
-    color: var(--md-sys-color-on-primary-container) !important;
-    border: 2px solid var(--md-sys-color-primary) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
 }
 
 .image-settings-button.images-enabled svg {
-    fill: var(--md-sys-color-on-primary-container) !important;
-}
-
-.image-settings-button.images-enabled:hover {
-    background: var(--md-sys-color-primary) !important;
-    color: var(--md-sys-color-on-primary) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    transform: translateY(-2px);
-}
-
-.image-settings-button.images-enabled:hover svg {
-    fill: var(--md-sys-color-on-primary) !important;
+    fill: var(--md-sys-color-on-primary);
 }
 
 /* Dark theme adjustments for highlighted IMG button */
 [data-theme="dark"] .image-settings-button.images-enabled {
-    background: var(--md-sys-color-primary-container) !important;
-    color: var(--md-sys-color-on-primary-container) !important;
-    border-color: var(--md-sys-color-primary) !important;
-}
-
-[data-theme="dark"] .image-settings-button.images-enabled:hover {
-    background: var(--md-sys-color-primary) !important;
-    color: var(--md-sys-color-on-primary) !important;
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
 }
 
 .prefix-list {

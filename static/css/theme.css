@@ -35,6 +35,10 @@
     transition: background-color 0.2s ease;
 }
 
+.table-scroll-wrapper::-webkit-scrollbar-corner {
+    background: var(--md-sys-color-surface-container);
+}
+
 [data-theme="dark"] .table-scroll-wrapper::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.05);
 }
