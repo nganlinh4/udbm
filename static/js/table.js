@@ -291,7 +291,7 @@ function loadImageSettings() {
         try {
             globalImageSettings = { ...globalImageSettings, ...JSON.parse(savedGlobal) };
         } catch (e) {
-            console.warn('Failed to load global image settings:', e);
+            // Failed to load global image settings
         }
     }
 
@@ -307,7 +307,7 @@ function loadImageSettings() {
                 };
             });
         } catch (e) {
-            console.warn('Failed to load table image settings:', e);
+            // Failed to load table image settings
         }
     }
 }
@@ -476,7 +476,6 @@ function createImageElement(imagePath, tableName = null, columnName = null) {
 
     const tryNextUrl = () => {
         if (currentUrlIndex < urls.length && !hasLoaded) {
-            console.log(`Trying to load image: ${urls[currentUrlIndex]}`);
             img.src = urls[currentUrlIndex];
             currentUrlIndex++;
         } else if (!hasLoaded) {
@@ -487,11 +486,9 @@ function createImageElement(imagePath, tableName = null, columnName = null) {
 
     img.onload = () => {
         hasLoaded = true;
-        console.log(`Successfully loaded image: ${img.src}`);
     };
 
     img.onerror = (e) => {
-        console.warn(`Failed to load image: ${img.src}`, e);
         tryNextUrl();
     };
 
@@ -908,22 +905,18 @@ function setupImageSettingsEventListeners(modal) {
 
             const columnName = pill.getAttribute('data-column');
             const tableName = modal.dataset.tableName;
-            console.log('Column pill clicked:', columnName, 'for table:', tableName);
             if (!columnName || !tableName) return;
 
             const tableSettings = getTableImageSettings(tableName);
             const isActive = pill.classList.contains('active');
-            console.log('Toggling column:', columnName, 'was active:', isActive);
 
             // Toggle the column
             if (isActive) {
                 tableSettings.enabledColumns.delete(columnName);
                 pill.classList.remove('active');
-                console.log('Disabled column:', columnName);
             } else {
                 tableSettings.enabledColumns.add(columnName);
                 pill.classList.add('active');
-                console.log('Enabled column:', columnName);
             }
 
             saveTableImageSettings();
@@ -1488,7 +1481,6 @@ function setupQueryHandler() {
     if (queryHandler) return; // Only set up once
 
     queryHandler = (e) => {
-        console.log('setupQueryHandler Q handler triggered!');
         if (!isAdminMode) return;
         if (!e.key || e.key.toLowerCase() !== 'q') return;
         
@@ -1587,7 +1579,6 @@ function setupQueryHandler() {
         };
         
         currentExecuteButton.addEventListener('click', (e) => {
-            console.log('Execute button clicked! (handler 1)');
             handleExecute();
         });
     };
@@ -1620,7 +1611,6 @@ function getCurrentDatabaseKey() {
 function saveTableOrderFromArrangement() {
     const currentDb = getCurrentDatabaseKey();
     if (!currentDb) {
-        console.log('No current database, using simple cookie key');
         // Fallback for monitor.js compatibility
         const tableOrder = Array.from(document.querySelectorAll('.table-section'))
             .map(section => section.dataset.tableName);
@@ -1631,22 +1621,14 @@ function saveTableOrderFromArrangement() {
     const tableOrder = Array.from(document.querySelectorAll('.table-section'))
         .map(section => section.dataset.tableName);
     setCookie(`tableOrder_${currentDb}`, JSON.stringify(tableOrder), 365);
-    console.log('Saved table order:', tableOrder);
 }
 
 // Helper function to get sorted table order based on relationships
 function getSortedTableOrder() {
-    console.log('getSortedTableOrder() called');
-    console.log('schemaData available:', !!schemaData);
-    console.log('relationships available:', !!schemaData?.relationships);
-
     if (!schemaData || !schemaData.relationships) {
-        console.log('No schema data, returning alphabetical order');
         return Array.from(document.querySelectorAll('.table-section'))
             .map(section => section.getAttribute('data-table-name'));
     }
-
-    console.log('Building relationship graph from', schemaData.relationships.length, 'relationships');
 
     // Build relationship graph
     const relationGraph = new Map();
@@ -1704,7 +1686,6 @@ function getSortedTableOrder() {
         }
     });
 
-    console.log('Final sorted table order:', sortedTables);
     return sortedTables;
 }
 
@@ -1720,22 +1701,19 @@ async function loadSchemaData() {
     try {
         const response = await fetch(`${window.location.origin}/schema`);
         if (!response.ok) {
-            // If no database is configured, that's expected - just log it quietly
+            // If no database is configured, that's expected
             if (response.status === 400) {
-                console.log('Schema data not available (no database configured)');
                 return;
             }
             throw new Error(`Failed to fetch schema: ${response.status}`);
         }
         const data = await response.json();
         if (data.error) {
-            console.log('Schema data not available:', data.error);
             return;
         }
         schemaData = data;
-        console.log('Schema data loaded:', schemaData);
     } catch (error) {
-        console.log('Schema data not available:', error.message);
+        // Schema data not available
     }
 }
 
@@ -2063,7 +2041,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         isRelationMode = initialArrangement;
 
         // Apply initial arrangement based on saved state
-        console.log('Applying initial arrangement:', initialArrangement ? 'smart' : 'alphabetical');
         if (initialArrangement) {
             arrangeByRelations();
         } else {
@@ -2073,14 +2050,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Add change event listener
         arrangementToggle.addEventListener('change', (e) => {
             const isSmartMode = e.target.selected;
-            console.log('Arrangement toggle changed to:', isSmartMode ? 'SMART ORDER (ON)' : 'ALPHABETICAL (OFF)');
             isRelationMode = isSmartMode;
             localStorage.setItem('arrangementMode', JSON.stringify(isSmartMode));
             const tableSections = document.querySelectorAll('.table-section');
             const tablePills = document.querySelectorAll('.table-button');
-
-            console.log('Found tableSections:', tableSections.length);
-            console.log('Found tablePills:', tablePills.length);
 
             // Add transitions for smooth reordering
             tableSections.forEach(section => {
@@ -2091,10 +2064,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             if (isRelationMode) {
-                console.log('Switching to SMART ORDER (relation mode)');
                 arrangeByRelations();
             } else {
-                console.log('Switching to ALPHABETICAL mode');
                 arrangeAlphabetically();
             }
             
@@ -2142,7 +2113,6 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
         headerCells.forEach((th, index) => {
             existingHeaderWidths[index] = th.offsetWidth;
         });
-        console.log(`📏 Preserved ${existingHeaderWidths.length} header widths for updateTableRows`);
     }
     
     // Store focused cell info before update
@@ -2392,7 +2362,6 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
                     });
                 }
             });
-            console.log(`📏 Applied preserved widths to ${existingHeaderWidths.length} columns in body`);
         }
     }
 }
@@ -2473,7 +2442,6 @@ export function createNewTable(tableDiv, tableData, columns, baseUrl) {
         const bodyScrollbarWidth = bodyWrapper.offsetWidth - bodyWrapper.clientWidth;
         if (bodyScrollbarWidth > 0) {
             headerTable.style.paddingRight = `${bodyScrollbarWidth}px`;
-            console.log(`📜 Added ${bodyScrollbarWidth}px padding to header for scrollbar alignment`);
         }
     }, 100);
 
@@ -2796,7 +2764,6 @@ function preserveTableAlignment(tableName, callback) {
                     });
                 }
 
-                console.log(`🔄 Preserved alignment for table: ${tableName}`);
             }
         }, 10);
     }
@@ -2812,8 +2779,6 @@ export function triggerTableAlignment(tableName) {
     const bodyWrapper = tableDiv.querySelector('.table-scroll-wrapper');
 
     if (!headerTable || !bodyTable || !bodyWrapper) return;
-
-    console.log(`🔧 Triggering alignment for table: ${tableName}`);
 
     // Use the same alignment logic from updateSingleTable
     setTimeout(() => {
@@ -2863,7 +2828,6 @@ export function triggerTableAlignment(tableName) {
             });
         }
 
-        console.log(`✅ Alignment completed for table: ${tableName}`);
     }, 100);
 }
 
@@ -2892,7 +2856,7 @@ function synchronizeHeaderScroll(headerWrapper, bodyWrapper) {
         headerWrapper.scrollLeft = Math.max(0, adjustedHeaderScroll);
     }
 
-    console.log(`📜 Scroll sync: Body: ${bodyScrollLeft}px (max: ${bodyMaxScroll}px), Header: ${headerWrapper.scrollLeft}px (max: ${headerMaxScroll}px), Scrollbar diff: ${scrollbarDifference}px`);
+
 }
 
 // Calculate optimal column widths based on header and data content
@@ -2901,8 +2865,6 @@ function calculateOptimalColumnWidths(headerTable, bodyTable, columns, tableData
     const bodyRows = bodyTable.querySelectorAll('tbody tr');
 
     if (!headerCells.length || !bodyRows.length) return;
-
-    console.log(`🔍 Calculating optimal widths for ${columns.length} columns with ${tableData.length} rows`);
 
     // Create a temporary measurement element
     const measureDiv = document.createElement('div');
@@ -2984,8 +2946,6 @@ function calculateOptimalColumnWidths(headerTable, bodyTable, columns, tableData
         const finalWidth = Math.max(minWidth, Math.min(maxWidth, optimalWidth));
 
         optimalWidths[index] = finalWidth;
-
-        console.log(`  Col ${index + 1} (${column}): Header: ${headerRequiredWidth}px, Data: ${Math.round(dataBasedWidth)}px, Final: ${finalWidth}px`);
     });
 
     // 4. Apply the calculated widths
@@ -3012,8 +2972,6 @@ function calculateOptimalColumnWidths(headerTable, bodyTable, columns, tableData
 
     // Clean up
     document.body.removeChild(measureDiv);
-
-    console.log(`✅ Applied optimal widths based on header and data analysis`);
 }
 
 // Make functions available globally
@@ -4392,7 +4350,6 @@ async function pauseMonitoringForFiltering() {
                                   (typeof window.isMonitoringPaused === 'undefined');
 
     if (isCurrentlyMonitoring) {
-        console.log('Pausing monitoring for filtering operation...');
 
         // Use the global toggle function if available
         if (typeof window.toggleMonitoring === 'function') {
@@ -4417,7 +4374,7 @@ async function pauseMonitoringForFiltering() {
             });
 
             if (!response.ok) {
-                console.warn('Failed to notify backend of monitoring pause');
+                // Failed to notify backend of monitoring pause
             }
         } catch (error) {
             console.error('Error setting monitoring state:', error);
@@ -4676,7 +4633,7 @@ export function handleTableScroll(wrapper, tableName) {
         try {
             currentLang = getCurrentLanguage() || 'ko';
         } catch (e) {
-            console.warn('Error getting current language, defaulting to Korean', e);
+            // Error getting current language, defaulting to Korean
         }
         
         // Only trigger pause on first historical data load
@@ -4767,13 +4724,7 @@ export function scrollAllTablesToTop() {
 
 // Function to arrange tables by relations
 function arrangeByRelations() {
-    console.log('arrangeByRelations() called');
-    console.log('schemaData:', schemaData);
-    console.log('schemaData.relationships:', schemaData?.relationships);
-
     if (!schemaData || !schemaData.relationships) {
-        console.warn('Schema data not available for relation arrangement, falling back to alphabetical');
-        console.warn('schemaData:', schemaData);
         arrangeAlphabetically();
         return;
     }
@@ -4782,10 +4733,6 @@ function arrangeByRelations() {
     const buttonsLine = document.querySelector('.table-buttons-line');
     const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
 
-    console.log('tablesContainer:', tablesContainer);
-    console.log('buttonsLine:', buttonsLine);
-    console.log('tableSections count:', tableSections.length);
-
     // Reset all groups
     tableSections.forEach(section => {
         section.classList.remove('relation-group');
@@ -4793,14 +4740,11 @@ function arrangeByRelations() {
     });
 
     const sortedOrder = getSortedTableOrder();
-    console.log('sortedOrder:', sortedOrder);
 
     // Update DOM with animation
     sortedOrder.forEach((tableName, index) => {
         const section = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
         const pill = document.querySelector(`.table-button[data-table="${tableName}"]`);
-
-        console.log(`Processing table ${tableName}: section=${!!section}, pill=${!!pill}`);
 
         if (section) {
             section.style.transition = 'all 0.3s ease-out';
@@ -4815,10 +4759,7 @@ function arrangeByRelations() {
         }
 
         if (pill) {
-            console.log(`Reordering pill for ${tableName}`);
             buttonsLine.appendChild(pill);
-        } else {
-            console.warn(`No pill found for table ${tableName}`);
         }
     });
 
@@ -4836,17 +4777,10 @@ function arrangeByRelations() {
 
 // Function to arrange tables alphabetically
 function arrangeAlphabetically() {
-    console.log('arrangeAlphabetically() called');
-
     const tablesContainer = document.getElementById('tables-container');
     const tableSections = Array.from(tablesContainer.querySelectorAll('.table-section'));
     const buttonsLine = document.querySelector('.table-buttons-line');
     const tablePills = Array.from(buttonsLine.querySelectorAll('.table-button'));
-
-    console.log('tablesContainer:', tablesContainer);
-    console.log('buttonsLine:', buttonsLine);
-    console.log('tableSections count:', tableSections.length);
-    console.log('tablePills count:', tablePills.length);
 
     // Remove relation-group class and reset margins
     tableSections.forEach(section => {
@@ -4859,8 +4793,6 @@ function arrangeAlphabetically() {
     const sortedNames = tableSections
         .map(section => section.getAttribute('data-table-name'))
         .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-
-    console.log('sortedNames:', sortedNames);
 
     // Reorder table sections with animation
     sortedNames.forEach((tableName, index) => {
@@ -4882,12 +4814,8 @@ function arrangeAlphabetically() {
         const pill = tablePills.find(p =>
             p.getAttribute('data-table') === tableName
         );
-        console.log(`Processing pill for ${tableName}: found=${!!pill}`);
         if (pill) {
-            console.log(`Reordering pill for ${tableName}`);
             buttonsLine.appendChild(pill);
-        } else {
-            console.warn(`No pill found for table ${tableName}`);
         }
     });
 
