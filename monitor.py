@@ -23,6 +23,12 @@ if getattr(sys, 'frozen', False):
     if os.path.exists(graphviz_bin_path):
         os.environ['PATH'] = graphviz_bin_path + os.pathsep + os.environ.get('PATH', '')
         os.environ['GRAPHVIZ_DOT'] = os.path.join(graphviz_bin_path, 'dot.exe')
+    else:
+        # Fallback to system GraphViz if bundled version not found
+        system_graphviz_path = r'C:\Program Files\Graphviz\bin'
+        if os.path.exists(system_graphviz_path):
+            os.environ['PATH'] = system_graphviz_path + os.pathsep + os.environ.get('PATH', '')
+            os.environ['GRAPHVIZ_DOT'] = os.path.join(system_graphviz_path, 'dot.exe')
 else:
     # Development mode - add system GraphViz to PATH
     system_graphviz_path = r'C:\Program Files\Graphviz\bin'
@@ -1259,7 +1265,24 @@ def get_schema():
                     edge_color = '#666666'
                     # Keep original light theme colors
 
+                # Create graphviz diagram
                 dot = graphviz.Digraph(comment='Database Schema')
+
+                # Set the engine path for bundled executable
+                if getattr(sys, 'frozen', False):
+                    bundle_dir = sys._MEIPASS
+                    dot_path = os.path.join(bundle_dir, 'graphviz', 'bin')
+                    # Override the graphviz backend to use our bundled binaries
+                    import graphviz.backend as backend
+                    original_run = backend.run
+
+                    def patched_run(cmd, input=None, capture_output=False, check=False, encoding=None, quiet=False, **kwargs):
+                        # Replace 'dot' with full path to our bundled dot.exe
+                        if cmd[0] == 'dot':
+                            cmd[0] = os.path.join(dot_path, 'dot.exe')
+                        return original_run(cmd, input, capture_output, check, encoding, quiet, **kwargs)
+
+                    backend.run = patched_run
                 dot.attr(rankdir='TB')
                 dot.attr('node', shape='record', fontsize='10', color=edge_color, fontcolor=text_color)
                 dot.attr(bgcolor='transparent')  # Set transparent background through graph attribute
