@@ -1696,10 +1696,15 @@ if __name__ == '__main__':
         
         # Start Flask app with proper host binding
         logger.info("Starting Flask app...")
+
+        # Get port from environment variable or use default
+        port = int(os.environ.get('FLASK_PORT', 5046))
+        logger.info(f"Starting Flask server on port {port}")
+
         app.run(
             host='0.0.0.0',  # Allow all incoming connections
-            port=5046,
-            debug=True,     # Changed to False for security
+            port=port,
+            debug=False,    # Disable debug for Electron
             threaded=True,
             use_reloader=False  # Disable reloader when using threads
         )

@@ -1,0 +1,62 @@
+{
+  "name": "udbm-electron",
+  "version": "1.0.0",
+  "description": "uDBM - Realtime Database Monitor (Electron App)",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build-python": "pyinstaller --onefile --distpath ./dist/python monitor.py",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "database",
+    "monitor",
+    "mysql",
+    "postgresql",
+    "electron",
+    "desktop"
+  ],
+  "author": "uDBM Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "find-free-port": "^2.0.0"
+  },
+  "build": {
+    "appId": "com.udbm.electron",
+    "productName": "uDBM - Database Monitor",
+    "directories": {
+      "output": "dist/electron"
+    },
+    "files": [
+      "src/**/*",
+      "static/**/*",
+      "dist/python/**/*",
+      "!node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/python/",
+        "to": "python/",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "static/monitor_icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "static/monitor_icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "static/monitor_icon.png"
+    }
+  }
+}
