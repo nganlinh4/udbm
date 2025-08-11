@@ -1587,6 +1587,20 @@ def download_table_xlsx(table_name):
         if 'connection' in locals():
             connection.close()
 
+@app.route('/graphviz_available')
+def graphviz_available():
+    """Check if GraphViz is available and working"""
+    try:
+        # Try to create a simple GraphViz diagram
+        test_dot = graphviz.Digraph()
+        test_dot.node('test', 'Test')
+        # Try to render to check if dot executable is available
+        test_dot.pipe(format='png')
+        return jsonify({'available': True})
+    except Exception as e:
+        logger.warning(f"GraphViz not available: {e}")
+        return jsonify({'available': False, 'error': str(e)})
+
 @app.route('/execute_query', methods=['POST'])
 def execute_query():
     if not current_db_config:

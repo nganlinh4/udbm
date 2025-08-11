@@ -4,6 +4,7 @@ let useGraphviz = true; // Keep for backward compatibility
 let schemaType = 'graphviz'; // New: 'graphviz', 'mermaid', 'd3'
 let lastGraphvizTheme = null;
 let lastGraphvizResult = null;
+let graphvizAvailable = true; // Track GraphViz availability
 
 function showSuccessPopup(message) {
     const popup = document.createElement('div');
@@ -637,11 +638,14 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
     schemaButton.dataset.initialized = 'true';
     console.log('Schema initialized');
 
+    // Check GraphViz availability and hide option if not available
+    checkGraphVizAvailability();
+
     // Load saved schema type preference and set initial state
     const savedSchemaType = localStorage.getItem('preferredSchemaType');
 
     // Migrate old preferences and set defaults
-    if (savedSchemaType === null || savedSchemaType === 'graphviz') {
+    if (savedSchemaType === null || (savedSchemaType === 'graphviz' && graphvizAvailable)) {
         schemaType = 'graphviz';
         useGraphviz = true;
     } else if (savedSchemaType === 'mermaid') {
@@ -651,9 +655,14 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         schemaType = 'd3';
         useGraphviz = false;
     } else {
-        // Default fallback
-        schemaType = 'graphviz';
-        useGraphviz = true;
+        // Default fallback - use Mermaid if GraphViz not available
+        if (graphvizAvailable) {
+            schemaType = 'graphviz';
+            useGraphviz = true;
+        } else {
+            schemaType = 'mermaid';
+            useGraphviz = false;
+        }
     }
 
     // Set initial UI state
@@ -1126,6 +1135,49 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         attributes: true,
         attributeFilter: ['data-theme']
     });
+}
+
+// Function to check GraphViz availability
+async function checkGraphVizAvailability() {
+    try {
+        const response = await fetch('/graphviz_available');
+        const result = await response.json();
+        graphvizAvailable = result.available;
+
+        const graphvizOption = document.querySelector('[data-type="graphviz"]');
+        if (!graphvizAvailable && graphvizOption) {
+            // Hide GraphViz option
+            graphvizOption.style.display = 'none';
+            console.log('GraphViz not available, hiding option');
+
+            // If GraphViz was the saved preference, switch to Mermaid
+            const savedSchemaType = localStorage.getItem('preferredSchemaType');
+            if (!savedSchemaType || savedSchemaType === 'graphviz') {
+                schemaType = 'mermaid';
+                useGraphviz = false;
+                localStorage.setItem('preferredSchemaType', 'mermaid');
+
+                // Update UI to show Mermaid as active
+                document.querySelectorAll('.schema-option').forEach(option => {
+                    option.classList.remove('active');
+                });
+                const mermaidOption = document.querySelector('[data-type="mermaid"]');
+                if (mermaidOption) {
+                    mermaidOption.classList.add('active');
+                }
+            }
+        } else if (graphvizAvailable) {
+            console.log('GraphViz is available');
+        }
+    } catch (error) {
+        console.error('Error checking GraphViz availability:', error);
+        // Assume not available on error
+        graphvizAvailable = false;
+        const graphvizOption = document.querySelector('[data-type="graphviz"]');
+        if (graphvizOption) {
+            graphvizOption.style.display = 'none';
+        }
+    }
 }
 
 function setupResizeObserver(modal) {
