@@ -15,17 +15,23 @@ from datetime import timedelta, datetime, date
 from decimal import Decimal
 import sys
 
-# Configure GraphViz path for bundled executable
+# Configure GraphViz path for both bundled and development
 if getattr(sys, 'frozen', False):
     # Running as bundled executable
     bundle_dir = sys._MEIPASS
     graphviz_bin_path = os.path.join(bundle_dir, 'graphviz', 'bin')
     if os.path.exists(graphviz_bin_path):
         os.environ['PATH'] = graphviz_bin_path + os.pathsep + os.environ.get('PATH', '')
-        # Set GraphViz executable path
-        graphviz.set_default_format('png')
-        # This ensures graphviz can find its executables
         os.environ['GRAPHVIZ_DOT'] = os.path.join(graphviz_bin_path, 'dot.exe')
+else:
+    # Development mode - add system GraphViz to PATH
+    system_graphviz_path = r'C:\Program Files\Graphviz\bin'
+    if os.path.exists(system_graphviz_path):
+        os.environ['PATH'] = system_graphviz_path + os.pathsep + os.environ.get('PATH', '')
+        os.environ['GRAPHVIZ_DOT'] = os.path.join(system_graphviz_path, 'dot.exe')
+
+# Set default format
+graphviz.set_default_format('png')
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
