@@ -54,7 +54,9 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      // Disable cache to prevent access denied errors
+      cache: false
     },
     icon: path.join(__dirname, '../static/monitor_icon.png'),
     show: false // Don't show until ready

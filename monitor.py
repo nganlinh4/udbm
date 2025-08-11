@@ -13,6 +13,19 @@ import csv
 import pandas as pd
 from datetime import timedelta, datetime, date
 from decimal import Decimal
+import sys
+
+# Configure GraphViz path for bundled executable
+if getattr(sys, 'frozen', False):
+    # Running as bundled executable
+    bundle_dir = sys._MEIPASS
+    graphviz_bin_path = os.path.join(bundle_dir, 'graphviz', 'bin')
+    if os.path.exists(graphviz_bin_path):
+        os.environ['PATH'] = graphviz_bin_path + os.pathsep + os.environ.get('PATH', '')
+        # Set GraphViz executable path
+        graphviz.set_default_format('png')
+        # This ensures graphviz can find its executables
+        os.environ['GRAPHVIZ_DOT'] = os.path.join(graphviz_bin_path, 'dot.exe')
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -1213,100 +1226,109 @@ def get_schema():
             '#CFD8DC',  # theme-9 (Blue Grey)
         ]
         if schema_type == 'graphviz':
-            # Create graphviz diagram
-            theme = request.args.get('theme', 'light')
-            is_dark = theme == 'dark'
-            
-            # Define theme colors
-            if is_dark:
-                text_color = '#ffffff'
-                edge_color = '#cccccc'
-                # Darker theme colors with better contrast
-                theme_colors = [
-                    '#4B6BBF',  # Dark Indigo
-                    '#3B8C84',  # Dark Teal
-                    '#C75B79',  # Dark Pink
-                    '#D4823B',  # Dark Orange
-                    '#4B9B4F',  # Dark Green
-                    '#9B67A0',  # Dark Purple
-                    '#4B91BF',  # Dark Light Blue
-                    '#BFB04B',  # Dark Yellow
-                    '#8B7355',  # Dark Brown
-                    '#546E7A',  # Dark Blue Grey
-                ]
-            else:
-                text_color = '#000000'
-                edge_color = '#666666'
-                # Keep original light theme colors
+            try:
+                # Create graphviz diagram
+                theme = request.args.get('theme', 'light')
+                is_dark = theme == 'dark'
 
-            dot = graphviz.Digraph(comment='Database Schema')
-            dot.attr(rankdir='TB')
-            dot.attr('node', shape='record', fontsize='10', color=edge_color, fontcolor=text_color)
-            dot.attr(bgcolor='transparent')  # Set transparent background through graph attribute
-            dot.attr(splines='ortho')
-            dot.attr(dpi='300')
-            
-            # Update edge attributes for better label positioning
-            dot.attr('edge', 
-                    arrowhead='normal', 
-                    fontsize='8',
-                    color=edge_color,
-                    fontcolor=text_color,
-                    labeldistance='1.0', 
-                    labelangle='0', 
-                    labelloc='c')
-            
-            # Graph-level attributes
-            dot.attr(nodesep='0.4')
-            dot.attr(ranksep='0.8')
-            
-            # Add tables with colored headers
-            for idx, (table_name, columns) in enumerate(tables.items()):
-                if table_name not in IGNORED_TABLES:
-                    color = theme_colors[idx % len(theme_colors)]
-                    
-                    # Format columns without COLLATE info
-                    column_strs = []
-                    for col in columns:
-                        type_str = str(col['type']).split('COLLATE')[0].strip()
-                        col_str = f"{col['name']} ({type_str})"
-                        if col['is_primary']:
-                            col_str = f"<b>{col_str}</b>"
-                        column_strs.append(col_str)
-                    
-                    # Create HTML-like label
-                    label = f'''<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
-                        <TR><TD BGCOLOR="{color}">{table_name}</TD></TR>
-                        <TR><TD ALIGN="LEFT">{('<BR/>' + '  ').join(column_strs)}</TD></TR>
-                    </TABLE>>'''
-                    
-                    dot.node(table_name, label, shape='none')
-            
-            # Add relationships with improved label positioning
-            for rel in relationships:
-                from_table = rel['from']['table']
-                to_table = rel['to']['table']
-                if from_table not in IGNORED_TABLES and to_table not in IGNORED_TABLES:
-                    label = f"{rel['from']['column']} → {rel['to']['column']}"
-                    # Use headlabel/taillabel instead of edge label for better positioning
-                    if len(label) > 20:  # Long labels might drift more
-                        # For longer labels, use separate head/tail labels
-                        dot.edge(from_table, to_table, 
-                               headlabel=rel['to']['column'], 
-                               taillabel=rel['from']['column'],
-                               labeldistance='2.0',
-                               labelangle='25')
-                    else:
-                        # For shorter labels, keep them centered
-                        dot.edge(from_table, to_table, label=label)
-            
-            # Save and return image path
-            schema_path = os.path.join(app.static_folder, 'schema.png')
-            dot.format = 'png'
-            dot.render(schema_path[:-4], format='png', cleanup=True)
-            dot.attr(layout='dot')
-            
-            return jsonify({'schema_url': url_for('static', filename='schema.png')})
+                # Define theme colors
+                if is_dark:
+                    text_color = '#ffffff'
+                    edge_color = '#cccccc'
+                    # Darker theme colors with better contrast
+                    theme_colors = [
+                        '#4B6BBF',  # Dark Indigo
+                        '#3B8C84',  # Dark Teal
+                        '#C75B79',  # Dark Pink
+                        '#D4823B',  # Dark Orange
+                        '#4B9B4F',  # Dark Green
+                        '#9B67A0',  # Dark Purple
+                        '#4B91BF',  # Dark Light Blue
+                        '#BFB04B',  # Dark Yellow
+                        '#8B7355',  # Dark Brown
+                        '#546E7A',  # Dark Blue Grey
+                    ]
+                else:
+                    text_color = '#000000'
+                    edge_color = '#666666'
+                    # Keep original light theme colors
+
+                dot = graphviz.Digraph(comment='Database Schema')
+                dot.attr(rankdir='TB')
+                dot.attr('node', shape='record', fontsize='10', color=edge_color, fontcolor=text_color)
+                dot.attr(bgcolor='transparent')  # Set transparent background through graph attribute
+                dot.attr(splines='ortho')
+                dot.attr(dpi='300')
+
+                # Update edge attributes for better label positioning
+                dot.attr('edge',
+                        arrowhead='normal',
+                        fontsize='8',
+                        color=edge_color,
+                        fontcolor=text_color,
+                        labeldistance='1.0',
+                        labelangle='0',
+                        labelloc='c')
+
+                # Graph-level attributes
+                dot.attr(nodesep='0.4')
+                dot.attr(ranksep='0.8')
+
+                # Add tables with colored headers
+                for idx, (table_name, columns) in enumerate(tables.items()):
+                    if table_name not in IGNORED_TABLES:
+                        color = theme_colors[idx % len(theme_colors)]
+
+                        # Format columns without COLLATE info
+                        column_strs = []
+                        for col in columns:
+                            type_str = str(col['type']).split('COLLATE')[0].strip()
+                            col_str = f"{col['name']} ({type_str})"
+                            if col['is_primary']:
+                                col_str = f"<b>{col_str}</b>"
+                            column_strs.append(col_str)
+
+                        # Create HTML-like label
+                        label = f'''<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+                            <TR><TD BGCOLOR="{color}">{table_name}</TD></TR>
+                            <TR><TD ALIGN="LEFT">{('<BR/>' + '  ').join(column_strs)}</TD></TR>
+                        </TABLE>>'''
+
+                        dot.node(table_name, label, shape='none')
+
+                # Add relationships with improved label positioning
+                for rel in relationships:
+                    from_table = rel['from']['table']
+                    to_table = rel['to']['table']
+                    if from_table not in IGNORED_TABLES and to_table not in IGNORED_TABLES:
+                        label = f"{rel['from']['column']} → {rel['to']['column']}"
+                        # Use headlabel/taillabel instead of edge label for better positioning
+                        if len(label) > 20:  # Long labels might drift more
+                            # For longer labels, use separate head/tail labels
+                            dot.edge(from_table, to_table,
+                                   headlabel=rel['to']['column'],
+                                   taillabel=rel['from']['column'],
+                                   labeldistance='2.0',
+                                   labelangle='25')
+                        else:
+                            # For shorter labels, keep them centered
+                            dot.edge(from_table, to_table, label=label)
+
+                # Save and return image path
+                schema_path = os.path.join(app.static_folder, 'schema.png')
+                dot.format = 'png'
+                dot.render(schema_path[:-4], format='png', cleanup=True)
+                dot.attr(layout='dot')
+
+                return jsonify({'schema_url': url_for('static', filename='schema.png')})
+
+            except Exception as graphviz_error:
+                logger.error(f"GraphViz error: {graphviz_error}")
+                # Return a helpful error message
+                error_msg = str(graphviz_error)
+                if 'dot' in error_msg.lower() or 'graphviz' in error_msg.lower():
+                    error_msg = "GraphViz is not installed or not found in PATH. Please install GraphViz to use this feature."
+                return jsonify({'error': error_msg}), 500
 
         # Handle D3 force-directed format
         if schema_type == 'd3':

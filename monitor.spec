@@ -58,6 +58,14 @@ hidden_imports = [
 # Collect data files for packages that need them
 datas = template_files + static_files
 
+# Add GraphViz binaries
+graphviz_bin_path = r'C:\Program Files\Graphviz\bin'
+if os.path.exists(graphviz_bin_path):
+    for file in os.listdir(graphviz_bin_path):
+        if file.endswith(('.exe', '.dll')):
+            src = os.path.join(graphviz_bin_path, file)
+            datas.append((src, 'graphviz/bin'))
+
 # Add any additional data files from packages
 try:
     datas += collect_data_files('graphviz')
