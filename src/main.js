@@ -1,12 +1,49 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
-const findFreePort = require('find-free-port');
+const net = require('net');
 
 // Keep a global reference of the window object
 let mainWindow;
 let pythonProcess;
 let flaskPort = 5046; // Default port
+
+// Function to find a free port using Node.js built-in modules
+function findFreePort(startPort = 5046, maxPort = 5100) {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+
+    function tryPort(port) {
+      if (port > maxPort) {
+        reject(new Error(`No free port found between ${startPort} and ${maxPort}`));
+        return;
+      }
+
+      server.listen(port, (err) => {
+        if (err) {
+          // Port is in use, try next one
+          tryPort(port + 1);
+        } else {
+          // Port is free
+          server.close(() => {
+            resolve(port);
+          });
+        }
+      });
+
+      server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          // Port is in use, try next one
+          tryPort(port + 1);
+        } else {
+          reject(err);
+        }
+      });
+    }
+
+    tryPort(startPort);
+  });
+}
 
 function createWindow() {
   // Create the browser window
@@ -53,7 +90,7 @@ async function startPythonServer() {
   return new Promise(async (resolve, reject) => {
     try {
       // Find a free port
-      const [freePort] = await findFreePort(5046, 5100);
+      const freePort = await findFreePort(5046, 5100);
       flaskPort = freePort;
       
       // Determine Python executable path

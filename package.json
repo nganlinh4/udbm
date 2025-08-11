@@ -8,7 +8,10 @@
     "dev": "electron . --dev",
     "build": "electron-builder",
     "build-python": "pyinstaller --onefile --distpath ./dist/python monitor.py",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "test-build": "npm run build && npm run test-portable",
+    "test-portable": "node scripts/test-portable.js",
+    "pre-release": "npm run test-build && echo 'All tests passed! Ready for release.'"
   },
   "keywords": [
     "database",
@@ -24,14 +27,12 @@
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1"
   },
-  "dependencies": {
-    "find-free-port": "^2.0.0"
-  },
+  "dependencies": {},
   "build": {
     "appId": "com.udbm.electron",
     "productName": "uDBM - Database Monitor",
     "directories": {
-      "output": "dist/electron"
+      "output": "dist/electron-build"
     },
     "files": [
       "src/**/*",
