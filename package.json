@@ -6,12 +6,14 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "build": "electron-builder",
+    "build": "node scripts/build-clean.js",
+    "build-simple": "electron-builder",
     "build-python": "pyinstaller --onefile --distpath ./dist/python monitor.py",
     "postinstall": "electron-builder install-app-deps",
     "test-build": "npm run build && npm run test-portable",
     "test-portable": "node scripts/test-portable.js",
-    "pre-release": "npm run test-build && echo 'All tests passed! Ready for release.'"
+    "pre-release": "npm run test-build && echo 'All tests passed! Ready for release.'",
+    "cleanup": "node scripts/cleanup.js"
   },
   "keywords": [
     "database",
