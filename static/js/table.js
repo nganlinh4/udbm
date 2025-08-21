@@ -3283,7 +3283,8 @@ export function fetchTableCount(tableName, baseUrl, translations, currentLang) {
 // Function to handle row deletion and cell editing
 export function handleRowDeletion(tableDiv, tableName, baseUrl) {
     const bodyTable = tableDiv.querySelector('.body-table');
-    if (!bodyTable) return;
+    const headerTable = tableDiv.querySelector('.header-table');
+    if (!bodyTable || !headerTable) return;
 
     let isEditing = false;
     let currentEditCell = null;
@@ -3421,7 +3422,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                 const row = cell.closest('tr');
                 const rowId = row.cells[0].textContent;
                 const columnIndex = Array.from(row.cells).indexOf(cell);
-                const columnName = table.querySelector('th:nth-child(' + (columnIndex + 1) + ')').textContent;
+                const columnName = headerTable.querySelector('th:nth-child(' + (columnIndex + 1) + ')').textContent;
                 
                 try {
                     // Validate JSON if it's a JSON cell
@@ -3614,7 +3615,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             if (e.key && e.key.toLowerCase() === 'x') {
                 const columnIndex = Array.from(row.cells).indexOf(focusedCell);
                 const valueToDelete = focusedCell.textContent;
-                const columnName = table.querySelector(`th:nth-child(${columnIndex + 1})`).textContent;
+                const columnName = headerTable.querySelector(`th:nth-child(${columnIndex + 1})`).textContent;
 
                 try {
                     const response = await fetch(`${baseUrl}/delete/${tableName}/column/${columnName}/value/${valueToDelete}`, {
@@ -3626,7 +3627,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                     }
 
                     // Find all rows with the same value in the same column
-                    const rowsToDelete = Array.from(table.querySelectorAll('tr')).filter(r => {
+                    const rowsToDelete = Array.from(bodyTable.querySelectorAll('tr')).filter(r => {
                         return r.cells[columnIndex] && r.cells[columnIndex].textContent === valueToDelete;
                     });
 
