@@ -18,7 +18,7 @@ This guide provides step-by-step instructions for installing and running the UDB
 
 3. **Open your browser and navigate to:**
    ```
-   http://127.0.0.1:5046
+   http://127.0.0.1:5080
    ```
 
 ### For Windows Users
@@ -35,7 +35,7 @@ This guide provides step-by-step instructions for installing and running the UDB
 
 3. **Open your browser and navigate to:**
    ```
-   http://127.0.0.1:5046
+   http://127.0.0.1:5080
    ```
 
 ## Manual Installation
@@ -151,7 +151,7 @@ run.bat
    ```
 
 3. **Access the application:**
-   Open your browser and go to: `http://127.0.0.1:5046`
+   Open your browser and go to: `http://127.0.0.1:5080`
 
 ## Troubleshooting
 
@@ -161,9 +161,9 @@ run.bat
    - **Solution:** Install Graphviz system package (see system dependencies above)
    - **Verify:** Run `dot -V` to confirm installation
 
-2. **Port 5046 already in use**
+2. **Port 5080 already in use**
    - **Solution:** Kill existing processes or change port in monitor.py
-   - **Find process:** `lsof -i :5046` (Linux/macOS) or `netstat -ano | findstr :5046` (Windows)
+   - **Find process:** `lsof -i :5080` (Linux/macOS) or `netstat -ano | findstr :5080` (Windows)
 
 3. **Python virtual environment creation fails**
    - **Ubuntu/Debian:** Install `python3-venv` package

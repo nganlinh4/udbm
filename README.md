@@ -31,7 +31,7 @@ install.bat
 run.bat
 ```
 
-Then open your browser to: `http://127.0.0.1:5046`
+Then open your browser to: `http://127.0.0.1:5080`
 
 📖 **For detailed installation instructions, troubleshooting, and manual setup, see [INSTALL.md](INSTALL.md)**
 
@@ -86,7 +86,7 @@ pip install -r requirements.txt
 
 ### Server Settings
 
-The monitor server runs on port 5046 by default. To change this, modify the port number at the end of `monitor.py`
+The monitor server runs on port 5080 by default. To change this, modify the port number at the end of `monitor.py`
 
 ## Usage
 
@@ -96,7 +96,7 @@ python monitor.py
 ```
 
 2. Access the web interface:
-   - Open your browser and navigate to `http://localhost:5046`
+   - Open your browser and navigate to `http://localhost:5080`
    - Add your database connection through the interface
 
 ### Swipe table pills

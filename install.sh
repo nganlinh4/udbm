@@ -195,7 +195,7 @@ show_usage() {
     echo "   python monitor.py"
     echo ""
     echo "3. Open your browser and go to:"
-    echo "   http://127.0.0.1:5046"
+    echo "   http://127.0.0.1:5080"
     echo ""
     echo "To deactivate the virtual environment later:"
     echo "   deactivate"

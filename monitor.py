@@ -1698,7 +1698,7 @@ if __name__ == '__main__':
         logger.info("Starting Flask app...")
         app.run(
             host='0.0.0.0',  # Allow all incoming connections
-            port=5046,
+            port=5080,
             debug=True,     # Changed to False for security
             threaded=True,
             use_reloader=False  # Disable reloader when using threads

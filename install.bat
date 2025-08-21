@@ -196,7 +196,7 @@ echo    venv\Scripts\activate.bat
 echo 4. Run the monitor application:
 echo    python monitor.py
 echo 5. Open your browser and go to:
-echo    http://127.0.0.1:5046
+echo    http://127.0.0.1:5080
 echo.
 echo To deactivate the virtual environment later:
 echo    deactivate

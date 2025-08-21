@@ -28,7 +28,7 @@ call venv\Scripts\activate.bat
 echo [INFO] Starting Flask application...
 echo.
 echo The application will be available at:
-echo http://127.0.0.1:5046
+echo http://127.0.0.1:5080
 echo.
 echo Press Ctrl+C to stop the application
 echo.
