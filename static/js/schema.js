@@ -409,7 +409,9 @@ async function renderGraphvizSchema(container, data) {
         // Build ELK graph with ports per column for precise edge attachment
         const PORT_HEIGHT = 20;
         const HEADER_HEIGHT = 28;
-        const NODE_WIDTH = 260;
+        const NODE_WIDTH = 200;
+        const MIN_NODE_WIDTH = 150;
+        const MAX_NODE_WIDTH = 220;
 
         // Determine colors per table (from server theme_colors or deterministic hash)
         const palette = (data.theme_colors && Array.isArray(data.theme_colors) && data.theme_colors.length)
@@ -431,6 +433,14 @@ async function renderGraphvizSchema(container, data) {
             const rows = Array.isArray(columns) ? columns : [];
             const height = HEADER_HEIGHT + Math.max(1, rows.length) * PORT_HEIGHT;
 
+            // Estimate width from content (table name and longest column)
+            const fontCharW = 7; // approximate px per char
+            const headerW = Math.max(120, tableName.length * fontCharW + 40);
+            const longestCol = rows.reduce((m, c) => Math.max(m, (c.name || '').length + (c.type ? 3 + String(c.type).length : 0)), 0);
+            const columnsW = Math.max(120, longestCol * fontCharW + 24);
+            const estWidth = Math.max(headerW, columnsW);
+            const width = Math.max(160, Math.min(estWidth, 240)); // clamp
+
             const ports = rows.map((col) => ({
                 id: `${tableName}:${col.name}`,
                 properties: { 'port.side': 'EAST' }
@@ -438,9 +448,8 @@ async function renderGraphvizSchema(container, data) {
 
             return {
                 id: tableName,
-                width: NODE_WIDTH,
+                width,
                 height,
-                // Store color in node for later use when drawing
                 color: colorForTable(tableName),
                 ports
             };
@@ -462,7 +471,11 @@ async function renderGraphvizSchema(container, data) {
                 'elk.direction': elkDirection,
                 'elk.edgeRouting': 'ORTHOGONAL',
                 'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-                'elk.layered.mergeEdges': 'false', // prevent visual merging of parallel edges
+                'elk.layered.cycleBreaking.strategy': 'GREEDY',
+                'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+                'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
+                'elk.layered.thoroughness': '10',
+                'elk.layered.mergeEdges': 'false',
                 'elk.layered.mergeHierarchyEdges': 'false',
                 'elk.spacing.nodeNode': '48',
                 'elk.layered.spacing.nodeNodeBetweenLayers': '72',
@@ -524,43 +537,44 @@ async function renderGraphvizSchema(container, data) {
 
         svg.appendChild(defs);
 
-        // Draw edges first (under nodes)
+        // Draw edges first (under nodes) and collect labels
         const edgeIdCounts = {};
+        const labelsToDraw = [];
         (layout.edges || []).forEach(edge => {
-            (edge.sections || []).forEach((section, sIdx) => {
+            (edge.sections || []).forEach((section) => {
                 const pointsArr = [section.startPoint, ...(section.bendPoints || []), section.endPoint];
                 const points = pointsArr
                     .map(p => `${Math.round(p.x + margin)},${Math.round(p.y + margin)}`)
                     .join(' ');
 
-                // Slightly offset parallel edges to avoid overlap
+                // Alternating offset pattern (B): 0, +3, -3, +6, -6, ...
                 const key = `${edge.sources?.[0]}|${edge.targets?.[0]}`;
                 const count = (edgeIdCounts[key] = (edgeIdCounts[key] || 0) + 1);
-                const offset = (count - 1) * 2; // 0,2,4,... px offset
+                const step = 3;
+                const mag = count === 1 ? 0 : Math.ceil((count - 1) / 2) * step;
+                const sign = (count % 2 === 0) ? 1 : -1; // 2:+, 3:-, 4:+, 5:- ... (1 is base 0)
+                const offsetX = elkDirection === 'DOWN' ? sign * mag : 0;
+                const offsetY = elkDirection === 'RIGHT' ? sign * mag : 0;
+
                 const polyline = document.createElementNS(svgNS, 'polyline');
                 polyline.setAttribute('points', points);
                 polyline.setAttribute('fill', 'none');
                 polyline.setAttribute('stroke', theme.edge);
                 polyline.setAttribute('stroke-width', '1.5');
                 polyline.setAttribute('marker-end', 'url(#arrow)');
-                polyline.setAttribute('transform', `translate(0, ${offset})`);
+                polyline.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
                 svg.appendChild(polyline);
 
-                // Edge label near the middle, offset a bit
+                // Edge label near the middle, recorded to draw above nodes
                 if (edge.labels && edge.labels.length) {
                     const midIndex = Math.floor(pointsArr.length / 2);
                     const a = pointsArr[Math.max(0, midIndex - 1)];
                     const b = pointsArr[Math.min(pointsArr.length - 1, midIndex)];
-                    const midX = Math.round(((a.x + b.x) / 2) + margin + 6);
-                    const midY = Math.round(((a.y + b.y) / 2) + margin - 6 + offset);
-                    const label = document.createElementNS(svgNS, 'text');
-                    label.setAttribute('x', String(midX));
-                    label.setAttribute('y', String(midY));
-                    label.setAttribute('font-family', 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif');
-                    label.setAttribute('font-size', '11');
-                    label.setAttribute('fill', theme.text);
-                    label.textContent = edge.labels[0].text;
-                    svg.appendChild(label);
+                    const midX = Math.round(((a.x + b.x) / 2) + margin + offsetX + 6);
+                    const midY = Math.round(((a.y + b.y) / 2) + margin + offsetY - 6);
+                    const dx = (b.x - a.x);
+                    const dy = (b.y - a.y);
+                    labelsToDraw.push({ x: midX, y: midY, text: edge.labels[0].text, dx, dy });
                 }
             });
         });
@@ -641,6 +655,49 @@ async function renderGraphvizSchema(container, data) {
                         rowBg.setAttribute('x', '0');
                         rowBg.setAttribute('y', String(y));
                         rowBg.setAttribute('width', String(width));
+        // After drawing all nodes, place edge labels on top and nudge to dodge nodes
+        const nodeBoxes = (layout.children || []).map(n => ({
+            id: n.id,
+            x1: Math.round((n.x || 0) + margin),
+            y1: Math.round((n.y || 0) + margin),
+            x2: Math.round((n.x || 0) + margin + (n.width || NODE_WIDTH)),
+            y2: Math.round((n.y || 0) + margin + (n.height || HEADER_HEIGHT))
+        }));
+
+        const labelPadding = 6; // gap from node box
+        const maxNudges = 3;
+        labelsToDraw.forEach(({ x, y, text, dx, dy }) => {
+            let lx = x, ly = y;
+
+            // Nudge loop: try up to maxNudges to escape node boxes
+            for (let i = 0; i < maxNudges; i++) {
+                const hit = nodeBoxes.find(b => lx >= b.x1 && lx <= b.x2 && ly >= b.y1 && ly <= b.y2);
+                if (!hit) break;
+                const len = Math.max(1, Math.hypot(dx, dy));
+                const ux = -dy / len, uy = dx / len; // perpendicular
+                const cx = (hit.x1 + hit.x2) / 2, cy = (hit.y1 + hit.y2) / 2;
+                const sgn = ((lx - cx) * ux + (ly - cy) * uy) >= 0 ? 1 : -1;
+                const bump = labelPadding + 8 + i * 4; // progressively larger
+                lx += sgn * ux * bump;
+                ly += sgn * uy * bump;
+            }
+
+            // Text with stroke outline (no halo)
+            const label = document.createElementNS(svgNS, 'text');
+            label.setAttribute('x', String(lx));
+            label.setAttribute('y', String(ly));
+            label.setAttribute('font-family', 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif');
+            label.setAttribute('font-size', '11');
+            label.setAttribute('fill', theme.text);
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('dominant-baseline', 'central');
+            label.setAttribute('paint-order', 'stroke');
+            label.setAttribute('stroke', isDark ? '#0b0f19' : '#ffffff');
+            label.setAttribute('stroke-width', '2.5');
+            label.setAttribute('pointer-events', 'none');
+            label.textContent = text;
+            svg.appendChild(label);
+        });
                         rowBg.setAttribute('height', String(PORT_HEIGHT));
                         rowBg.setAttribute('fill', isDark ? '#0b1220' : '#f5f7fa');
                         rowBg.setAttribute('opacity', '0.7');
