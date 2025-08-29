@@ -12,12 +12,12 @@ import {
 } from './utils.js';
 import './main-lang-switcher.js';
 import './simple-lang-switcher.js';
-import { 
-    updateSingleTable, 
-    fetchTableData, 
-    fetchTableCount, 
+import {
+    updateSingleTable,
+    fetchTableData,
+    fetchTableCount,
     adjustColumnWidths,
-    addDownloadButtons 
+    addDownloadButtons
 } from './table.js';
 
 // Constants
@@ -139,6 +139,355 @@ function updateConnectionStatus(forceLang) {
     `;
 }
 
+// Enhance DB setup form: add smart suggestions and scanning for users/databases
+function enhanceDbForm(form) {
+    if (!form) return;
+    const typeSelect = form.querySelector('select[name="type"]');
+    const hostInput = form.querySelector('input[name="host"]');
+    const userInput = form.querySelector('input[name="user"]');
+    const passwordInput = form.querySelector('input[name="password"]');
+    const dbInput = form.querySelector('input[name="database"]');
+    if (!hostInput || !userInput || !dbInput) return;
+
+    // Create selects for user and database; initially allow typing but swap to select after first scan
+    const uid = Math.random().toString(36).slice(2);
+
+    // Wrap field to insert select and refresh button
+    function wrapWithSelect(inputEl, name, placeholderText) {
+        const group = inputEl.closest('.form-group') || inputEl.parentElement;
+        const fieldShell = document.createElement('div');
+        fieldShell.className = 'field-shell';
+        const label = group.querySelector('label');
+        const input = inputEl;
+
+        // Create select (hidden initially); avoid duplicate name with input
+        const select = document.createElement('select');
+        select.name = `${name}_select`;
+        select.id = `${name}_${uid}`;
+        select.style.display = 'none';
+        select.setAttribute('autocomplete', 'off');
+        select.style.width = '100%';
+        select.disabled = true;
+
+        // Placeholder option
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = placeholderText;
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        select.appendChild(placeholder);
+
+        // Refresh button
+        const refreshBtn = document.createElement('button');
+        refreshBtn.type = 'button';
+        refreshBtn.className = 'form-refresh';
+        refreshBtn.innerHTML = '<span class="icon">⟳</span> Refresh';
+
+        // Extras container below the shell
+        const extras = document.createElement('div');
+        extras.className = 'field-extras';
+        extras.style.display = 'flex';
+        extras.style.flexDirection = 'row';
+        extras.style.alignItems = 'center';
+        extras.style.gap = '8px';
+        extras.appendChild(select);
+        extras.appendChild(refreshBtn);
+
+        // Store original name for switching
+        input.setAttribute('data-original-name', input.name || name);
+
+        // Keep label+input together to preserve your material label alignment
+        fieldShell.appendChild(input);
+        if (label) fieldShell.appendChild(label);
+
+        // Replace group contents with shell + extras (label stays relative to input)
+        group.innerHTML = '';
+        group.appendChild(fieldShell);
+        group.appendChild(extras);
+
+        // keep the canonical control name for posting/validation
+        const originalName = input.getAttribute('name') || name;
+        input.setAttribute('data-original-name', originalName);
+
+        return { name: originalName, select, refreshBtn, input, extras, group, fieldShell };
+    }
+
+    const userField = wrapWithSelect(userInput, 'user', 'Select a user');
+    const dbField = wrapWithSelect(dbInput, 'database', 'Select a database');
+
+    function populateSelect(selectEl, items) {
+        // Clear, keep first placeholder
+        selectEl.options.length = 1;
+        items.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            selectEl.appendChild(opt);
+        });
+    }
+
+    function switchToSelect(field, items) {
+        if (!items || !items.length) return;
+        populateSelect(field.select, items);
+        // Ensure only select participates in validation/post
+        field.input.required && (field.select.required = true);
+        field.input.required = false;
+        field.input.disabled = true;
+        field.input.removeAttribute('name');
+        field.select.name = field.name;
+        field.select.disabled = false;
+        // Swap visibility
+        field.select.style.display = '';
+        field.input.style.display = 'none';
+        field.refreshBtn.style.display = 'inline-flex';
+        field.group.classList.add('select-mode');
+    }
+
+    function switchToInput(field) {
+        // Restore input as the named control
+        field.select.required = false;
+        field.select.disabled = true;
+        field.select.name = `${field.name}_select`;
+        field.input.name = field.name;
+        field.input.disabled = false;
+        // Swap visibility
+        field.select.style.display = 'none';
+        field.input.style.display = '';
+        field.refreshBtn.style.display = 'none';
+        field.group.classList.remove('select-mode');
+    }
+
+    // Disable browser autofill/assist on these inputs
+    form.setAttribute('autocomplete', 'off');
+    [hostInput, userInput, dbInput].forEach(inp => {
+        if (!inp) return;
+        inp.setAttribute('autocomplete', 'off');
+        inp.setAttribute('autocapitalize', 'none');
+        inp.setAttribute('autocorrect', 'off');
+        inp.setAttribute('spellcheck', 'false');
+        inp.setAttribute('aria-autocomplete', 'none');
+        inp.setAttribute('data-lpignore', 'true');
+        inp.setAttribute('data-1p-ignore', 'true');
+    });
+    if (passwordInput) {
+        passwordInput.setAttribute('autocomplete', 'new-password');
+        passwordInput.setAttribute('autocapitalize', 'none');
+        passwordInput.setAttribute('autocorrect', 'off');
+        passwordInput.setAttribute('spellcheck', 'false');
+        passwordInput.setAttribute('aria-autocomplete', 'none');
+        passwordInput.setAttribute('data-lpignore', 'true');
+        passwordInput.setAttribute('data-1p-ignore', 'true');
+    }
+
+    // Add offscreen dummy credential fields to deter password managers
+    const offscreenStyle = 'position:absolute;left:-9999px;opacity:0;width:0;height:0;pointer-events:none;';
+    const dummyUsername = document.createElement('input');
+    dummyUsername.type = 'text';
+    dummyUsername.name = 'username';
+    dummyUsername.autocomplete = 'username';
+    dummyUsername.tabIndex = -1;
+    dummyUsername.setAttribute('aria-hidden', 'true');
+    dummyUsername.style.cssText = offscreenStyle;
+    form.prepend(dummyUsername);
+
+    const dummyPassword = document.createElement('input');
+    dummyPassword.type = 'password';
+    dummyPassword.name = 'password';
+    dummyPassword.autocomplete = 'new-password';
+    dummyPassword.tabIndex = -1;
+    dummyPassword.setAttribute('aria-hidden', 'true');
+    dummyPassword.style.cssText = offscreenStyle;
+    form.prepend(dummyPassword);
+
+    // Inline scanning status indicators: place them in extras rows next to refresh (below the field)
+    const userStatus = document.createElement('div');
+    userStatus.className = 'scan-status user-status';
+    userField.extras.appendChild(userStatus);
+
+    const dbStatus = document.createElement('div');
+    dbStatus.className = 'scan-status db-status';
+    dbField.extras.appendChild(dbStatus);
+
+    // Hide refresh buttons until a select is shown
+    userField.refreshBtn.style.display = 'none';
+    dbField.refreshBtn.style.display = 'none';
+
+    // Rename visible password field to avoid PM heuristics; mirror into hidden real 'password'
+    let hiddenPwd = null;
+    if (passwordInput) {
+        if (passwordInput.getAttribute('name') === 'password') {
+            passwordInput.setAttribute('name', 'db_password');
+        }
+        hiddenPwd = document.createElement('input');
+        hiddenPwd.type = 'hidden';
+        hiddenPwd.name = 'password';
+        form.appendChild(hiddenPwd);
+        const syncPwd = () => { hiddenPwd.value = passwordInput.value || ''; };
+        passwordInput.addEventListener('input', syncPwd);
+        syncPwd();
+    }
+
+
+
+    function getSavedConfigs() {
+        try {
+            const str = getCookie('db_configs');
+            return str ? JSON.parse(decodeURIComponent(str)) : {};
+        } catch (e) {
+            console.warn('Failed to parse saved database configs for suggestions:', e);
+            return {};
+        }
+    }
+
+    function getSuggestionsFromSaved(host, type) {
+        const cfgs = getSavedConfigs();
+        const users = new Set();
+        const dbs = new Set();
+        Object.values(cfgs).forEach(c => {
+            if (!c) return;
+            const ctype = (c.type || c.db_type || 'mysql').toLowerCase();
+            if (c.host === host && (!type || ctype === type)) {
+                if (c.user) users.add(c.user);
+                if (c.database) dbs.add(c.database);
+            }
+        });
+        return { users: [...users], databases: [...dbs] };
+    }
+
+    function populate(listEl, items) {
+        listEl.innerHTML = '';
+        items.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            listEl.appendChild(opt);
+        });
+    }
+
+    function defaultsForType(type) {
+        if ((type || '').toLowerCase() === 'postgresql') {
+            return { users: ['postgres', 'admin'], databases: ['postgres'] };
+        }
+        return { users: ['root', 'admin'], databases: ['mysql'] };
+    }
+
+    function refreshUserSuggestions() {
+        const host = hostInput.value.trim();
+        const type = (typeSelect?.value || 'mysql').toLowerCase();
+        const saved = host ? getSuggestionsFromSaved(host, type).users : [];
+        const merged = Array.from(new Set([...saved, ...defaultsForType(type).users]));
+        populate(userList, merged);
+    }
+
+    function refreshDbSuggestionsLocal() {
+        const host = hostInput.value.trim();
+        const type = (typeSelect?.value || 'mysql').toLowerCase();
+        const saved = host ? getSuggestionsFromSaved(host, type).databases : [];
+        const merged = Array.from(new Set([...saved, ...defaultsForType(type).databases]));
+        populate(dbList, merged);
+    }
+
+    function debounce(fn, ms = 400) {
+        let to;
+        return (...args) => {
+            clearTimeout(to);
+            to = setTimeout(() => fn(...args), ms);
+        };
+    }
+
+    // Track latest request to avoid out-of-order updates
+    let dbScanSeq = 0;
+    let userScanSeq = 0;
+
+    const maybeScanDatabases = debounce(async () => {
+        const host = hostInput.value.trim();
+        const user = userInput.value.trim();
+        const password = passwordInput ? passwordInput.value : '';
+        const type = (typeSelect?.value || 'mysql');
+        const dbType = type.toLowerCase();
+        if (!host || !user) { if (dbStatus) dbStatus.textContent = ''; return; }
+        if (dbType === 'mysql' && !password) { if (dbStatus) dbStatus.textContent = 'Enter password to scan'; return; }
+        const seq = ++dbScanSeq;
+        if (dbStatus) dbStatus.textContent = '⏳ Scanning databases…';
+        try {
+            const resp = await fetch(`${baseUrl}/api/scan/databases`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host, user, password, type })
+            });
+            const data = await (async () => {
+                try { return await resp.json(); } catch { return null; }
+            })();
+            if (seq !== dbScanSeq) return; // stale
+            if (resp.status === 401) { if (dbStatus) dbStatus.textContent = 'Authentication required to scan'; return; }
+            if (!resp.ok) { if (dbStatus) dbStatus.textContent = 'Scan failed'; return; }
+            const dbs = Array.isArray(data?.databases) ? data.databases : [];
+            if (dbs.length) switchToSelect(dbField, dbs); else switchToInput(dbField);
+            if (dbStatus) dbStatus.textContent = dbs.length ? `Found ${dbs.length}` : 'No databases found';
+        } catch (e) {
+            if (seq !== dbScanSeq) return;
+            if (dbStatus) dbStatus.textContent = 'Scan failed';
+        }
+    }, 600);
+
+    const maybeScanUsers = debounce(async () => {
+        const host = hostInput.value.trim();
+        const user = userInput.value.trim();
+        const password = passwordInput ? passwordInput.value : '';
+        const type = (typeSelect?.value || 'mysql');
+        const dbType = type.toLowerCase();
+        if (!host || !user) { if (userStatus) userStatus.textContent = ''; return; }
+        if (dbType === 'mysql' && !password) { if (userStatus) userStatus.textContent = 'Enter password to scan'; return; }
+        const seq = ++userScanSeq;
+        if (userStatus) userStatus.textContent = '⏳ Scanning users…';
+        try {
+            const resp = await fetch(`${baseUrl}/api/scan/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host, user, password, type })
+            });
+            const data = await (async () => {
+                try { return await resp.json(); } catch { return null; }
+            })();
+            if (seq !== userScanSeq) return; // stale
+            if (resp.status === 401) { if (userStatus) userStatus.textContent = 'Authentication required to scan'; return; }
+            if (!resp.ok) { if (userStatus) userStatus.textContent = 'Scan failed'; return; }
+            const users = Array.isArray(data?.users) ? data.users : [];
+            if (users.length) switchToSelect(userField, users); else switchToInput(userField);
+            if (userStatus) userStatus.textContent = users.length ? `Found ${users.length}` : 'No users found';
+        } catch (e) {
+            if (seq !== userScanSeq) return;
+            if (userStatus) userStatus.textContent = 'Scan failed';
+        }
+    }, 600);
+
+    // Events (scan-only; no local suggestions)
+    hostInput.addEventListener('input', debounce(() => {
+        maybeScanUsers();
+        maybeScanDatabases();
+    }, 300));
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', () => {
+            maybeScanUsers();
+            maybeScanDatabases();
+        });
+    }
+
+    userInput.addEventListener('input', () => {
+        maybeScanUsers();
+        maybeScanDatabases();
+    });
+    if (passwordInput) passwordInput.addEventListener('input', () => {
+        maybeScanUsers();
+        maybeScanDatabases();
+    });
+
+    // Kick off initial scans if possible
+    maybeScanUsers();
+    maybeScanDatabases();
+}
+
+
 function loadTableStates() {
     const tableElements = document.querySelectorAll('.table-container');
     tableNames = Array.from(tableElements).map(el => el.id);
@@ -162,7 +511,7 @@ function loadTableStates() {
         button.classList.add(themeClass);
 
         container.classList.add('initialized');
-        
+
         // Always fetch table count
         fetchTableCount(tableName, baseUrl, null, getCurrentLanguage());
     });
@@ -297,37 +646,37 @@ monitorIntervalId = setInterval(async () => {
             fetchTableCount(tableName, baseUrl, null, currentLang)
                 .then(newCount => {
                     const oldCount = previousCounts[tableName];
-                    
+
                     if (oldCount !== undefined && newCount !== oldCount) {
                         const delta = newCount - oldCount;
-                        
+
                         // Update table row count
                         const countSpan = document.getElementById(`${tableName}_count`);
                         if (!countSpan.classList.contains('table-row-count')) {
                             countSpan.className = 'table-row-count';
                         }
-                        
+
                         // Update pill count
                         const buttonCount = document.getElementById(`${tableName}_button_count`);
                         const pillWrapper = buttonCount.closest('.pill-count-wrapper') || createPillWrapper(buttonCount);
                         if (!buttonCount.classList.contains('pill-count')) {
                             buttonCount.className = 'pill-count';
                         }
-                        
+
                         // Add delta indicators
                         [countSpan, buttonCount].forEach(element => {
                             const deltaPopup = document.createElement('span');
                             deltaPopup.className = `count-delta ${delta > 0 ? 'positive' : 'negative'}`;
                             deltaPopup.textContent = `${delta > 0 ? '+' : ''}${delta}`;
-                            
+
                             const container = element.closest('.table-row-count, .pill-count-wrapper');
                             const existingDelta = container.querySelector('.count-delta');
                             if (existingDelta) {
                                 existingDelta.remove();
                             }
-                            
+
                             container.appendChild(deltaPopup);
-                            
+
                             // Trigger animation
                             element.classList.remove('count-update');
                             void element.offsetWidth;
@@ -340,7 +689,7 @@ monitorIntervalId = setInterval(async () => {
                                 .forEach(el => el.classList.remove('count-update'));
                         }, 1500);
                     }
-                    
+
                     previousCounts[tableName] = newCount;
                 });
         });
@@ -376,12 +725,12 @@ function toggleMonitoring() {
     const pauseButton = document.getElementById('pauseButton');
     const clockHand = document.querySelector('.clock-hand');
     const tempTooltip = pauseButton.querySelector('.temp-tooltip');
-    
+
     window.isMonitoringPaused = !window.isMonitoringPaused;
-    
+
     // Use the global function from icon-morph.js
     window.togglePausePlayIcon(!window.isMonitoringPaused);
-    
+
     if (window.isMonitoringPaused) {
         if (monitorIntervalId) {
             clearInterval(monitorIntervalId);
@@ -481,7 +830,7 @@ function toggleTable(tableName) {
         if (window.isMonitoringPaused) {
             window.toggleMonitoring();
         }
-        
+
         // Reset chunk tracking when hiding table
         delete tableChunks[tableName];
         // Add hiding class for slide-out animation
@@ -565,7 +914,7 @@ function toggleTable(tableName) {
 document.addEventListener('DOMContentLoaded', () => {
     // Add download buttons to all table headers
     addDownloadButtons();
-    
+
     const initialSetup = document.getElementById('initial-setup');
     const mainInterface = document.getElementById('main-interface');
 
@@ -574,11 +923,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const faviconUpload = document.getElementById('faviconUpload');
     const faviconUploadButton = document.querySelector('.favicon-upload');
     const defaultFaviconPath = '/static/monitor_icon.png';
-    
+
     // Load saved favicon preferences
     const savedFavicon = localStorage.getItem('customFavicon');
     const useCustomFavicon = localStorage.getItem('useCustomFavicon') === 'true';
-    
+
     // Initialize toggle state and visibility
     faviconToggle.selected = useCustomFavicon;
     faviconUploadButton.style.display = useCustomFavicon ? 'block' : 'none';
@@ -617,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-    
+
     // Handle favicon drag-and-drop
     // Use the existing faviconUploadButton variable, but get the specific button element
     const uploadButton = document.querySelector('.favicon-upload .upload-button');
@@ -644,7 +993,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add loaded class immediately to make content visible
     document.body.classList.add('loaded');
-    
+
     // First fetch current database state
     fetch(`${baseUrl}/api/database`)
         .then(response => response.json())
@@ -653,9 +1002,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Show initial setup screen
                 initialSetup.style.display = 'flex';
                 mainInterface.style.display = 'none';
-                
+
                 // Get the existing form
                 const form = document.querySelector('.setup-form-container form');
+                // Enhance setup form with smart scanning suggestions
+                enhanceDbForm(form);
                 const typeSelect = form.querySelector('select[name="type"]');
                 let config = { type: typeSelect.value }; // Initialize config with selected type
 
@@ -671,6 +1022,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     for (let [key, value] of formData.entries()) {
                         config[key] = value;
                     }
+                    // Strip helper fields from config before sending
+                    delete config.db_password;
+                    delete config.user_select;
+                    delete config.database_select;
+
 
                     try {
                         const response = await fetch(`${baseUrl}/api/database`, {
@@ -678,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(config)
                         });
-                        
+
                         if (response.ok) {
                             window.location.reload();
                         } else {
@@ -704,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 checkConnection(baseUrl, updateConnectionStatus);
             }
         });
-    
+
     new Sortable(document.getElementById('tables-container'), {
         animation: 150,
         handle: '.drag-handle',
@@ -817,7 +1173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const addDbButton = document.getElementById('addDbButton');
         const dbList = document.querySelector('.db-list');
         let isFormOpen = false;
-        
+
         // Load saved databases from cookie with proper encoding/decoding
         const savedConfigs = (() => {
             try {
@@ -828,9 +1184,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return {};
             }
         })();
-        
+
         const currentDb = document.querySelector('.current-db');
-        
+
         // Update currentDb display for no configuration
         if (!Object.keys(savedConfigs).length) {
             currentDb.textContent = 'No Database Connected';
@@ -847,7 +1203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         }, true);  // Use capture phase to handle click before other listeners
-        
+
         function showAddDatabaseForm() {
             // Form height is the same for all DBs
             const currentDb = getCurrentDatabaseKey();
@@ -929,12 +1285,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </form>
             `;
 
-            
+
             // After a short delay to allow fade out animation
             setTimeout(() => {
                 isFormOpen = true;
                 updateAddButtonState(true);
-                
+
                 // Instead of removing favicon controls, just hide them
                 const faviconControls = dbMenu.querySelector('.favicon-controls');
                 if (faviconControls) {
@@ -942,25 +1298,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     faviconControls.style.opacity = '0';
                     faviconControls.style.visibility = 'hidden';
                     faviconControls.style.display = 'none';
-                    
+
                     // We don't need to store it since we're no longer removing it
                     // But keep the reference in case it's needed elsewhere
                     dbMenu.dataset.hasFaviconControls = 'true';
                 }
-               
+
                 // Create temporary container to measure form height
                 const tempContainer = document.createElement('div');
                 tempContainer.style.position = 'absolute';
                 tempContainer.style.visibility = 'hidden';
                 tempContainer.innerHTML = formHtml;
                 dbMenu.appendChild(tempContainer);
-                
+
                 // Get the final height from temp container
                 const finalHeight = tempContainer.scrollHeight;
-                
+
                 // Remove temp container
                 dbMenu.removeChild(tempContainer);
-                
+
                 // Now update actual content and animate height
                 requestAnimationFrame(() => {
                     dbList.innerHTML = formHtml;
@@ -970,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => {
                         dbMenu.style.height = form.scrollHeight + 'px';
                     }, 50);
-                    
+
                     // Add cleanup timeout
                     setTimeout(() => {
                         form.style.opacity = '1';
@@ -978,17 +1334,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         form.classList.remove('animating-in');
                         // Reset to auto height after animation
                         dbMenu.style.height = 'auto';
-                        
+
                         // Setup radio button handlers after form is visible
+                        // Enhance form with smart scanning suggestions
+                        enhanceDbForm(form);
                         // Handle form submission after form is ready
                         form.addEventListener('submit', (e) => {
                             e.preventDefault();
                             const formData = new FormData(form);
                             const config = Object.fromEntries(formData);
-                            
+
                             // Get type from select element
                             const type = config.type; // Type is already in the FormData
-                            
+
                             // Add the type to the config and save
                             const fullConfig = {
                                 ...config,
@@ -996,20 +1354,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             };
                             const configKey = `${fullConfig.host}/${fullConfig.database}`;
                             savedConfigs[configKey] = fullConfig;
-                            
+
                             setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
-                            
+
                             // Show the updated list before switching
                             updateDbList();
                             isFormOpen = false;
                             updateAddButtonState(false);
-                            
+
                             // Switch to the new database
                             switchDatabase(config);
                         });
                     }, 300);
                 });
-                
+
             }, 300); // Wait for fade-out animation to complete
         }
 
@@ -1017,13 +1375,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // If there's a form, fade it out first
             const form = dbList.querySelector('.db-form');
             const currentHeight = dbMenu.scrollHeight;
-            
+
             // Set fixed height to prevent jumps
             dbMenu.style.height = currentHeight + 'px';
-            
+
             if (form) {
                 form.classList.add('animating-out');
-                
+
                 // Wait for fade-out to complete
                 setTimeout(() => {
                     // Create temporary container for measuring
@@ -1032,32 +1390,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     tempContainer.style.visibility = 'hidden';
                     tempContainer.style.width = dbList.offsetWidth + 'px';
                     dbMenu.appendChild(tempContainer);
-                    
+
                     tempContainer.innerHTML = dbList.innerHTML;
                     populateDbList(tempContainer);
-                    
+
                     // Measure final height
                     const finalHeight = tempContainer.scrollHeight;
-                    
+
                     // Remove temp container
                     dbMenu.removeChild(tempContainer);
-                    
+
                     // Now update actual content
                     requestAnimationFrame(() => {
                         // First set explicit height
                         dbMenu.style.height = currentHeight + 'px';
-                        
+
                         // Update content
                         dbList.innerHTML = '';
                         populateDbList(dbList);
-                        
+
                         // Force a reflow
                         void dbList.offsetHeight;
 
                         // Animate to new height
                         requestAnimationFrame(() => {
                             dbMenu.style.height = finalHeight + 'px';
-                            
+
                             // Reset to auto after animation completes
                             setTimeout(() => {
                                 dbMenu.style.height = 'auto';
@@ -1072,27 +1430,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 tempContainer.style.visibility = 'hidden';
                 tempContainer.style.width = dbList.offsetWidth + 'px';
                 dbMenu.appendChild(tempContainer);
-                
+
                 populateDbList(tempContainer);
                 const finalHeight = tempContainer.scrollHeight;
                 dbMenu.removeChild(tempContainer);
-                
+
                 // Now update actual content with smooth transition
                 requestAnimationFrame(() => {
                     // Set current height explicitly
                     dbMenu.style.height = currentHeight + 'px';
-                    
+
                     // Update content
                     dbList.innerHTML = '';
                     populateDbList(dbList);
-                    
+
                     // Force reflow
                     void dbList.offsetHeight;
-                    
+
                     // Animate to new height
                     requestAnimationFrame(() => {
                         dbMenu.style.height = finalHeight + 'px';
-                        
+
                         // Reset to auto after animation
                         setTimeout(() => {
                             dbMenu.style.height = 'auto';
@@ -1101,10 +1459,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-        
+
         function populateDbList(container = dbList) {
             const entries = Object.entries(savedConfigs);
-            
+
             // Show favicon controls when updating db list
             const faviconControls = dbMenu.querySelector('.favicon-controls');
             if (faviconControls) {
@@ -1115,14 +1473,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     void faviconControls.offsetWidth;
                     faviconControls.style.opacity = '1';
                     faviconControls.style.visibility = 'visible';
-                    
+
                     // Add visible class for additional animation if defined
                     setTimeout(() => {
                         faviconControls.classList.add('visible');
                     }, 50);
                 });
             }
-            
+
             if (entries.length === 0) {
                 showAddDatabaseForm();
                 // Clear server-side state when no databases remain
@@ -1134,10 +1492,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 return;
             }
-            
+
             // Clear existing content
             container.innerHTML = '';
-            
+
             entries.forEach(([key, config], index) => {
                 const item = document.createElement('div');
                 item.className = 'db-item';
@@ -1146,63 +1504,63 @@ document.addEventListener('DOMContentLoaded', () => {
                     // First item has default animation timing
                     // Other items will get their delay from CSS
                 }
-                
+
                 const contentSpan = document.createElement('span');
                 contentSpan.className = 'db-item-content';
                 const dbType = config.type;
                 contentSpan.innerHTML = `${config.database} (${config.host}) <span class="db-type-badge db-type-${dbType.toLowerCase()}">${dbType === 'postgresql' ? 'PostgreSQL' : 'MySQL'}</span>`;
                 contentSpan.addEventListener('click', () => switchDatabase(config));
-                
+
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-db';
                 deleteBtn.innerHTML = '×';
                 deleteBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    
+
                     // Store references to important elements before deletion
                     const configKey = `${config.host}/${config.database}`;
                     const dbItemToRemove = e.target.closest('.db-item');
-                    
+
                     // Calculate initial heights before any changes
                     const initialMenuHeight = dbMenu.scrollHeight;
                     const itemHeight = dbItemToRemove.offsetHeight;
-                    
+
                     // Estimate new height after item is removed (but before actual DOM change)
                     const estimatedNewHeight = initialMenuHeight - itemHeight;
-                    
+
                     // Set fixed height to allow for smooth transition
                     dbMenu.style.height = `${initialMenuHeight}px`;
                     dbMenu.style.overflow = 'hidden';
-                    
+
                     // Force reflow
                     void dbMenu.offsetHeight;
-                    
+
                     // Animate item being deleted
                     dbItemToRemove.style.transition = 'opacity 0.3s, transform 0.3s';
                     dbItemToRemove.style.opacity = '0';
                     dbItemToRemove.style.transform = 'translateX(-10px)';
-                    
+
                     // Clear height caches for this DB
                     try {
                         localStorage.removeItem('dbMenuListHeight_' + configKey);
                         // Don't remove form height as it's shared
-                        
+
                         // Also clear any old format caches
                         localStorage.removeItem('dbMenuListHeight');
                         localStorage.removeItem('dbMenuFormHeight');
                     } catch (e) {
                         console.warn('Failed to clear height caches:', e);
                     }
-                    
+
                     const currentDb = getCurrentDatabaseKey();
-                    
+
                     // Begin actual height transition to estimated height
                     setTimeout(() => {
                         dbMenu.style.height = `${estimatedNewHeight}px`;
-                        
+
                         // Now remove the item from the data structure
                         delete savedConfigs[key];
-                        
+
                         // After transition completes, update the DOM structure
                         setTimeout(() => {
                             // If this was the last database
@@ -1212,15 +1570,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 showAddDatabaseForm();
                                 return;
                             }
-                            
+
                             // Remove the item from DOM
                             if (dbItemToRemove.parentNode) {
                                 dbItemToRemove.parentNode.removeChild(dbItemToRemove);
                             }
-                            
+
                             // Update cookie with remaining configs
                             setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
-                            
+
                             // If we're deleting the currently active database, switch to another one
                             if (currentDb && currentDb === configKey) {
                                 const nextDbKey = Object.keys(savedConfigs)[0];
@@ -1231,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }, 300); // Match the height transition duration
                     }, 100); // Slight delay to allow opacity change to start
                 });
-                
+
                 item.appendChild(contentSpan);
                 item.appendChild(deleteBtn);
                 container.appendChild(item);
@@ -1241,11 +1599,11 @@ document.addEventListener('DOMContentLoaded', () => {
         function switchDatabase(config) {
             const dbList = document.querySelector('.db-list');
             dbList.innerHTML = '<div class="db-loading">Connecting...</div>';
-            
+
             const dbConfig = { // Use provided config directly
                 ...config
             };
-            
+
             fetch(`${baseUrl}/api/database`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1257,7 +1615,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const newConfigs = { ...savedConfigs };
                     const configKey = `${config.host}/${config.database}`;
                     newConfigs[configKey] = config;
-                    
+
                     // Clear old db's list height cache before switching
                     const currentDb = getCurrentDatabaseKey();
                     if (currentDb) {
@@ -1268,7 +1626,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             console.warn('Failed to clear old db height cache:', e);
                         }
                     }
-                    
+
                     setCookie('db_configs', encodeURIComponent(JSON.stringify(newConfigs)), 365);
                     location.reload();
                 } else {
@@ -1280,7 +1638,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(updateDbList, 2000);
             });
         }
-        
+
         // Toggle menu with proper animation sequence
         dbSwitchButton.addEventListener('click', () => {
             // Opening the menu
@@ -1302,93 +1660,93 @@ document.addEventListener('DOMContentLoaded', () => {
                     const realDbList = dbMenu.querySelector('.db-list');
                     realDbList.innerHTML = '';
                     populateDbList(realDbList);
-                    
+
                     // Show the controls
                     const faviconControls = dbMenu.querySelector('.favicon-controls');
                     if (faviconControls) {
                         faviconControls.style.display = 'flex';
                         faviconControls.style.visibility = 'visible';
                         faviconControls.style.opacity = '1';
-                        
+
                         // Add visible class for additional animation
                         setTimeout(() => {
                             faviconControls.classList.add('visible');
                         }, 50);
                     }
                 }
-                
+
                 // Wait a generous amount of time for all content to be fully loaded and rendered
                 setTimeout(() => {
                     // Measure the final height from the fully rendered content
                     const finalHeight = dbMenu.scrollHeight;
-                    
+
                     // Store for future reference
                     const currentDb = getCurrentDatabaseKey();
                     localStorage.setItem('dbMenuListHeight_' + (currentDb || 'default'), finalHeight + 'px');
-                    
+
                     // Now prepare the actual animation
                     // First, set starting height to 0 without showing menu yet
                     dbMenu.style.height = '0px';
                     dbMenu.style.opacity = '0';
                     dbMenu.style.visibility = 'visible'; // Make visible but with 0 height/opacity
-                    
+
                     // Force a reflow
                     void dbMenu.offsetHeight;
-                    
+
                     // Now start the animation with both height and opacity
                     setTimeout(() => {
                         dbMenu.style.height = `${finalHeight}px`;
                         dbMenu.style.opacity = '1';
                         dbMenu.classList.add('show');
-                        
+
                         // Add materialReveal animation class
                         dbMenu.classList.add('materialReveal');
-                        
+
                         // Reset to auto height after animation completes
                         setTimeout(() => {
                             dbMenu.style.height = 'auto';
                             dbMenu.style.overflow = '';
-                            
+
                             // Remove the animation class after animation completes
                             dbMenu.classList.remove('materialReveal');
-                            
+
                             // Re-enable the button
                             dbSwitchButton.classList.remove('disabled');
                         }, 400); // Match animation duration in CSS
                     }, 10);
                 }, 100); // Give browser time to fully render content
-                
+
             } else {
                 // For closing: first add closing class to start the animation
                 dbMenu.classList.add('closing');
-                
+
                 // Lock height to current value to prevent jumping
                 const currentHeight = dbMenu.scrollHeight;
                 dbMenu.style.height = `${currentHeight}px`;
                 dbMenu.style.overflow = 'hidden';
-                
+
                 // Force a reflow
                 void dbMenu.offsetHeight;
-                
+
                 // Animate height to 0 and fade out
                 requestAnimationFrame(() => {
                     dbMenu.style.height = '0';
                     dbMenu.style.opacity = '0';
                     dbMenu.classList.remove('show');
                 });
-                
+
                 // Wait for animation to complete before hiding
                 setTimeout(() => {
                     if (!dbMenu.classList.contains('show')) {
                         dbMenu.style.display = 'none';
                         dbMenu.classList.remove('closing');
                         dbMenu.style.overflow = '';
-                        
+
                         // Reset height to auto for next opening
                         dbMenu.style.height = 'auto';
                     }
                 }, 400); // Match the animation duration
-                
+
                 // If a form is open, go back to the database list view
                 if (isFormOpen) {
                     updateDbList();
@@ -1421,46 +1779,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Going back to database list from form
                 // Lock button to prevent clicking during animation
                 addDbButton.classList.add('disabled');
-                
+
                 // First, mark that we're no longer in form mode
                 isFormOpen = false;
                 updateAddButtonState(false);
-                
+
                 // Fade out the form
                 const form = dbList.querySelector('.db-form');
                 if (form) {
                     form.classList.add('animating-out');
                     form.style.opacity = '0';
                 }
-                
+
                 // Lock current height
                 const currentHeight = dbMenu.scrollHeight;
                 dbMenu.style.height = `${currentHeight}px`;
                 dbMenu.style.overflow = 'hidden';
-                
+
                 // Wait briefly for form fade out to start
                 setTimeout(() => {
                     // Create the database list in the actual menu (hidden initially)
                     dbList.style.opacity = '0';
                     dbList.innerHTML = '';
                     populateDbList(dbList);
-                    
+
                     // Prepare controls
                     const faviconControls = dbMenu.querySelector('.favicon-controls');
                     const logoControls = dbMenu.querySelector('.logo-controls');
-                    
+
                     if (faviconControls) {
                         faviconControls.style.display = 'flex';
                         faviconControls.style.opacity = '0';
                         faviconControls.style.visibility = 'hidden';
                     }
-                    
+
                     if (logoControls) {
                         logoControls.style.display = 'flex';
                         logoControls.style.opacity = '0';
                         logoControls.style.visibility = 'hidden';
                     }
-                    
+
                     // Now measure the final height with everything in place
                     // Give browser time to render everything
                     setTimeout(() => {
@@ -1469,33 +1827,33 @@ document.addEventListener('DOMContentLoaded', () => {
                         dbMenu.style.height = 'auto';
                         const finalHeight = dbMenu.scrollHeight;
                         dbMenu.style.height = originalHeight; // Reset to original height
-                        
+
                         // Store this height for future reference
                         const currentDb = getCurrentDatabaseKey();
                         localStorage.setItem('dbMenuListHeight_' + (currentDb || 'default'), finalHeight + 'px');
-                        
+
                         // Now start the transition to the final state
                         requestAnimationFrame(() => {
                             dbMenu.style.height = `${finalHeight}px`;
                             dbList.style.opacity = '1';
-                            
+
                             // Fade in controls after height animation starts
                             setTimeout(() => {
                                 if (faviconControls) {
                                     faviconControls.style.visibility = 'visible';
                                     faviconControls.style.opacity = '1';
                                 }
-                                
+
                                 if (logoControls) {
                                     logoControls.style.visibility = 'visible';
                                     logoControls.style.opacity = '1';
                                 }
-                                
+
                                 // Reset to auto height once animation completes
                                 setTimeout(() => {
                                     dbMenu.style.height = 'auto';
                                     dbMenu.style.overflow = '';
-                                    
+
                                     // Re-enable the button
                                     addDbButton.classList.remove('disabled');
                                 }, 300);
@@ -1505,16 +1863,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 150); // Wait briefly for form fade-out
                 return;
             }
-            
+
             // Disable the button during animation
             addDbButton.classList.add('disabled');
-            
+
             // Begin animation for showing the form
             // Step 1: Measure and set initial height
             const currentHeight = dbMenu.scrollHeight;
             dbMenu.style.height = `${currentHeight}px`;
             dbMenu.style.overflow = 'hidden';
-            
+
             // Step 2: Prepare the form but keep it hidden
             const formHtml = `
                 <form class="db-form material-form">
@@ -1565,7 +1923,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </form>
             `;
-            
+
             // Step 3: Create a temporary form to measure its height
             const tempContainer = document.createElement('div');
             tempContainer.style.position = 'absolute';
@@ -1573,76 +1931,82 @@ document.addEventListener('DOMContentLoaded', () => {
             tempContainer.style.width = dbList.offsetWidth + 'px';
             tempContainer.innerHTML = formHtml;
             dbMenu.appendChild(tempContainer);
-            
+
             // Step 4: Measure the form height
             const estimatedFormHeight = tempContainer.scrollHeight;
             dbMenu.removeChild(tempContainer);
-            
+
             // Step 5: Fade out current content
             const currentContent = Array.from(dbList.children);
             currentContent.forEach(el => {
                 el.style.transition = 'opacity 0.2s ease-out';
                 el.style.opacity = '0';
             });
-            
+
             // Step 6: Hide favicon controls with animation
             const faviconControls = dbMenu.querySelector('.favicon-controls');
             if (faviconControls) {
                 faviconControls.style.transition = 'opacity 0.2s ease-out';
                 faviconControls.style.opacity = '0';
             }
-            
+
             // Step 7: After fade out, swap content and animate to new height
             setTimeout(() => {
                 // Mark as form open for state tracking
                 isFormOpen = true;
                 updateAddButtonState(true);
-                
+
                 // Hide favicon controls
                 if (faviconControls) {
                     faviconControls.style.visibility = 'hidden';
                     faviconControls.style.display = 'none';
                 }
-                
+
                 // Update the content
                 dbList.innerHTML = formHtml;
-                
+
                 // Start with the form hidden
                 const form = dbList.querySelector('.db-form');
                 form.style.opacity = '0';
-                
+
                 // Force a reflow
                 void dbList.offsetHeight;
-                
+
                 // Animate to the new height
                 requestAnimationFrame(() => {
                     dbMenu.style.height = `${estimatedFormHeight}px`;
-                    
+
                     // Once height animation has started, fade in the form
                     setTimeout(() => {
                         form.style.transition = 'opacity 0.3s ease-in';
                         form.style.opacity = '1';
-                        
+
                         // Final cleanup once animation completes
                         setTimeout(() => {
                             dbMenu.style.height = 'auto';
                             dbMenu.style.overflow = '';
                             addDbButton.classList.remove('disabled');
-                            
+
                             // Store the actual height after everything is visible
                             const actualFormHeight = dbMenu.scrollHeight;
                             const currentDb = getCurrentDatabaseKey();
                             localStorage.setItem('dbMenuFormHeight_' + (currentDb || 'default'), actualFormHeight);
-                            
+
+                            // Enhance form with smart scanning suggestions
+                            enhanceDbForm(form);
                             // Setup form submission handler
                             form.addEventListener('submit', (e) => {
                                 e.preventDefault();
                                 const formData = new FormData(form);
                                 const config = Object.fromEntries(formData);
-                                
+                                // Remove helper/duplicate fields
+                                delete config.db_password;
+                                delete config.user_select;
+                                delete config.database_select;
+
                                 // Get type from select element
                                 const type = config.type; // Type is already in the FormData
-                                
+
                                 // Add the type to the config and save
                                 const fullConfig = {
                                     ...config,
@@ -1650,14 +2014,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 };
                                 const configKey = `${fullConfig.host}/${fullConfig.database}`;
                                 savedConfigs[configKey] = fullConfig;
-                                
+
                                 setCookie('db_configs', encodeURIComponent(JSON.stringify(savedConfigs)), 365);
-                                
+
                                 // Show the updated list before switching
                                 updateDbList();
                                 isFormOpen = false;
                                 updateAddButtonState(false);
-                                
+
                                 // Switch to the new database
                                 switchDatabase(config);
                             });
@@ -1672,12 +2036,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!dbMenu.contains(e.target) && !dbSwitchButton.contains(e.target) && dbMenu.classList.contains('show')) {
                 // For closing: first add closing class to start the animation
                 dbMenu.classList.add('closing');
-                
+
                 // Allow a brief moment for closing class to apply before removing show class
                 requestAnimationFrame(() => {
                     dbMenu.classList.remove('show');
                 });
-                
+
                 // Wait for animation to complete before hiding
                 setTimeout(() => {
                     if (!dbMenu.classList.contains('show')) {
@@ -1685,7 +2049,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         dbMenu.classList.remove('closing');
                     }
                 }, 400); // Match the animation duration
-                
+
                 if (isFormOpen) {
                     updateDbList();
                     isFormOpen = false;
@@ -1693,7 +2057,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        
+
         // Load current database info
         fetch(`${baseUrl}/api/database`)
             .then(response => response.json())
@@ -1727,7 +2091,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mouseDownTime = Date.now();
         startX = e.clientX;
         startY = e.clientY;
-        
+
         const targetButton = e.target.closest('.table-button');
         if (targetButton) {
             startButton = targetButton;
@@ -1736,7 +2100,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 processAndToggleButton(targetButton);
             }
         }
-        
+
         processedButtons.clear();
         e.preventDefault();
     });
@@ -1754,7 +2118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tableName = button.dataset.table;
         const tableSection = document.querySelector(`.table-section[data-table-name="${tableName}"]`);
         const currentDb = getCurrentDatabaseKey();
-        
+
         if (!processedButtons.has(button)) {
             if (initialState) {
                 button.classList.add('active');
@@ -1777,14 +2141,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     setCookie(`table_${currentDb}_${tableName}`, 'hidden', 365);
                 }
             }
-            
+
             processedButtons.add(button);
         }
     }
 
     buttonsLine.addEventListener('mousemove', (e) => {
         if (!isMouseDown) return;
-        
+
         // Check if movement threshold is met
         if (!hasMoved && hasMovedEnough(e)) {
             hasMoved = true;
@@ -1792,14 +2156,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!hasMoved) return; // Don't process if movement threshold isn't met
-        
+
         const elementsUnderMouse = document.elementsFromPoint(e.clientX, e.clientY);
         const currentButton = elementsUnderMouse.find(el => el.classList.contains('table-button'));
-        
+
         if (currentButton && initialState === null) {
             initialState = !currentButton.classList.contains('active');
         }
-        
+
         if (currentButton) {
             processAndToggleButton(currentButton);
         }
@@ -1822,7 +2186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     guideElement.className = 'swipe-guide';
     document.body.appendChild(guideElement);
 
-    
+
     // Show guide when hovering over any table button - only once per page load
     let hasShownGuide = false;
     const firstTableButton = document.querySelector('.table-button');
@@ -1836,15 +2200,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 guide.style.top = `${buttonRect.top + (buttonRect.height * 1.3)}px`;
                 guide.style.left = `${buttonRect.left + (buttonRect.width * 0.5)}px`;
                 document.body.appendChild(guide);
-                
+
                 requestAnimationFrame(() => {
                     guide.classList.add('animate');
                 });
-                
+
                 setTimeout(() => {
                     guide.remove();
                 }, 2000);
-                
+
                 hasShownGuide = true;
             }
         });
@@ -1864,7 +2228,7 @@ function initializePageTitle() {
     if (currentDb) {
         const savedTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
         const savedTitle = savedTitles[currentDb];
-        
+
         if (savedTitle) {
             requestAnimationFrame(() => {
                 pageTitle.textContent = savedTitle;
@@ -1872,7 +2236,7 @@ function initializePageTitle() {
             });
         }
     }
-    
+
     // Add initialized class after checking for saved title
     requestAnimationFrame(() => {
         pageTitle.classList.add('initialized');
@@ -1912,7 +2276,7 @@ function getCurrentDatabaseKey() {
     // Get current database configuration from cookie
     const dbConfigsCookie = getCookie('db_configs');
     const lastUsedDb = getCookie('last_used_db');
-    
+
     if (dbConfigsCookie && lastUsedDb) {
         try {
             const dbConfigs = JSON.parse(decodeURIComponent(dbConfigsCookie));
@@ -1942,7 +2306,7 @@ function handleTextSelection() {
         clearInterval(selectionCheckInterval);
         selectionCheckInterval = null;
     }
-    
+
     // When text is selected, always pause monitoring
     if (hasSelection && !isSelectionPaused) {
         isSelectionPaused = true;
@@ -1952,7 +2316,7 @@ function handleTextSelection() {
             if (tempTooltip) tempTooltip.style.display = 'block';
             if (defaultTooltip) defaultTooltip.style.display = 'none';
         }
-        
+
         // Start checking selection continuously
         selectionCheckInterval = setInterval(() => {
             const currentSelection = window.getSelection();
@@ -1961,14 +2325,14 @@ function handleTextSelection() {
                 clearInterval(selectionCheckInterval);
                 selectionCheckInterval = null;
                 isSelectionPaused = false;
-                
+
                 // Check if monitoring was already paused before selection
                 if (!monitorWasPausedBeforeSelection) {
                     // Only check for historical data if monitoring wasn't already paused
-                    const hasHistoricalData = Object.values(tableChunks).some(chunk => 
+                    const hasHistoricalData = Object.values(tableChunks).some(chunk =>
                         chunk && chunk.end > 50
                     );
-                
+
                     // Resume monitoring ONLY if no historical data
                     if (!hasHistoricalData) {
                         toggleMonitoring();
@@ -1981,31 +2345,31 @@ function handleTextSelection() {
                     if (tempTooltip) tempTooltip.style.display = 'none';
                     if (defaultTooltip) defaultTooltip.style.display = '';
                 }
-                
+
                 // Reset the stored state
                 monitorWasPausedBeforeSelection = false;
             }
         }, 100); // Check every 100ms
-    } 
+    }
     // This branch handles when we already know selection was removed (direct mouseup without selection)
     else if (!hasSelection && isSelectionPaused && !selectionCheckInterval) {
         isSelectionPaused = false;
 
         // Check if monitoring was already paused before selection
         if (!monitorWasPausedBeforeSelection) {
-            const hasHistoricalData = Object.values(tableChunks).some(chunk => 
+            const hasHistoricalData = Object.values(tableChunks).some(chunk =>
                 chunk && chunk.end > 50
             );
-            
+
             if (!hasHistoricalData) {
                 toggleMonitoring();
             }
         }
-        
+
         // Always clean up tooltips
         if (tempTooltip) tempTooltip.style.display = 'none';
         if (defaultTooltip) defaultTooltip.style.display = '';
-        
+
         // Reset stored state
         monitorWasPausedBeforeSelection = false;
     }

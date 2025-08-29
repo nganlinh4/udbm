@@ -81,7 +81,7 @@ def get_db_connection():
     global current_db_config
     if not current_db_config:
         raise Exception("No database configured")
-    
+
     if current_db_config.get('db_type') == 'postgresql':
         # PostgreSQL connection
         conn_params = {
@@ -102,14 +102,14 @@ def load_last_used_database():
         if not db_configs_raw:
             current_db_config = None
             return False
-            
+
         from urllib.parse import unquote
         db_configs = json.loads(unquote(db_configs_raw))
-        
+
         if not db_configs:
             current_db_config = None
             return False
-            
+
         last_used = request.cookies.get('last_used_db')
         if last_used and last_used in db_configs:
             config = db_configs[last_used]
@@ -135,13 +135,13 @@ def load_last_used_database():
 @app.route('/api/database', methods=['GET', 'POST', 'DELETE'])
 def handle_database():
     global current_db_config
-    
+
     # For GET requests, always try to sync with client cookies first
     if request.method == 'GET':
         if not load_last_used_database():
             current_db_config = None
             return jsonify({})
-            
+
     if request.method == 'DELETE':
         current_db_config = None
         response = make_response(jsonify({
@@ -151,12 +151,12 @@ def handle_database():
         response.delete_cookie('db_configs')
         response.delete_cookie('last_used_db')
         return response
-    
+
     if request.method == 'POST':
         data = request.json
         try:
             db_type = data.get('type', 'mysql')  # Use 'type' from frontend form
-            
+
             # Test connection based on database type
             if db_type == 'postgresql':
                 connection = psycopg2.connect(
@@ -173,7 +173,7 @@ def handle_database():
                     database=data['database']
                 )
             connection.close()
-            
+
             # If successful, update current config
             current_db_config = {
                 'host': data['host'],
@@ -183,28 +183,28 @@ def handle_database():
                 'type': db_type,  # Always store the type field
                 'db_type': db_type  # Keep db_type for backward compatibility
             }
-            
+
             response = make_response(jsonify({
                 'status': 'success',
                 'message': 'Database connection updated'
             }))
-            
+
             try:
                 db_configs = json.loads(request.cookies.get('db_configs') or '{}')
             except json.JSONDecodeError:
                 db_configs = {}
-                
+
             db_key = f"{data['host']}/{data['database']}"
             db_configs[db_key] = current_db_config
-            
+
             # URL encode the JSON string before setting cookie
             from urllib.parse import quote
             encoded_configs = quote(json.dumps(db_configs))
             response.set_cookie('db_configs', encoded_configs, max_age=30*24*60*60)
             response.set_cookie('last_used_db', db_key, max_age=30*24*60*60)
-            
+
             return response
-            
+
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -215,11 +215,131 @@ def handle_database():
     if not current_db_config:
         # Try to load from cookies
         load_last_used_database()
-        
+
     safe_config = dict(current_db_config or {})
     if 'password' in safe_config:
         safe_config['password'] = '********'
     return jsonify(safe_config)
+
+
+# Scan endpoint to list databases available for given credentials
+@app.route('/api/scan/databases', methods=['POST'])
+def scan_databases():
+    try:
+        data = request.json or {}
+        db_type = (data.get('type') or data.get('db_type') or 'mysql').lower()
+        host = data.get('host')
+        user = data.get('user')
+        password = data.get('password')
+
+        if not host:
+            return jsonify({'error': 'host is required'}), 400
+        if not user:
+            return jsonify({'error': 'user is required'}), 400
+        # password may be empty; allow empty string
+
+        if db_type == 'postgresql':
+            # Need a database to connect to; try common postgres maintenance DB
+            conn = psycopg2.connect(host=host, user=user, password=password, database=data.get('database') or 'postgres')
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT datname
+                FROM pg_database
+                WHERE datistemplate = false
+                ORDER BY datname
+            """)
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            dbs = [r[0] for r in rows]
+        else:
+            # MySQL: connect without selecting a specific database
+            conn = mysql.connector.connect(host=host, user=user, password=password)
+            cur = conn.cursor()
+            cur.execute("SHOW DATABASES")
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            # Filter out system databases
+            system_dbs = {"information_schema", "performance_schema", "mysql", "sys"}
+            dbs = [r[0] for r in rows if isinstance(r, (list, tuple)) and r and r[0] not in system_dbs]
+
+        return jsonify({'databases': dbs})
+    except mysql.connector.Error as e:
+        logger.error(f"Error scanning databases: {e}")
+        # MySQL auth error code 1045 -> Unauthorized
+        if getattr(e, 'errno', None) == 1045:
+            return jsonify({'error': 'auth', 'message': str(e)}), 401
+        return jsonify({'error': str(e)}), 400
+    except psycopg2.Error as e:
+        logger.error(f"Error scanning databases (pg): {e}")
+        # PostgreSQL password/auth failure codes: 28P01 / 28000
+        if getattr(e, 'pgcode', None) in ('28P01', '28000'):
+            return jsonify({'error': 'auth', 'message': str(e)}), 401
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error scanning databases: {e}")
+        return jsonify({'error': str(e)}), 400
+
+
+# Scan endpoint to list users/roles available (best-effort; may require privileges)
+@app.route('/api/scan/users', methods=['POST'])
+def scan_users():
+    try:
+        data = request.json or {}
+        db_type = (data.get('type') or data.get('db_type') or 'mysql').lower()
+        host = data.get('host')
+        user = data.get('user')
+        password = data.get('password')
+
+        if not host:
+            return jsonify({'error': 'host is required'}), 400
+        if not user:
+            return jsonify({'error': 'user is required'}), 400
+        # password may be empty
+
+        if db_type == 'postgresql':
+            conn = psycopg2.connect(host=host, user=user, password=password, database=data.get('database') or 'postgres')
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT rolname
+                FROM pg_roles
+                WHERE rolcanlogin
+                ORDER BY rolname
+            """)
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            users = [r[0] for r in rows]
+        else:
+            conn = mysql.connector.connect(host=host, user=user, password=password)
+            cur = conn.cursor()
+            # Access to mysql.user may be restricted; handle errors gracefully
+            try:
+                cur.execute("SELECT user FROM mysql.user")
+                rows = cur.fetchall()
+                users = sorted({r[0] for r in rows if isinstance(r, (list, tuple)) and r})
+            except Exception:
+                # Fallback: show only the current user
+                users = [user]
+            finally:
+                cur.close()
+                conn.close()
+
+        return jsonify({'users': users})
+    except mysql.connector.Error as e:
+        logger.error(f"Error scanning users: {e}")
+        if getattr(e, 'errno', None) == 1045:
+            return jsonify({'error': 'auth', 'message': str(e)}), 401
+        return jsonify({'error': str(e)}), 400
+    except psycopg2.Error as e:
+        logger.error(f"Error scanning users (pg): {e}")
+        if getattr(e, 'pgcode', None) in ('28P01', '28000'):
+            return jsonify({'error': 'auth', 'message': str(e)}), 401
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error scanning users: {e}")
+        return jsonify({'error': str(e)}), 400
 
 # Define tables to ignore
 IGNORED_TABLES = {'SequelizeMeta'}
@@ -283,7 +403,7 @@ def get_table_names():
             # Attempt database connection
             connection = get_db_connection()
             cursor = connection.cursor()
-            
+
             # Get table information based on database type
             if current_db_config.get('db_type') == 'postgresql':
                 # PostgreSQL query
@@ -294,7 +414,7 @@ def get_table_names():
                     AND table_type = 'BASE TABLE'
                 """)
                 table_names = [table[0] for table in cursor.fetchall()]
-                
+
                 for table_name in table_names:
                     if table_name not in IGNORED_TABLES:
                         try:
@@ -335,7 +455,7 @@ def get_table_names():
                     WHERE table_schema = DATABASE()
                 """)
                 existing_tables = {table[0] for table in cursor.fetchall()}
-                
+
                 cursor.execute("SHOW TABLES")
                 for table in cursor.fetchall():
                     table_name = table[0]
@@ -353,7 +473,7 @@ def get_table_names():
                             'name': table_name,
                             'pk': pk[0] if pk else None
                         })
-            
+
             # If we get here, query was successful
             return tables
 
@@ -362,7 +482,7 @@ def get_table_names():
             logger.error(f"Error in get_table_names() attempt {attempt + 1}: {e}")
             if attempt < max_retries - 1:
                 time.sleep(retry_delay)
-        
+
         finally:
             # Clean up database resources
             if cursor:
@@ -402,20 +522,20 @@ def index():
         app.jinja_env.cache = {}
         preferred_theme = request.cookies.get('preferred_theme', 'light')
         preferred_language = request.cookies.get('preferred_language', 'en')
-        
-        response = make_response(render_template('index.html', 
-            tables=tables, 
+
+        response = make_response(render_template('index.html',
+            tables=tables,
             preferred_theme=preferred_theme,
             preferred_language=preferred_language,
             has_database=bool(current_db_config)
         ))
-        
+
         # Set default cookies if not present
         if 'preferred_language' not in request.cookies:
             response.set_cookie('preferred_language', 'en', max_age=365*24*60*60)
         if 'preferred_theme' not in request.cookies:
             response.set_cookie('preferred_theme', 'light', max_age=365*24*60*60)
-            
+
         return response
     except Exception as e:
         logger.error(f"Error rendering template: {e}", exc_info=True)
@@ -427,7 +547,7 @@ def check_connection():
     # Return 200 with no_database status when no database is configured
     if not current_db_config:
         return jsonify({"status": "no_database"})
-    
+
     try:
         connection = get_db_connection()
         if current_db_config.get('db_type') == 'postgresql':
@@ -551,7 +671,7 @@ def data_table(table_name):
                 exists = result[0] if not isinstance(result, dict) else result['exists']
                 if not exists:
                     return jsonify({'error': f'Table {table_name} does not exist'}), 404
-                
+
                 # Verify table is queryable
                 cursor.execute('SELECT 1 FROM information_schema.columns WHERE table_name = %s LIMIT 1', (table_name,))
                 if not cursor.fetchone():
@@ -586,7 +706,7 @@ def data_table(table_name):
                 except psycopg2.Error as e:
                     logger.error(f"Error getting count for table {table_name}: {e}")
                     return jsonify({'error': f'Error getting count: {str(e)}'}), 500
-                
+
                 # Get the columns in order for PostgreSQL with error handling
                 try:
                     cursor.execute("""
@@ -597,14 +717,14 @@ def data_table(table_name):
                         ORDER BY ordinal_position""", (table_name,))
                     columns_info = cursor.fetchall()
                     columns = [col['column_name'] for col in columns_info]  # Use column name since using RealDictCursor
-                    
+
                     if not columns:
                         logger.error(f"No columns found for table {table_name}")
                         return jsonify({'error': f'No columns found for table {table_name}'}), 500
                 except psycopg2.Error as e:
                     logger.error(f"Error getting columns for table {table_name}: {e}")
                     return jsonify({'error': f'Error getting columns: {str(e)}'}), 500
-                
+
                 # Build response
                 response = {
                     'count': row_count,
@@ -612,7 +732,7 @@ def data_table(table_name):
                     'limited': False,
                     'data': []  # Initialize empty data array
                 }
-                
+
                 # Fetch data only if a non-zero limit is specified
                 if limit > 0:
                     try:
@@ -711,7 +831,7 @@ def add_row(table_name):
             try:
                 # Use RealDictCursor for PostgreSQL
                 cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-                
+
                 # Get column information including primary key info
                 cursor.execute("""
                     SELECT DISTINCT ON (c.column_name)
@@ -739,19 +859,19 @@ def add_row(table_name):
                     ORDER BY c.column_name, c.ordinal_position
                 """, (table_name, table_name))
                 columns_info = cursor.fetchall()
-                
+
                 # Prepare columns and values with appropriate defaults
                 columns = []
                 values = []
                 for col in columns_info:
                     col_name = col['column_name']
-                    
+
                     # Skip auto-incrementing columns
                     if col['data_type'] == 'integer' and col['column_default'] and 'nextval' in str(col['column_default']):
                         continue
-                        
+
                     columns.append(col_name)
-                    
+
                     # For UUID primary keys, always generate a new UUID
                     if col['data_type'] == 'uuid' and col['is_primary']:
                         import uuid
@@ -759,20 +879,20 @@ def add_row(table_name):
                     else:
                         # For all other fields, just use NULL
                         values.append(None)
-                
+
                 # Validate column-value alignment
                 if len(columns) != len(values):
                     raise ValueError(f"Column-value mismatch: {len(columns)} columns vs {len(values)} values")
-                
+
                 # Insert empty row
                 columns_str = ', '.join(f'"{col}"' for col in columns)
                 values_str = ', '.join(['%s'] * len(values))  # Ensure placeholders match values
-                
+
                 query = f'INSERT INTO "{table_name}" ({columns_str}) VALUES ({values_str}) RETURNING *'
                 logger.debug(f"PostgreSQL insert query for {table_name}: {query}")
                 logger.debug(f"Values: {values}")
                 logger.debug(f"Columns: {columns}")
-                
+
                 cursor.execute(query, values)
                 new_row = cursor.fetchone()
                 connection.commit()
@@ -787,21 +907,21 @@ def add_row(table_name):
         else:
             cursor = connection.cursor(dictionary=True)
             cursor.execute("SET FOREIGN_KEY_CHECKS=0")
-            
+
             # Get column info and exclude auto-increment columns
             cursor.execute(f"SHOW COLUMNS FROM {table_name}")
             columns_info = cursor.fetchall()
-            
+
             # Identify columns that need default values
             insert_columns = []
             for col in columns_info:
                 # Skip auto-increment columns
                 if 'auto_increment' in col['Extra'].lower():
                     continue
-                
+
                 # Include other columns
                 insert_columns.append(col['Field'])
-            
+
             # Create minimal INSERT statement
             if insert_columns:
                 # For tables with required columns, use DEFAULT keyword
@@ -811,7 +931,7 @@ def add_row(table_name):
             else:
                 # For tables with only auto-increment columns
                 query = f"INSERT INTO {table_name} () VALUES ()"
-            
+
             cursor.execute(query)
             cursor.execute(f"SELECT * FROM {table_name} WHERE id = LAST_INSERT_ID()")
             new_row = cursor.fetchone()
@@ -877,16 +997,16 @@ def delete_rows_by_column_value(table, column, value):
         if current_db_config.get('db_type') == 'postgresql':
             cursor.execute("""
                 SELECT EXISTS (
-                    SELECT 1 FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_schema = 'public'
                     AND table_name = %s
                 )
             """, (table,))
             table_exists = cursor.fetchone()[0]
         else:
             cursor.execute("""
-                SELECT COUNT(*) FROM information_schema.tables 
-                WHERE table_schema = DATABASE() 
+                SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_schema = DATABASE()
                 AND table_name = %s
             """, (table,))
             table_exists = cursor.fetchone()[0] > 0
@@ -898,18 +1018,18 @@ def delete_rows_by_column_value(table, column, value):
         if current_db_config.get('db_type') == 'postgresql':
             cursor.execute("""
                 SELECT EXISTS (
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_schema = 'public' 
-                    AND table_name = %s 
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                    AND table_name = %s
                     AND column_name = %s
                 )
             """, (table, column))
             column_exists = cursor.fetchone()[0]
         else:
             cursor.execute("""
-                SELECT COUNT(*) FROM information_schema.columns 
-                WHERE table_schema = DATABASE() 
-                AND table_name = %s 
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                AND table_name = %s
                 AND column_name = %s
             """, (table, column))
             column_exists = cursor.fetchone()[0] > 0
@@ -1042,11 +1162,11 @@ def get_schema():
     try:
         schema_type = request.args.get('type', 'mermaid')
         global current_db_config
-        
+
         if not current_db_config:
             logger.error("No database configured for schema request")
             return jsonify({'error': 'No database configured'}), 400
-            
+
         tables = {}
         relationships = []
 
@@ -1054,7 +1174,7 @@ def get_schema():
         if current_db_config.get('db_type') == 'postgresql':
             connection = get_db_connection()
             cursor = connection.cursor()
-            
+
             # Get all tables
             cursor.execute("""
                 SELECT table_name
@@ -1063,7 +1183,7 @@ def get_schema():
                 AND table_type = 'BASE TABLE'
             """)
             table_names = [row[0] for row in cursor.fetchall()]
-            
+
             # Get columns for each table
             for table_name in table_names:
                 if table_name not in IGNORED_TABLES:
@@ -1091,7 +1211,7 @@ def get_schema():
                     except psycopg2.Error as e:
                         logger.warning(f"Skipping table {table_name}: {str(e)}")
                         continue
-                    
+
                     columns = []
                     for col in cursor.fetchall():
                         columns.append({
@@ -1101,9 +1221,9 @@ def get_schema():
                             'default': col[3],
                             'is_primary': col[4] or False
                         })
-                    
+
                     tables[table_name] = columns
-                    
+
                     try:
                         # Create a new cursor with RealDictCursor for foreign keys
                         dict_cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -1124,11 +1244,11 @@ def get_schema():
                             AND nsp.nspname = 'public'
                             AND src.relname = %s;
                         """, (table_name,))
-                        
+
                         fk_results = dict_cursor.fetchall()
-                        
+
                         for row in fk_results:
-                            
+
                             if row['foreign_table_name'] not in IGNORED_TABLES:
                                 rel = {
                                     'from': {
@@ -1145,18 +1265,18 @@ def get_schema():
                     except psycopg2.Error as e:
                         logger.warning(f"Error getting foreign keys for table {table_name}: {str(e)}")
                         continue
-            
+
             cursor.close()
             connection.close()
         else:
             # MySQL connection with manual schema extraction
             connection = get_db_connection()
             cursor = connection.cursor(dictionary=True)
-            
+
             # Get all tables
             cursor.execute("SHOW TABLES")
             table_names = [table['Tables_in_' + current_db_config['database']] for table in cursor.fetchall()]
-            
+
             # Get columns and relationships for each table
             for table_name in table_names:
                 if table_name not in IGNORED_TABLES:
@@ -1173,7 +1293,7 @@ def get_schema():
                                 'is_primary': col['Key'] == 'PRI'
                             })
                         tables[table_name] = columns
-                        
+
                         # Get foreign key relationships
                         cursor.execute("""
                             SELECT
@@ -1188,14 +1308,14 @@ def get_schema():
                     except mysql.connector.Error as e:
                         logger.warning(f"Error processing table {table_name}: {str(e)}")
                         continue
-                    
+
                     for fk in cursor.fetchall():
                         if fk['REFERENCED_TABLE_NAME'] not in IGNORED_TABLES:
                             relationships.append({
                                 'from': {'table': table_name, 'column': fk['COLUMN_NAME']},
                                 'to': {'table': fk['REFERENCED_TABLE_NAME'], 'column': fk['REFERENCED_COLUMN_NAME']}
                             })
-            
+
             cursor.close()
             connection.close()
 
@@ -1255,21 +1375,21 @@ def download_xlsx():
 
         # Convert JSON data to pandas DataFrame
         df = pd.DataFrame(data['data'])
-        
+
         # Process DataFrame before converting to Excel
         for column in df.columns:
             # Convert JSON objects in cells to strings
-            df[column] = df[column].apply(lambda x: 
+            df[column] = df[column].apply(lambda x:
                 json.dumps(x, ensure_ascii=False) if isinstance(x, dict) else x
             )
 
         # Create a BytesIO object to store the Excel file
         excel_file = io.BytesIO()
-        
+
         # Write to Excel file
         df.to_excel(excel_file, index=False, engine='openpyxl')
         excel_file.seek(0)
-        
+
         return send_file(
             excel_file,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -1283,7 +1403,7 @@ def download_table_csv(table_name):
     try:
         connection = get_db_connection()
         cursor = None
-        
+
         if current_db_config.get('db_type') == 'postgresql':
             cursor = connection.cursor()
         else:
@@ -1298,7 +1418,7 @@ def download_table_csv(table_name):
             cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
             columns = [desc[0] for desc in cursor.description]
             cursor.fetchall()  # Fetch (and discard) results before closing
-        
+
         # Close and create new cursor to avoid unread results
         cursor.close()
         if current_db_config.get('db_type') == 'postgresql':
@@ -1320,7 +1440,7 @@ def download_table_csv(table_name):
                 query = f'SELECT * FROM "{table_name}" ORDER BY "{columns[0]}" LIMIT %s OFFSET %s'
             else:
                 query = f"SELECT * FROM {table_name} ORDER BY `{columns[0]}` LIMIT %s OFFSET %s"
-            
+
             cursor.execute(query, (chunk_size, offset))
             rows = cursor.fetchall()
             if not rows:
@@ -1330,7 +1450,7 @@ def download_table_csv(table_name):
                 if current_db_config.get('db_type') == 'postgresql':
                     processed_row = []
                     for value in row:
-                        processed_row.append(json.dumps(value) if isinstance(value, (dict, list)) 
+                        processed_row.append(json.dumps(value) if isinstance(value, (dict, list))
                                           else (str(value) if value is not None else ''))
                 else:
                     processed_row = []
@@ -1595,10 +1715,10 @@ if __name__ == '__main__':
         # Create template directory if it doesn't exist
         os.makedirs(template_dir, exist_ok=True)
         logger.info(f"Template directory: {template_dir}")
-        
+
         # Create static directory if it doesn't exist
         os.makedirs(os.path.join(static_dir, 'js'), exist_ok=True)
-        
+
         # Start Flask app with proper host binding
         logger.info("Starting Flask app...")
         app.run(

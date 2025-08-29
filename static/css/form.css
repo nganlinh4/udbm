@@ -293,7 +293,7 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
 
 /* Add/Edit form animations */
 .db-form {
-    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: opacity, transform;
 }
@@ -569,7 +569,69 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
     color: var(--md-sys-color-primary);
 }
 
+
+/* Scan status label styling */
+.scan-status {
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-left: 8px;
+    align-self: flex-start;
+}
+[data-theme="dark"] .scan-status {
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.9;
+}
+.scan-status { white-space: nowrap; }
+
+/* Refresh button next to selects */
+.form-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--md-sys-color-primary);
+    background: transparent;
+    border: none;
+    padding: 4px 6px;
+    margin-top: 4px;
+    cursor: pointer;
+}
+.form-refresh .icon { font-size: 14px; line-height: 1; }
+.form-refresh:hover { opacity: 0.9; }
+
+
+/* Preserve floating label alignment; when select-mode, pin label above control */
+.material-form .form-group.select-mode label {
+    position: static !important;
+    transform: none !important;
+    top: auto; left: auto;
+    font-size: 12px;
+    line-height: 1.2;
+    margin: 0 0 6px 12px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+.material-form .form-group .field-shell { position: relative; }
+.material-form .form-group .field-extras { margin-top: 6px; }
+.material-form .form-group .field-extras select { flex: 1 1 auto; min-width: 0; }
+
 /* Favicon controls styles */
+
+/* Ensure selects and inputs have consistent vertical alignment (pill) */
+.material-form .form-group select,
+.material-form .form-group input[type="text"],
+.material-form .form-group input[type="password"] {
+    height: 38px;
+    line-height: 38px;
+    padding: 0 12px;
+    border-radius: 18px;
+}
+
+/* Prevent overlap of label and select placeholder */
+.material-form .form-group.select-mode .field-shell label + select,
+.material-form .form-group.select-mode select + label {
+    margin-top: 0;
+}
+
 .favicon-controls {
     padding: 12px;
     margin-top: 12px;
