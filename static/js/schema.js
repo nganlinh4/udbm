@@ -1,7 +1,7 @@
 let currentData = null;
 let schemaData = null;
 let useGraphviz = true; // Keep for backward compatibility
-let schemaType = 'graphviz'; // New: 'graphviz', 'mermaid', 'd3'
+let schemaType = 'hierarchy'; // New: 'hierarchy', 'mermaid', 'd3'
 let lastGraphvizTheme = null;
 let lastGraphvizResult = null;
 
@@ -384,48 +384,309 @@ function generateMermaidDefinition(data) {
 }
 
 async function renderGraphvizSchema(container, data) {
+    // Replaced GraphViz with ELK.js hierarchical layout rendered client-side
     const img = container.querySelector('#graphvizContent');
     img.style.opacity = '0';
     img.style.cssText = 'opacity: 0; transition: opacity 0.3s ease; cursor: grab;';
-    const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-    console.log('Rendering GraphViz schema with theme:', currentTheme);
 
     try {
-        // Only fetch new schema if theme has changed or no previous result
-        img.removeAttribute('data-zoom-initialized');
-        if (lastGraphvizTheme !== currentTheme || !lastGraphvizResult) {
-            console.log('Getting new GraphViz schema for theme:', currentTheme);
-            const response = await fetch(`/schema?type=graphviz&theme=${currentTheme}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            lastGraphvizResult = await response.json();
-            lastGraphvizTheme = currentTheme;
-            console.log('New GraphViz schema received');
-        } else {
-            console.log('Using cached GraphViz schema');
+        if (typeof ELK === 'undefined') {
+            throw new Error('ELK.js not loaded');
         }
-        
-        if (lastGraphvizResult && lastGraphvizResult.schema_url) {
-            img.src = `${lastGraphvizResult.schema_url}?t=${new Date().getTime()}`; // Add cache buster
-            img.onload = () => {
-                img.style.opacity = '1';
-                img.style.pointerEvents = 'auto';
-                img.style.cursor = 'grab';
-                if (!img.dataset.zoomInitialized) {
-                    initializeZoomPan(container, img);
-                }
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const theme = {
+            bg: 'transparent',
+            nodeFill: isDark ? '#1f2937' : '#ffffff',
+            nodeStroke: isDark ? '#374151' : '#d1d5db',
+            text: isDark ? '#e5e7eb' : '#111827',
+            edge: isDark ? '#9ca3af' : '#4b5563'
+        };
+
+        const elk = new ELK();
+
+        // Build ELK graph with ports per column for precise edge attachment
+        const PORT_HEIGHT = 20;
+        const HEADER_HEIGHT = 28;
+        const NODE_WIDTH = 240;
+        const H_PADDING = 12;
+
+        const nodes = Object.entries(data.tables || {}).map(([tableName, columns]) => {
+            const rows = Array.isArray(columns) ? columns : [];
+            const height = HEADER_HEIGHT + Math.max(1, rows.length) * PORT_HEIGHT;
+
+            const ports = rows.map((col, i) => ({
+                id: `${tableName}:${col.name}`,
+                properties: {
+                    'port.side': 'EAST' // default; ELK may reassign based on direction
+                },
+                // Position hint via port constraints if needed later
+            }));
+
+            return {
+                id: tableName,
+                width: NODE_WIDTH,
+                height,
+                ports
             };
-        } else {
-            console.error('No valid GraphViz schema URL');
-            lastGraphvizResult = null; // Clear invalid result
-            throw new Error('No valid schema URL available');
-        }
+        });
+
+        const edges = (data.relationships || []).map((rel, idx) => ({
+            id: `${rel.from.table}->${rel.to.table}-${idx}`,
+            sources: [rel.from.table],
+            targets: [rel.to.table],
+            sourcePort: `${rel.from.table}:${rel.from.column}`,
+            targetPort: `${rel.to.table}:${rel.to.column}`,
+            labels: [{ text: `${rel.from.column} → ${rel.to.column}` }]
+        }));
+
+        const elkGraph = {
+            id: 'root',
+            layoutOptions: {
+                'algorithm': 'layered',
+                'elk.direction': 'RIGHT',
+                'elk.edgeRouting': 'ORTHOGONAL',
+                'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+                'elk.layered.mergeEdges': 'true',
+                'elk.spacing.nodeNode': '40',
+                'elk.layered.spacing.nodeNodeBetweenLayers': '60',
+                'elk.spacing.edgeNode': '24',
+                'elk.spacing.edgeEdge': '16',
+                'elk.portConstraints': 'FIXED_ORDER',
+                'elk.portAlignment.default': 'CENTER'
+            },
+            children: nodes,
+            edges: edges
+        };
+
+        console.log('Computing ELK layout...');
+        const layout = await elk.layout(elkGraph);
+
+        // Create SVG from layout
+        const margin = 40;
+        const svgW = Math.ceil((layout.width || 800) + margin * 2);
+        const svgH = Math.ceil((layout.height || 600) + margin * 2);
+
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('xmlns', svgNS);
+        svg.setAttribute('width', String(svgW));
+        svg.setAttribute('height', String(svgH));
+        svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+        svg.style.background = theme.bg;
+
+        // Define marker for arrows
+        const defs = document.createElementNS(svgNS, 'defs');
+        const marker = document.createElementNS(svgNS, 'marker');
+        marker.setAttribute('id', 'arrow');
+        marker.setAttribute('orient', 'auto');
+        marker.setAttribute('markerWidth', '10');
+        marker.setAttribute('markerHeight', '7');
+        marker.setAttribute('refX', '10');
+        marker.setAttribute('refY', '3.5');
+        const markerPath = document.createElementNS(svgNS, 'path');
+        markerPath.setAttribute('d', 'M0,0 L10,3.5 L0,7 Z');
+        markerPath.setAttribute('fill', theme.edge);
+        marker.appendChild(markerPath);
+        defs.appendChild(marker);
+
+        // Alternating row background pattern
+        const bgPattern = document.createElementNS(svgNS, 'pattern');
+        bgPattern.setAttribute('id', 'rowAlt');
+        bgPattern.setAttribute('patternUnits', 'userSpaceOnUse');
+        bgPattern.setAttribute('width', '4');
+        bgPattern.setAttribute('height', String(PORT_HEIGHT));
+        const altRect = document.createElementNS(svgNS, 'rect');
+        altRect.setAttribute('x', '0');
+        altRect.setAttribute('y', '0');
+        altRect.setAttribute('width', '100%');
+        altRect.setAttribute('height', String(PORT_HEIGHT));
+        altRect.setAttribute('fill', isDark ? '#111827' : '#f9fafb');
+        altRect.setAttribute('opacity', '0.7');
+        bgPattern.appendChild(altRect);
+        defs.appendChild(bgPattern);
+
+        svg.appendChild(defs);
+
+        // Draw edges first (under nodes)
+        (layout.edges || []).forEach(edge => {
+            (edge.sections || []).forEach(section => {
+                const pointsArr = [section.startPoint, ...(section.bendPoints || []), section.endPoint];
+                const points = pointsArr
+                    .map(p => `${Math.round(p.x + margin)},${Math.round(p.y + margin)}`)
+                    .join(' ');
+                const polyline = document.createElementNS(svgNS, 'polyline');
+                polyline.setAttribute('points', points);
+                polyline.setAttribute('fill', 'none');
+                polyline.setAttribute('stroke', theme.edge);
+                polyline.setAttribute('stroke-width', '1.5');
+                polyline.setAttribute('marker-end', 'url(#arrow)');
+                svg.appendChild(polyline);
+
+                // Edge label at mid bend (or midpoint)
+                const midIndex = Math.floor(pointsArr.length / 2);
+                const midPoint = pointsArr[midIndex] || section.startPoint;
+                if (edge.labels && edge.labels.length) {
+                    const label = document.createElementNS(svgNS, 'text');
+                    label.setAttribute('x', String(Math.round(midPoint.x + margin + 6)));
+                    label.setAttribute('y', String(Math.round(midPoint.y + margin - 6)));
+                    label.setAttribute('font-family', 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif');
+                    label.setAttribute('font-size', '11');
+                    label.setAttribute('fill', theme.text);
+                    label.textContent = edge.labels[0].text;
+                    svg.appendChild(label);
+                }
+            });
+        });
+
+        // Draw nodes with header and per-column rows
+        (layout.children || []).forEach(node => {
+            const g = document.createElementNS(svgNS, 'g');
+            g.setAttribute('transform', `translate(${Math.round((node.x || 0) + margin)}, ${Math.round((node.y || 0) + margin)})`);
+
+            const width = Math.round(node.width || NODE_WIDTH);
+            const height = Math.round(node.height || HEADER_HEIGHT);
+
+            // Node outer box
+            const rect = document.createElementNS(svgNS, 'rect');
+            rect.setAttribute('width', String(width));
+            rect.setAttribute('height', String(height));
+            rect.setAttribute('rx', '6');
+            rect.setAttribute('fill', theme.nodeFill);
+            rect.setAttribute('stroke', theme.nodeStroke);
+            rect.setAttribute('stroke-width', '1');
+            g.appendChild(rect);
+
+            // Header background line
+            const headerSep = document.createElementNS(svgNS, 'line');
+            headerSep.setAttribute('x1', '0');
+            headerSep.setAttribute('y1', String(HEADER_HEIGHT));
+            headerSep.setAttribute('x2', String(width));
+            headerSep.setAttribute('y2', String(HEADER_HEIGHT));
+            headerSep.setAttribute('stroke', theme.nodeStroke);
+            headerSep.setAttribute('stroke-width', '1');
+            g.appendChild(headerSep);
+
+            // Table name (header)
+            const title = document.createElementNS(svgNS, 'text');
+            title.setAttribute('x', String(Math.round(width / 2)));
+            title.setAttribute('y', '18');
+            title.setAttribute('text-anchor', 'middle');
+            title.setAttribute('font-family', 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif');
+            title.setAttribute('font-size', '13');
+            title.setAttribute('font-weight', '600');
+            title.setAttribute('fill', theme.text);
+            const titleSpan = document.createElementNS(svgNS, 'tspan');
+            titleSpan.textContent = node.id;
+            title.appendChild(titleSpan);
+            g.appendChild(title);
+
+            // Column rows from ports positions
+            const nodeData = (nodes.find(n => n.id === node.id));
+            const rowStartY = HEADER_HEIGHT + 14; // baseline for text in first row
+            const fontSize = 12;
+
+            if (nodeData && Array.isArray(nodeData.ports)) {
+                nodeData.ports.forEach((port, idx) => {
+                    const y = HEADER_HEIGHT + idx * PORT_HEIGHT;
+
+                    // Alternating row background fill
+                    if (idx % 2 === 1) {
+                        const rowBg = document.createElementNS(svgNS, 'rect');
+                        rowBg.setAttribute('x', '0');
+                        rowBg.setAttribute('y', String(y));
+                        rowBg.setAttribute('width', String(width));
+                        rowBg.setAttribute('height', String(PORT_HEIGHT));
+                        rowBg.setAttribute('fill', isDark ? '#0b1220' : '#f5f7fa');
+                        rowBg.setAttribute('opacity', '0.7');
+                        g.appendChild(rowBg);
+                    }
+
+                    // Row separator
+                    const rowLine = document.createElementNS(svgNS, 'line');
+                    rowLine.setAttribute('x1', '0');
+                    rowLine.setAttribute('y1', String(y));
+                    rowLine.setAttribute('x2', String(width));
+                    rowLine.setAttribute('y2', String(y));
+                    rowLine.setAttribute('stroke', theme.nodeStroke);
+                    rowLine.setAttribute('stroke-width', '0.5');
+                    g.appendChild(rowLine);
+
+                    // Extract column name
+                    const colName = port.id.split(':').slice(1).join(':');
+
+                    // Column text
+                    const txt = document.createElementNS(svgNS, 'text');
+                    txt.setAttribute('x', '8');
+                    txt.setAttribute('y', String(rowStartY + idx * PORT_HEIGHT));
+                    txt.setAttribute('font-family', 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif');
+                    txt.setAttribute('font-size', String(fontSize));
+                    txt.setAttribute('fill', theme.text);
+
+                    // Badges for PK/FK
+                    const tableCols = (data.tables[node.id] || []);
+                    const colInfo = tableCols.find(c => c.name === colName);
+                    const badges = [];
+                    if (colInfo && colInfo.is_primary) badges.push('PK');
+                    // detect FK by presence in relationships
+                    const isFK = (data.relationships || []).some(rel =>
+                        (rel.from.table === node.id && rel.from.column === colName) ||
+                        (rel.to.table === node.id && rel.to.column === colName)
+                    );
+                    if (isFK) badges.push('FK');
+
+                    if (badges.length) {
+                        const badge = document.createElementNS(svgNS, 'tspan');
+                        badge.textContent = `[${badges.join(',')}] `;
+                        badge.setAttribute('font-weight', '600');
+                        txt.appendChild(badge);
+                    }
+
+                    const nameSpan = document.createElementNS(svgNS, 'tspan');
+                    nameSpan.textContent = colName;
+                    txt.appendChild(nameSpan);
+                    g.appendChild(txt);
+                });
+            }
+
+            svg.appendChild(g);
+        });
+
+        // Convert SVG to PNG data URL
+        const xml = new XMLSerializer().serializeToString(svg);
+        const svgBlob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        const tempImg = new Image();
+        tempImg.src = url;
+        await new Promise((resolve) => {
+            tempImg.onload = () => {
+                const scale = 2; // 2x for crispness
+                const canvas = document.createElement('canvas');
+                canvas.width = svgW * scale;
+                canvas.height = svgH * scale;
+                const ctx = canvas.getContext('2d');
+                ctx.setTransform(scale, 0, 0, scale, 0, 0);
+                ctx.drawImage(tempImg, 0, 0);
+                img.src = canvas.toDataURL('image/png');
+                URL.revokeObjectURL(url);
+                resolve();
+            };
+        });
+
+        img.onload = () => {
+            img.style.opacity = '1';
+            img.style.pointerEvents = 'auto';
+            img.style.cursor = 'grab';
+            if (!img.dataset.zoomInitialized) {
+                initializeZoomPan(container, img);
+            }
+        };
     } catch (error) {
-        console.error('Error rendering GraphViz schema:', error);
+        console.error('Error rendering ELK (hierarchical) schema:', error);
         img.style.display = 'none';
         const errorMsg = container.querySelector('.schema-error');
-        errorMsg.textContent = `Failed to render GraphViz diagram: ${error.message}`;
+        errorMsg.textContent = `Failed to render hierarchical diagram: ${error.message}`;
         errorMsg.style.display = 'block';
     }
 }
@@ -641,9 +902,11 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
     const savedSchemaType = localStorage.getItem('preferredSchemaType');
 
     // Migrate old preferences and set defaults
-    if (savedSchemaType === null || savedSchemaType === 'graphviz') {
-        schemaType = 'graphviz';
-        useGraphviz = true;
+    if (savedSchemaType === null || savedSchemaType === 'graphviz' || savedSchemaType === 'hierarchy') {
+        schemaType = 'hierarchy';
+        useGraphviz = true; // 'useGraphviz' now means 'useHierarchy'
+        // Migrate stored preference
+        localStorage.setItem('preferredSchemaType', 'hierarchy');
     } else if (savedSchemaType === 'mermaid') {
         schemaType = 'mermaid';
         useGraphviz = false;
@@ -652,8 +915,9 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         useGraphviz = false;
     } else {
         // Default fallback
-        schemaType = 'graphviz';
+        schemaType = 'hierarchy';
         useGraphviz = true;
+        localStorage.setItem('preferredSchemaType', 'hierarchy');
     }
 
     // Set initial UI state
@@ -696,11 +960,11 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                 if (useGraphviz) {
                     const img = container.querySelector('#graphvizContent');
                     if (!img || !img.src) {
-                        throw new Error('GraphViz image not found');
+                        throw new Error('Hierarchy image not found');
                     }
                     const response = await fetch(img.src);
                     blob = await response.blob();
-                    schemaName = 'GraphViz schema';
+                    schemaName = 'Hierarchy schema';
                 } else if (schemaType === 'd3') {
                     // Handle D3 copy
                     if (!d3Renderer) {
@@ -798,7 +1062,7 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
         schemaType = newType;
 
         // Update backward compatibility flag
-        useGraphviz = (newType === 'graphviz');
+        useGraphviz = (newType === 'hierarchy');
 
         // Save preference
         localStorage.setItem('preferredSchemaType', newType);
@@ -835,7 +1099,7 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
             lastGraphvizResult = null;
 
             // Show and render appropriate container
-            if (newType === 'graphviz') {
+            if (newType === 'hierarchy') {
                 document.getElementById('graphvizContent').style.display = 'block';
                 document.getElementById('graphvizContent').style.pointerEvents = 'auto';
                 renderGraphvizSchema(container, currentData);
@@ -1012,7 +1276,7 @@ export function initializeSchema(schemaButton, modal, loading, error, container)
                 document.getElementById('d3Content').style.display = 'none';
 
                 // Show and render appropriate container
-                if (schemaType === 'graphviz') {
+                if (schemaType === 'hierarchy') {
                     document.getElementById('graphvizContent').style.display = 'block';
                     renderGraphvizSchema(container, currentData);
                 } else if (schemaType === 'mermaid') {
