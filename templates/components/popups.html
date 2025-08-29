@@ -59,8 +59,15 @@
                     <button class="schema-option active" data-type="hierarchy">Hierarchy</button>
                     <button class="schema-option" data-type="mermaid">Mermaid</button>
                     <button class="schema-option" data-type="d3">Interactive</button>
+
                 </div>
 
+
+                        <!-- Hierarchy Controls (like D3 controls, only when Hierarchy active) -->
+                        <div class="hierarchy-controls control-group" style="display: none; gap: 8px; margin-left: 12px; align-items: center;">
+                            <span class="control-label" style="font-size:12px; opacity:0.8;">Direction:</span>
+                            <button id="hierarchyDirectionToggle" class="control-button" style="line-height: 1; padding-top: 6px; padding-bottom: 6px;">RIGHT</button>
+                        </div>
                 <!-- D3 Interactive Controls -->
                 <div class="d3-controls" style="display: none;">
                     <div class="control-group">
@@ -118,6 +125,7 @@
                             <span class="lang-en">Optimize Layout</span>
                             <span class="lang-vi">Tối ưu bố cục</span>
                         </button>
+
                         <button id="pauseSimulation" class="control-button">
                             <span class="lang-ko">일시정지</span>
                             <span class="lang-en">Pause</span>
