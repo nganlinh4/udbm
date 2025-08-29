@@ -664,25 +664,69 @@ async function renderGraphvizSchema(container, data) {
             y2: Math.round((n.y || 0) + margin + (n.height || HEADER_HEIGHT))
         }));
 
+        const placedLabelBoxes = [];
         const labelPadding = 6; // gap from node box
-        const maxNudges = 3;
+        const maxNudges = 5;
         labelsToDraw.forEach(({ x, y, text, dx, dy }) => {
             let lx = x, ly = y;
 
-            // Nudge loop: try up to maxNudges to escape node boxes
+            // Estimate label bbox (centered)
+            const fontSize = 11;
+            const charW = 6.5;
+            const padX = 3, padY = 2;
+            const labelW = Math.max(12, text.length * charW + padX * 2);
+            const labelH = fontSize + padY * 2;
+
+            // Helper: test intersection
+            const intersects = (ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) => (
+                ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1
+            );
+
+            // Nudge loop: try up to maxNudges to escape node boxes AND other labels
+            // Keep labels near their edge by stacking along the edge direction instead of pushing far away
+            const isVertical = Math.abs(dy) >= Math.abs(dx);
+            let perpShiftX = 0, perpShiftY = 0; // small perpendicular shift to clear nodes
+            let stackIndex = 0; // how many steps along the edge direction
             for (let i = 0; i < maxNudges; i++) {
-                const hit = nodeBoxes.find(b => lx >= b.x1 && lx <= b.x2 && ly >= b.y1 && ly <= b.y2);
-                if (!hit) break;
-                const len = Math.max(1, Math.hypot(dx, dy));
-                const ux = -dy / len, uy = dx / len; // perpendicular
-                const cx = (hit.x1 + hit.x2) / 2, cy = (hit.y1 + hit.y2) / 2;
-                const sgn = ((lx - cx) * ux + (ly - cy) * uy) >= 0 ? 1 : -1;
-                const bump = labelPadding + 8 + i * 4; // progressively larger
-                lx += sgn * ux * bump;
-                ly += sgn * uy * bump;
+                // First, a gentle perpendicular bump to clear node bodies
+                const hit = nodeBoxes.find(b => (x + perpShiftX) >= b.x1 && (x + perpShiftX) <= b.x2 && (y + perpShiftY) >= b.y1 && (y + perpShiftY) <= b.y2);
+                if (hit) {
+                    const len = Math.max(1, Math.hypot(dx, dy));
+                    const ux = -dy / len, uy = dx / len; // perpendicular
+                    const cx = (hit.x1 + hit.x2) / 2, cy = (hit.y1 + hit.y2) / 2;
+                    const sgn = (((x + perpShiftX) - cx) * ux + ((y + perpShiftY) - cy) * uy) >= 0 ? 1 : -1;
+                    const bump = 6 + i * 2; // small growth
+                    perpShiftX += sgn * ux * bump;
+                    perpShiftY += sgn * uy * bump;
+                }
+
+                // Candidate position after node dodge
+                lx = x + perpShiftX;
+                ly = y + perpShiftY;
+
+                // Check collision with placed labels
+                const aX1 = lx - labelW / 2, aY1 = ly - labelH / 2;
+                const aX2 = lx + labelW / 2, aY2 = ly + labelH / 2;
+                const overlap = placedLabelBoxes.find(r => intersects(aX1, aY1, aX2, aY2, r.x1, r.y1, r.x2, r.y2));
+                if (overlap) {
+                    // Stack along the edge direction (vertical for vertical edges, horizontal for horizontal edges)
+                    stackIndex++;
+                    const step = 12; // spacing between stacked labels
+                    const mag = Math.ceil(stackIndex / 2) * step;
+                    const sign = (stackIndex % 2 === 1) ? 1 : -1; // +, -, +, - ... around base point
+                    if (isVertical) {
+                        ly = y + perpShiftY + sign * mag;
+                        lx = x + perpShiftX;
+                    } else {
+                        lx = x + perpShiftX + sign * mag;
+                        ly = y + perpShiftY;
+                    }
+                } else {
+                    break; // no overlap with placed labels; done
+                }
             }
 
-            // Text with stroke outline (no halo)
+            // Draw stroked text (no halo)
             const label = document.createElementNS(svgNS, 'text');
             label.setAttribute('x', String(lx));
             label.setAttribute('y', String(ly));
@@ -697,6 +741,14 @@ async function renderGraphvizSchema(container, data) {
             label.setAttribute('pointer-events', 'none');
             label.textContent = text;
             svg.appendChild(label);
+
+            // Remember this label's bbox to help subsequent labels dodge it
+            placedLabelBoxes.push({
+                x1: lx - labelW / 2,
+                y1: ly - labelH / 2,
+                x2: lx + labelW / 2,
+                y2: ly + labelH / 2
+            });
         });
                         rowBg.setAttribute('height', String(PORT_HEIGHT));
                         rowBg.setAttribute('fill', isDark ? '#0b1220' : '#f5f7fa');
