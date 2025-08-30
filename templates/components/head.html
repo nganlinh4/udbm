@@ -152,7 +152,12 @@
                     fallbackLng: 'en',
                     debug: false,
                     backend: {
-                        loadPath: '/static/locales/{{lng}}/translation.json'
+                        // Cache-bust translation files per page load to avoid stale keys
+                        loadPath: (lngs, namespaces) => {
+                            const v = (typeof window.__I18N_CACHE_BUSTER__ !== 'undefined') ? window.__I18N_CACHE_BUSTER__ : Date.now();
+                            const lng = Array.isArray(lngs) ? lngs[0] : (lngs || 'en');
+                            return `/static/locales/${lng}/translation.json?v=${v}`;
+                        }
                     },
                     interpolation: {
                         escapeValue: false

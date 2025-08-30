@@ -215,11 +215,56 @@ function enhanceDbForm(form) {
         const originalName = input.getAttribute('name') || name;
         input.setAttribute('data-original-name', originalName);
 
+        // Set immediate fallback texts using our local t() to avoid raw keys before i18next is ready
+        if (name === 'user') {
+            placeholder.textContent = t('scan.selectUser');
+        } else if (name === 'database') {
+            placeholder.textContent = t('scan.selectDatabase');
+        }
+        const refreshLabel = refreshBtn.querySelector('[data-i18n="scan.refresh"]');
+        if (refreshLabel) refreshLabel.textContent = t('scan.refresh');
+
+        // Then ask i18next to update when ready
+        if (window.updateTranslations) {
+            window.updateTranslations();
+        }
+
         return { name: originalName, select, refreshBtn, input, extras, group, fieldShell };
     }
 
     const userField = wrapWithSelect(userInput, 'user', t('scan.selectUser'));
     const dbField = wrapWithSelect(dbInput, 'database', t('scan.selectDatabase'));
+
+    // Ensure dynamic scan UI bits are localized immediately and on language changes
+    function applyScanI18n() {
+        try {
+            const translate = (key) => (window.i18next && window.i18next.isInitialized)
+                ? window.i18next.t(key)
+                : t(key);
+
+            const uPh = userField?.select?.options?.[0];
+            if (uPh && uPh.getAttribute('data-i18n')) {
+                uPh.textContent = translate(uPh.getAttribute('data-i18n'));
+            }
+            const dPh = dbField?.select?.options?.[0];
+            if (dPh && dPh.getAttribute('data-i18n')) {
+                dPh.textContent = translate(dPh.getAttribute('data-i18n'));
+            }
+            const uRef = userField?.refreshBtn?.querySelector('[data-i18n="scan.refresh"]');
+            if (uRef) uRef.textContent = translate('scan.refresh');
+            const dRef = dbField?.refreshBtn?.querySelector('[data-i18n="scan.refresh"]');
+            if (dRef) dRef.textContent = translate('scan.refresh');
+        } catch (e) {
+            // no-op
+        }
+    }
+    // Apply now and whenever language changes (and once i18next finishes loading)
+    applyScanI18n();
+    setTimeout(applyScanI18n, 0);
+    if (window.i18nextPromise && typeof window.i18nextPromise.then === 'function') {
+        window.i18nextPromise.then(() => applyScanI18n()).catch(() => {});
+    }
+    window.addEventListener('languageChanged', applyScanI18n);
 
     function populateSelect(selectEl, items) {
         // Clear, keep first placeholder
