@@ -88,6 +88,21 @@
     "localFiles": "Cho tệp cục bộ",
     "securityNote": "Lưu ý: Truy cập tệp cục bộ có thể bị hạn chế bởi bảo mật trình duyệt. Để có kết quả tốt nhất với tệp cục bộ, hãy xem xét thiết lập máy chủ web cục bộ."
   },
+  "scan": {
+    "enterPassword": "Nhập mật khẩu để quét",
+    "scanningDatabases": "⏳ Đang quét cơ sở dữ liệu…",
+    "scanningUsers": "⏳ Đang quét người dùng…",
+    "authRequired": "Cần xác thực để quét",
+    "scanFailed": "Quét thất bại",
+    "scanFailedWithReason": "Quét thất bại: {{error}}",
+    "foundCount": "Đã tìm thấy {{count}}",
+    "noDatabasesFound": "Không tìm thấy cơ sở dữ liệu nào",
+    "noUsersFound": "Không tìm thấy người dùng nào",
+    "refresh": "Làm mới",
+    "selectUser": "Chọn người dùng",
+    "selectDatabase": "Chọn cơ sở dữ liệu"
+  },
+
   "languages": {
     "korean": "한국어",
     "english": "English",

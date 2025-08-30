@@ -119,6 +119,18 @@ export function t(key, options = {}) {
             'image.cancel': '취소',
             'image.imagePath': '이미지 경로',
             'image.download': '다운로드',
+            'scan.enterPassword': '스캔하려면 비밀번호를 입력하세요',
+            'scan.scanningDatabases': '⏳ 데이터베이스 스캔 중…',
+            'scan.scanningUsers': '⏳ 사용자 스캔 중…',
+            'scan.authRequired': '스캔하려면 인증이 필요합니다',
+            'scan.scanFailed': '스캔 실패',
+            'scan.scanFailedWithReason': '스캔 실패: {{error}}',
+            'scan.foundCount': '{{count}}개 발견',
+            'scan.noDatabasesFound': '데이터베이스를 찾을 수 없습니다',
+            'scan.noUsersFound': '사용자를 찾을 수 없습니다',
+            'scan.refresh': '새로고침',
+            'scan.selectUser': '사용자를 선택하세요',
+            'scan.selectDatabase': '데이터베이스를 선택하세요',
             'languages.korean': '한국어',
             'languages.english': 'English',
             'languages.vietnamese': 'Tiếng Việt'
@@ -188,6 +200,18 @@ export function t(key, options = {}) {
             'image.cancel': 'Cancel',
             'image.imagePath': 'Image Path',
             'image.download': 'Download',
+            'scan.enterPassword': 'Enter password to scan',
+            'scan.scanningDatabases': '⏳ Scanning databases…',
+            'scan.scanningUsers': '⏳ Scanning users…',
+            'scan.authRequired': 'Authentication required to scan',
+            'scan.scanFailed': 'Scan failed',
+            'scan.scanFailedWithReason': 'Scan failed: {{error}}',
+            'scan.foundCount': 'Found {{count}}',
+            'scan.noDatabasesFound': 'No databases found',
+            'scan.noUsersFound': 'No users found',
+            'scan.refresh': 'Refresh',
+            'scan.selectUser': 'Select a user',
+            'scan.selectDatabase': 'Select a database',
             'languages.korean': '한국어',
             'languages.english': 'English',
             'languages.vietnamese': 'Tiếng Việt',
@@ -266,13 +290,32 @@ export function t(key, options = {}) {
             'ui.warningPerformance': 'Đặt tần suất làm mới dưới 2 giây có thể ảnh hưởng đến hiệu suất hệ thống.',
             'ui.rowDeleted': 'Hàng đã được xóa.',
             'ui.databaseSetup': 'Thiết lập cơ sở dữ liệu',
+            'scan.enterPassword': 'Nhập mật khẩu để quét',
+            'scan.scanningDatabases': '⏳ Đang quét cơ sở dữ liệu…',
+            'scan.scanningUsers': '⏳ Đang quét người dùng…',
+            'scan.authRequired': 'Cần xác thực để quét',
+            'scan.scanFailed': 'Quét thất bại',
+            'scan.scanFailedWithReason': 'Quét thất bại: {{error}}',
+            'scan.foundCount': 'Đã tìm thấy {{count}}',
+            'scan.noDatabasesFound': 'Không tìm thấy cơ sở dữ liệu nào',
+            'scan.noUsersFound': 'Không tìm thấy người dùng nào',
+            'scan.refresh': 'Làm mới',
+            'scan.selectUser': 'Chọn người dùng',
+            'scan.selectDatabase': 'Chọn cơ sở dữ liệu',
             'ui.warningPerformance': '갱신 주기가 2초 미만일 경우 시스템 성능에 영향을 줄 수 있습니다.',
             'ui.rowDeleted': '행이 삭제되었습니다.',
             'ui.databaseSetup': '데이터베이스 설정'
         }
     };
 
-    return fallbackTranslations[currentLang]?.[key] || fallbackTranslations['en']?.[key] || key;
+    const raw = fallbackTranslations[currentLang]?.[key] || fallbackTranslations['en']?.[key] || key;
+    if (typeof raw === 'string' && options && Object.keys(options).length) {
+        return raw.replace(/\{\{\s*([^}]+)\s*\}\}/g, (m, p1) => {
+            const v = options[p1.trim()];
+            return v !== undefined && v !== null ? String(v) : m;
+        });
+    }
+    return raw;
 }
 
 export function updateLanguage(updateStaticLanguageElements, updateDynamicElements, updateDropdownOptions, updateConnectionStatus) {

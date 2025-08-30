@@ -173,6 +173,12 @@ function enhanceDbForm(form) {
         const placeholder = document.createElement('option');
         placeholder.value = '';
         placeholder.textContent = placeholderText;
+        // Set data-i18n so global updater can change language later
+        if (name === 'user') {
+            placeholder.setAttribute('data-i18n', 'scan.selectUser');
+        } else if (name === 'database') {
+            placeholder.setAttribute('data-i18n', 'scan.selectDatabase');
+        }
         placeholder.disabled = true;
         placeholder.selected = true;
         select.appendChild(placeholder);
@@ -181,7 +187,7 @@ function enhanceDbForm(form) {
         const refreshBtn = document.createElement('button');
         refreshBtn.type = 'button';
         refreshBtn.className = 'form-refresh';
-        refreshBtn.innerHTML = '<span class="icon">⟳</span> Refresh';
+        refreshBtn.innerHTML = '<span class="icon">⟳</span> <span data-i18n="scan.refresh">' + t('scan.refresh') + '</span>';
 
         // Extras container below the shell
         const extras = document.createElement('div');
@@ -212,8 +218,8 @@ function enhanceDbForm(form) {
         return { name: originalName, select, refreshBtn, input, extras, group, fieldShell };
     }
 
-    const userField = wrapWithSelect(userInput, 'user', 'Select a user');
-    const dbField = wrapWithSelect(dbInput, 'database', 'Select a database');
+    const userField = wrapWithSelect(userInput, 'user', t('scan.selectUser'));
+    const dbField = wrapWithSelect(dbInput, 'database', t('scan.selectDatabase'));
 
     function populateSelect(selectEl, items) {
         // Clear, keep first placeholder
@@ -405,9 +411,9 @@ function enhanceDbForm(form) {
         const type = (typeSelect?.value || 'mysql');
         const dbType = type.toLowerCase();
         if (!host || !user) { if (dbStatus) dbStatus.textContent = ''; return; }
-        if (dbType === 'mysql' && !password) { if (dbStatus) dbStatus.textContent = 'Enter password to scan'; return; }
+        if (dbType === 'mysql' && !password) { if (dbStatus) dbStatus.textContent = t('scan.enterPassword'); return; }
         const seq = ++dbScanSeq;
-        if (dbStatus) dbStatus.textContent = '⏳ Scanning databases…';
+        if (dbStatus) dbStatus.textContent = t('scan.scanningDatabases');
         try {
             const resp = await fetch(`${baseUrl}/api/scan/databases`, {
                 method: 'POST',
@@ -418,14 +424,14 @@ function enhanceDbForm(form) {
                 try { return await resp.json(); } catch { return null; }
             })();
             if (seq !== dbScanSeq) return; // stale
-            if (resp.status === 401) { if (dbStatus) dbStatus.textContent = 'Authentication required to scan'; return; }
-            if (!resp.ok) { if (dbStatus) dbStatus.textContent = 'Scan failed'; return; }
+            if (resp.status === 401) { if (dbStatus) dbStatus.textContent = data?.message ? `${t('scan.authRequired')}: ${data.message}` : t('scan.authRequired'); return; }
+            if (!resp.ok) { if (dbStatus) { const errText = (data && (data.message || data.error)) || resp.statusText || t('scan.scanFailed'); dbStatus.textContent = t('scan.scanFailedWithReason', { error: errText }); } return; }
             const dbs = Array.isArray(data?.databases) ? data.databases : [];
             if (dbs.length) switchToSelect(dbField, dbs); else switchToInput(dbField);
-            if (dbStatus) dbStatus.textContent = dbs.length ? `Found ${dbs.length}` : 'No databases found';
+            if (dbStatus) dbStatus.textContent = dbs.length ? t('scan.foundCount', { count: dbs.length }) : t('scan.noDatabasesFound');
         } catch (e) {
             if (seq !== dbScanSeq) return;
-            if (dbStatus) dbStatus.textContent = 'Scan failed';
+            if (dbStatus) dbStatus.textContent = t('scan.scanFailedWithReason', { error: e?.message || String(e) });
         }
     }, 600);
 
@@ -436,9 +442,9 @@ function enhanceDbForm(form) {
         const type = (typeSelect?.value || 'mysql');
         const dbType = type.toLowerCase();
         if (!host || !user) { if (userStatus) userStatus.textContent = ''; return; }
-        if (dbType === 'mysql' && !password) { if (userStatus) userStatus.textContent = 'Enter password to scan'; return; }
+        if (dbType === 'mysql' && !password) { if (userStatus) userStatus.textContent = t('scan.enterPassword'); return; }
         const seq = ++userScanSeq;
-        if (userStatus) userStatus.textContent = '⏳ Scanning users…';
+        if (userStatus) userStatus.textContent = t('scan.scanningUsers');
         try {
             const resp = await fetch(`${baseUrl}/api/scan/users`, {
                 method: 'POST',
@@ -449,14 +455,14 @@ function enhanceDbForm(form) {
                 try { return await resp.json(); } catch { return null; }
             })();
             if (seq !== userScanSeq) return; // stale
-            if (resp.status === 401) { if (userStatus) userStatus.textContent = 'Authentication required to scan'; return; }
-            if (!resp.ok) { if (userStatus) userStatus.textContent = 'Scan failed'; return; }
+            if (resp.status === 401) { if (userStatus) userStatus.textContent = data?.message ? `${t('scan.authRequired')}: ${data.message}` : t('scan.authRequired'); return; }
+            if (!resp.ok) { if (userStatus) { const errText = (data && (data.message || data.error)) || resp.statusText || t('scan.scanFailed'); userStatus.textContent = t('scan.scanFailedWithReason', { error: errText }); } return; }
             const users = Array.isArray(data?.users) ? data.users : [];
             if (users.length) switchToSelect(userField, users); else switchToInput(userField);
-            if (userStatus) userStatus.textContent = users.length ? `Found ${users.length}` : 'No users found';
+            if (userStatus) userStatus.textContent = users.length ? t('scan.foundCount', { count: users.length }) : t('scan.noUsersFound');
         } catch (e) {
             if (seq !== userScanSeq) return;
-            if (userStatus) userStatus.textContent = 'Scan failed';
+            if (userStatus) userStatus.textContent = t('scan.scanFailedWithReason', { error: e?.message || String(e) });
         }
     }, 600);
 

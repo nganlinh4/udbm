@@ -88,6 +88,21 @@
     "localFiles": "For local files",
     "securityNote": "Note: Local file access may be limited by browser security. For best results with local files, consider setting up a local web server."
   },
+  "scan": {
+    "enterPassword": "Enter password to scan",
+    "scanningDatabases": "⏳ Scanning databases…",
+    "scanningUsers": "⏳ Scanning users…",
+    "authRequired": "Authentication required to scan",
+    "scanFailed": "Scan failed",
+    "scanFailedWithReason": "Scan failed: {{error}}",
+    "foundCount": "Found {{count}}",
+    "noDatabasesFound": "No databases found",
+    "noUsersFound": "No users found",
+    "refresh": "Refresh",
+    "selectUser": "Select a user",
+    "selectDatabase": "Select a database"
+  },
+
   "languages": {
     "korean": "한국어",
     "english": "English",
