@@ -292,6 +292,16 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
 }
 
 /* Add/Edit form animations */
+
+/* Ensure refresh/status never wrap inside db-menu too */
+.db-menu .form-refresh,
+#dbMenu .form-refresh,
+.db-menu .scan-status,
+#dbMenu .scan-status {
+    min-width: max-content;
+    white-space: nowrap;
+}
+
 .db-form {
     transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -595,6 +605,7 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
     padding: 4px 6px;
     margin-top: 4px;
     cursor: pointer;
+    min-width: max-content; /* keep on one line */
 }
 .form-refresh .icon { font-size: 14px; line-height: 1; }
 .form-refresh:hover { opacity: 0.9; }
