@@ -18,7 +18,7 @@ A real-time database monitoring system that focus on monitoring tables' data. Av
 ## 🚀 Desktop Application (Electron)
 
 ### Download Portable Executable
-- **Latest:** [v2.0.0 Portable](https://github.com/nganlinh4/udbm/releases/latest) (100MB)
+- **Latest:** [Download Portable](https://github.com/nganlinh4/udbm/releases/latest) (94MB)
 - No installation required - just download and run!
 
 ### Build from Source
@@ -27,36 +27,21 @@ A real-time database monitoring system that focus on monitoring tables' data. Av
 - Node.js 16+ ([Download](https://nodejs.org/))
 - Python 3.8+ ([Download](https://www.python.org/))
 
-#### Quick Setup
+#### Build Steps
 
-**Windows:**
-```powershell
-# Clone and setup
+```bash
+# Clone repository
 git clone https://github.com/nganlinh4/udbm.git
 cd udbm
-.\setup_dev.ps1  # Automated setup script
 
-# Run in development mode
-npm run dev
+# Install dependencies
+npm install
+pip install pyinstaller
+pip install -r backend/requirements.txt
 
 # Build portable executable
 npm run build
-# Output: release/uDBM-portable.exe
-```
-
-**Linux/macOS:**
-```bash
-# Clone and setup
-git clone https://github.com/nganlinh4/udbm.git
-cd udbm
-chmod +x setup_dev.sh
-./setup_dev.sh  # Automated setup script
-
-# Run in development mode
-npm run dev
-
-# Build executable
-npm run build
+# Output: release/uDBM-2.0.0-portable.exe
 ```
 
 ## 📁 Project Structure
@@ -72,34 +57,35 @@ udbm/
 │   └── preload.js  # Preload script
 ├── build-tools/     # Build configurations
 │   └── monitor.spec # PyInstaller config
-├── package.json     # Node.js dependencies
-└── setup_dev.ps1/sh # Setup scripts
+└── package.json     # Node.js dependencies
 ```
 
-## Quick Installation (Web Version)
+## Run as Web Application (Without Electron)
 
-### Automated Installation (Recommended)
-
-**Linux/macOS:**
 ```bash
-./install.sh
-./run.sh
-```
+# Clone repository
+git clone https://github.com/nganlinh4/udbm.git
+cd udbm
 
-**Windows:**
-```cmd
-install.bat
-run.bat
+# Create virtual environment (optional but recommended)
+python -m venv venv
+# Activate it:
+# Windows: venv\Scripts\activate
+# Linux/Mac: source venv/bin/activate
+
+# Install Python dependencies
+pip install -r backend/requirements.txt
+
+# Start the Flask server
+python backend/monitor.py
 ```
 
 Then open your browser to: `http://127.0.0.1:5080`
 
-📖 **For detailed installation instructions, troubleshooting, and manual setup, see [INSTALL.md](INSTALL.md)**
-
 ## Features
 
 - Real-time monitoring for MySQL and PostgreSQL databases, at any scale
-- Interactive schema visualization with relationships using GraphViz andMermaid.js
+- Interactive schema visualization with relationships
 - Real-time data view with auto-refresh
 - Pause/Resume monitoring, configurable refresh rate
 - Light/dark mode, English/Korean language support
@@ -113,46 +99,22 @@ Then open your browser to: `http://127.0.0.1:5080`
 (please recommend me more features)
 - Support for more SQL types besides MySQL and PostgreSQL
 
-## Installation
+## (Optional) Testing with Sample Databases
 
-1. Clone the repository:
-```bash
-git clone udbm
-cd udbm
-```
-
-2. Create and activate a virtual environment:
-```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-```
-
-3. Install Python dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-### (Optional) Testing with Sample Databases
-
-- `python create_db.py`: Creates two sample databases (mock_db and fake_db, based on your defined `config.py`) - one small and one large with predefined schemas. Use this if you want to quickly test the system without having any existing databases. Before running this, go to config.py to define your host, MySQL username, password.
-- `python simulation.py`: Simulates three basic database operations (insert, update, delete) on the sample databases (if successes, the monitor page will have indicating animations like the below).
+- `python backend/create_db.py`: Creates two sample databases (mock_db and fake_db) - one small and one large with predefined schemas. Use this if you want to quickly test the system without having any existing databases. Before running this, create a config.py in the backend folder to define your host, MySQL username, password.
+- `python backend/simulation.py`: Simulates three basic database operations (insert, update, delete) on the sample databases (if successful, the monitor page will have indicating animations like the below).
 
 ![Database Operations Animation](readme_assets/animation.png)
 
 ### Server Settings
 
-The monitor server runs on port 5080 by default. To change this, modify the port number at the end of `monitor.py`
+The monitor server runs on port 5080 by default. To change this, modify the port number at the end of `backend/monitor.py`
 
 ## Usage
 
 1. Start the monitoring server:
 ```bash
+cd backend
 python monitor.py
 ```
 
@@ -167,13 +129,13 @@ Quickly toggle multiple tables with swiping (table pills ordered smartly by thei
 
 ### Changing Page Title
 
-Modified page title will be remembered to each of your DB separatedly
+Modified page title will be remembered for each of your databases separately
 
 ![Page Title Customization](readme_assets/title.png)
 
 ### Viewing Historical Data
 
-Just scroll down, the monitoring will automatically pauses, it will auto resume when you scroll back up or collapse the table
+Just scroll down, the monitoring will automatically pause. It will auto resume when you scroll back up or collapse the table
 
 ![Historical Data View](readme_assets/tooltip.png)
 
