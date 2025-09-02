@@ -34,6 +34,11 @@ A real-time database monitoring system that focus on monitoring tables' data. Av
 git clone https://github.com/nganlinh4/udbm.git
 cd udbm
 
+# Create and activate virtual environment
+python -m venv venv
+# Windows: venv\Scripts\activate
+# Linux/Mac: source venv/bin/activate
+
 # Install dependencies
 npm install
 pip install pyinstaller
@@ -67,9 +72,8 @@ udbm/
 git clone https://github.com/nganlinh4/udbm.git
 cd udbm
 
-# Create virtual environment (optional but recommended)
+# Create and activate virtual environment
 python -m venv venv
-# Activate it:
 # Windows: venv\Scripts\activate
 # Linux/Mac: source venv/bin/activate
 
