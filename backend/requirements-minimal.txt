@@ -1,0 +1,8 @@
+# Core requirements for monitor.py (production)
+Flask>=2.0.0
+flask-cors>=4.0.0
+mysql-connector-python>=8.0.0
+psycopg2-binary>=2.9.0
+pandas>=2.0.0
+openpyxl>=3.0.0  # For Excel export via pandas
+xlsxwriter>=3.0.0  # Alternative Excel engine for pandas

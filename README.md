@@ -18,8 +18,8 @@ A real-time database monitoring system that focus on monitoring tables' data. Av
 ## 🚀 Desktop Application (Electron)
 
 ### Download Portable Executable
-- Download the latest portable `.exe` from [Releases](https://github.com/nganlinh4/udbm/releases)
-- No installation required - just run the executable!
+- **Latest:** [v2.0.0 Portable](https://github.com/nganlinh4/udbm/releases/latest) (100MB)
+- No installation required - just download and run!
 
 ### Build from Source
 
