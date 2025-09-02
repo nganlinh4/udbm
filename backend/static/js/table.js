@@ -1125,170 +1125,71 @@ function updateAllImageButtonHighlights() {
     });
 }
 
-// Set up global query handler (independent of table state)
-document.addEventListener('keydown', (e) => {
-    if (!isAdminMode) return;
-    if (!e.key || e.key.toLowerCase() !== 'q') return;
+// Helper function to create table cell with long text handling
+function createTableCell(value) {
+    const td = document.createElement('td');
+    if (value === null) {
+        td.textContent = 'NULL';
+    } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
+        const jsonView = formatJsonCell(value);
+        td.appendChild(jsonView);
+    } else {
+        const textValue = String(value);
+        td.textContent = textValue;
 
-    let { queryPopup, executeButton, queryInput, resultArea, queryHistory, historyIndex, handleClose } = setupQueryPopup();
+        // Add special styling for long text (like CREATE TABLE statements)
+        if (textValue.length > 100 || textValue.includes('\n') || textValue.toUpperCase().includes('CREATE TABLE')) {
+            td.classList.add('long-text');
 
-    const isQueryInputFocused = document.activeElement?.id === 'queryInput';
-    const isQueryPopupVisible = queryPopup?.classList.contains('visible');
-    
-    if (isQueryInputFocused || isQueryPopupVisible) return;
-    
-    e.preventDefault();
-
-    // Clear and show popup
-    queryPopup.classList.add('visible');
-    queryInput.value = '';
-    // Only remove download buttons from query popup, not from table sections
-    queryPopup.querySelector('.download-buttons')?.remove();
-    resultArea.textContent = '';
-
-    // Set up execute button text
-    executeButton.innerHTML = `
-        <span class="lang-ko">(Ctrl+Enter) 실행</span>
-        <span class="lang-en">(Ctrl+Enter) Execute</span>
-        <span class="lang-vi">(Ctrl+Enter) Thực thi</span>
-    `;
-
-    // Replace elements to clear old event listeners
-    const newInput = queryInput.cloneNode(true);
-    const newButton = executeButton.cloneNode(true);
-    queryInput.parentNode.replaceChild(newInput, queryInput);
-    executeButton.parentNode.replaceChild(newButton, executeButton);
-    queryInput = newInput;
-    queryInput.focus();
-
-    // Handle query execution
-    const handleExecute = async () => {
-        const query = queryInput.value.trim();
-        // Clean up previous download buttons only from query popup
-        queryPopup.querySelector('.download-buttons')?.remove();
-        if (!query) return;
-
-        // Save to history
-        if (!queryHistory.includes(query)) {
-            queryHistory.unshift(query);
-            if (queryHistory.length > 50) queryHistory.pop();
-            localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
-        }
-        historyIndex = -1;
-
-        try {
-            const response = await fetch(`${window.baseUrl}/execute_query`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query })
-            });
-
-            const data = await response.json();
-            if (data.error) {
-                resultArea.textContent = `Error: ${data.error}`;
-                return;
-            }
-
-            if (data.results) {
-                // Handle multiple result sets
-                if (data.hasMultipleResultSets) {
-                    resultArea.innerHTML = '';
-                    data.results.forEach((resultSet, index) => {
-                        const setHeader = document.createElement('h4');
-                        setHeader.textContent = `Result Set ${index + 1}:`;
-                        setHeader.style.marginTop = index > 0 ? '20px' : '0';
-                        resultArea.appendChild(setHeader);
-
-                        const setContainer = document.createElement('div');
-                        if (Array.isArray(resultSet) && resultSet.length > 0 && typeof resultSet[0] === 'object') {
-                            createQueryResultTable(setContainer, resultSet);
-                        } else {
-                            setContainer.textContent = JSON.stringify(resultSet, null, 2);
-                        }
-                        resultArea.appendChild(setContainer);
-                    });
-                } else {
-                    // Single result set
-                    if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
-                        createQueryResultTable(resultArea, data.results);
+            // Add click-to-copy functionality
+            td.style.cursor = 'pointer';
+            td.title = 'Click to copy to clipboard';
+            td.addEventListener('click', async () => {
+                try {
+                    // Try modern clipboard API first
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(textValue);
                     } else {
-                        resultArea.textContent = JSON.stringify(data.results, null, 2);
+                        // Fallback for older browsers or non-HTTPS
+                        const textArea = document.createElement('textarea');
+                        textArea.value = textValue;
+                        textArea.style.position = 'fixed';
+                        textArea.style.left = '-999999px';
+                        textArea.style.top = '-999999px';
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
                     }
+
+                    // Show temporary feedback
+                    const originalTitle = td.title;
+                    td.title = 'Copied!';
+                    setTimeout(() => {
+                        td.title = originalTitle;
+                    }, 1000);
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                    // Show error feedback
+                    const originalTitle = td.title;
+                    td.title = 'Copy failed - try selecting text manually';
+                    setTimeout(() => {
+                        td.title = originalTitle;
+                    }, 2000);
                 }
-            } else if (data.message) {
-                // For non-SELECT queries, show the success message
-                resultArea.textContent = data.message;
-            }
-         } catch (error) {
-             resultArea.textContent = `Error: ${error.message}`;
-         }
-    };
-
-    // Helper function to create table cell with long text handling
-    function createTableCell(value) {
-        const td = document.createElement('td');
-        if (value === null) {
-            td.textContent = 'NULL';
-        } else if (typeof value === 'object' || (typeof value === 'string' && value.trim().startsWith('{'))) {
-            const jsonView = formatJsonCell(value);
-            td.appendChild(jsonView);
-        } else {
-            const textValue = String(value);
-            td.textContent = textValue;
-
-            // Add special styling for long text (like CREATE TABLE statements)
-            if (textValue.length > 100 || textValue.includes('\n') || textValue.toUpperCase().includes('CREATE TABLE')) {
-                td.classList.add('long-text');
-
-                // Add click-to-copy functionality
-                td.style.cursor = 'pointer';
-                td.title = 'Click to copy to clipboard';
-                td.addEventListener('click', async () => {
-                    try {
-                        // Try modern clipboard API first
-                        if (navigator.clipboard && navigator.clipboard.writeText) {
-                            await navigator.clipboard.writeText(textValue);
-                        } else {
-                            // Fallback for older browsers or non-HTTPS
-                            const textArea = document.createElement('textarea');
-                            textArea.value = textValue;
-                            textArea.style.position = 'fixed';
-                            textArea.style.left = '-999999px';
-                            textArea.style.top = '-999999px';
-                            document.body.appendChild(textArea);
-                            textArea.focus();
-                            textArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                        }
-
-                        // Show temporary feedback
-                        const originalTitle = td.title;
-                        td.title = 'Copied!';
-                        setTimeout(() => {
-                            td.title = originalTitle;
-                        }, 1000);
-                    } catch (err) {
-                        console.error('Failed to copy text: ', err);
-                        // Show error feedback
-                        const originalTitle = td.title;
-                        td.title = 'Copy failed - try selecting text manually';
-                        setTimeout(() => {
-                            td.title = originalTitle;
-                        }, 2000);
-                    }
-                });
-            }
+            });
         }
-        return td;
     }
+    return td;
+}
 
-    // Create query result table function
-    function createQueryResultTable(resultArea, results) {
-        resultArea.innerHTML = '';
-        const tableWrapper = document.createElement('div');
-        tableWrapper.className = 'table-scroll-wrapper';
-    
+// Create query result table function
+function createQueryResultTable(resultArea, results) {
+    resultArea.innerHTML = '';
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'table-scroll-wrapper';
+
     // Create download buttons container
     const downloadButtons = document.createElement('div');
     downloadButtons.className = 'download-buttons';
@@ -1394,7 +1295,6 @@ document.addEventListener('keydown', (e) => {
                 'Failed to download Excel file. Please ensure the server supports Excel downloads ' +
                 'or try downloading as CSV instead.'
             );
-            link.click();
         });
     };
     
@@ -1406,36 +1306,138 @@ document.addEventListener('keydown', (e) => {
     if (queryButtons) {
         queryButtons.insertBefore(downloadButtons, queryButtons.firstChild);
     }
-        const table = document.createElement('table');
-        table.className = 'query-result-table';
-        
-        // Create header
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-        Object.keys(results[0]).forEach(key => {
-            const th = document.createElement('th');
-            th.textContent = key;
-            headerRow.appendChild(th);
+    
+    const table = document.createElement('table');
+    table.className = 'query-result-table';
+    
+    // Create header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    Object.keys(results[0]).forEach(key => {
+        const th = document.createElement('th');
+        th.textContent = key;
+        headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    // Create body
+    const tbody = document.createElement('tbody');
+    results.forEach(row => {
+        const tr = document.createElement('tr');
+        Object.values(row).forEach(value => {
+            const td = createTableCell(value);
+            tr.appendChild(td);
         });
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-        
-        // Create body
-        const tbody = document.createElement('tbody');
-        results.forEach(row => {
-            const tr = document.createElement('tr');
-            Object.values(row).forEach(value => {
-                const td = createTableCell(value);
-                tr.appendChild(td);
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    
+    tableWrapper.appendChild(table);
+    resultArea.appendChild(tableWrapper);
+    setTimeout(() => adjustColumnWidths(table), 0);
+}
+
+// Set up global query handler (independent of table state)
+document.addEventListener('keydown', (e) => {
+    if (!isAdminMode) return;
+    if (!e.key || e.key.toLowerCase() !== 'q') return;
+
+    let { queryPopup, executeButton, queryInput, resultArea, queryHistory, historyIndex, handleClose } = setupQueryPopup();
+
+    const isQueryInputFocused = document.activeElement?.id === 'queryInput';
+    const isQueryPopupVisible = queryPopup?.classList.contains('visible');
+    
+    if (isQueryInputFocused || isQueryPopupVisible) return;
+    
+    e.preventDefault();
+
+    // Clear and show popup
+    queryPopup.classList.add('visible');
+    queryInput.value = '';
+    // Only remove download buttons from query popup, not from table sections
+    queryPopup.querySelector('.download-buttons')?.remove();
+    resultArea.textContent = '';
+
+    // Set up execute button text
+    executeButton.innerHTML = `
+        <span class="lang-ko">(Ctrl+Enter) 실행</span>
+        <span class="lang-en">(Ctrl+Enter) Execute</span>
+        <span class="lang-vi">(Ctrl+Enter) Thực thi</span>
+    `;
+
+    // Replace elements to clear old event listeners
+    const newInput = queryInput.cloneNode(true);
+    const newButton = executeButton.cloneNode(true);
+    queryInput.parentNode.replaceChild(newInput, queryInput);
+    executeButton.parentNode.replaceChild(newButton, executeButton);
+    queryInput = newInput;
+    queryInput.focus();
+
+    // Handle query execution
+    const handleExecute = async () => {
+        const query = queryInput.value.trim();
+        // Clean up previous download buttons only from query popup
+        queryPopup.querySelector('.download-buttons')?.remove();
+        if (!query) return;
+
+        // Save to history
+        if (!queryHistory.includes(query)) {
+            queryHistory.unshift(query);
+            if (queryHistory.length > 50) queryHistory.pop();
+            localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+        }
+        historyIndex = -1;
+
+        try {
+            const response = await fetch(`${window.baseUrl}/execute_query`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
             });
-            tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-        
-        tableWrapper.appendChild(table);
-        resultArea.appendChild(tableWrapper);
-        setTimeout(() => adjustColumnWidths(table), 0);
-    }
+
+            const data = await response.json();
+            if (data.error) {
+                resultArea.textContent = `Error: ${data.error}`;
+                return;
+            }
+
+            if (data.results) {
+                // Handle multiple result sets
+                if (data.hasMultipleResultSets) {
+                    resultArea.innerHTML = '';
+                    data.results.forEach((resultSet, index) => {
+                        const setHeader = document.createElement('h4');
+                        setHeader.textContent = `Result Set ${index + 1}:`;
+                        setHeader.style.marginTop = index > 0 ? '20px' : '0';
+                        resultArea.appendChild(setHeader);
+
+                        const setContainer = document.createElement('div');
+                        if (Array.isArray(resultSet) && resultSet.length > 0 && typeof resultSet[0] === 'object') {
+                            createQueryResultTable(setContainer, resultSet);
+                        } else {
+                            setContainer.textContent = JSON.stringify(resultSet, null, 2);
+                        }
+                        resultArea.appendChild(setContainer);
+                    });
+                } else {
+                    // Single result set
+                    if (Array.isArray(data.results) && data.results.length > 0 && typeof data.results[0] === 'object') {
+                        createQueryResultTable(resultArea, data.results);
+                    } else {
+                        resultArea.textContent = JSON.stringify(data.results, null, 2);
+                    }
+                }
+            } else if (data.message) {
+                // For non-SELECT queries, show the success message
+                resultArea.textContent = data.message;
+            }
+         } catch (error) {
+             resultArea.textContent = `Error: ${error.message}`;
+         }
+    };
+
+    // The createTableCell and createQueryResultTable functions are now defined at module level
 
     // Event listeners
     queryInput.addEventListener('keydown', (e) => {
@@ -3421,7 +3423,10 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                 const row = cell.closest('tr');
                 const rowId = row.cells[0].textContent;
                 const columnIndex = Array.from(row.cells).indexOf(cell);
-                const columnName = table.querySelector('th:nth-child(' + (columnIndex + 1) + ')').textContent;
+                const headerTable = tableDiv.querySelector('.header-table');
+                const th = headerTable.querySelector('th:nth-child(' + (columnIndex + 1) + ')');
+                const headerText = th.querySelector('.header-text');
+                const columnName = headerText ? headerText.textContent.trim() : th.textContent.trim();
                 
                 try {
                     // Validate JSON if it's a JSON cell
@@ -3614,7 +3619,10 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
             if (e.key && e.key.toLowerCase() === 'x') {
                 const columnIndex = Array.from(row.cells).indexOf(focusedCell);
                 const valueToDelete = focusedCell.textContent;
-                const columnName = table.querySelector(`th:nth-child(${columnIndex + 1})`).textContent;
+                const headerTable = tableDiv.querySelector('.header-table');
+                const th = headerTable.querySelector(`th:nth-child(${columnIndex + 1})`);
+                const headerText = th.querySelector('.header-text');
+                const columnName = headerText ? headerText.textContent.trim() : th.textContent.trim();
 
                 try {
                     const response = await fetch(`${baseUrl}/delete/${tableName}/column/${columnName}/value/${valueToDelete}`, {
@@ -3626,7 +3634,7 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                     }
 
                     // Find all rows with the same value in the same column
-                    const rowsToDelete = Array.from(table.querySelectorAll('tr')).filter(r => {
+                    const rowsToDelete = Array.from(bodyTable.querySelectorAll('tr')).filter(r => {
                         return r.cells[columnIndex] && r.cells[columnIndex].textContent === valueToDelete;
                     });
 
@@ -3711,7 +3719,10 @@ export function handleRowDeletion(tableDiv, tableName, baseUrl) {
                 try {
                     // Get table columns from header table
                     const headerTable = tableDiv.querySelector('.header-table');
-                    const headers = Array.from(headerTable.querySelectorAll('th')).map(th => th.textContent);
+                    const headers = Array.from(headerTable.querySelectorAll('th')).map(th => {
+                        const headerText = th.querySelector('.header-text');
+                        return headerText ? headerText.textContent.trim() : th.textContent.trim();
+                    });
                     
                     // Create empty row data object
                     const emptyRow = {};
@@ -3860,7 +3871,8 @@ function addFilterListeners(table, columns) {
     let scrollTimeout;
     window.addEventListener('scroll', function(e) {
         // Don't close if scrolling inside a dropdown
-        if (e.target.closest('.filter-dropdown-content')) {
+        // Check if e.target has closest method (it might be window)
+        if (e.target && typeof e.target.closest === 'function' && e.target.closest('.filter-dropdown-content')) {
             return;
         }
 
