@@ -13,9 +13,70 @@
 
 ![Database Schema](readme_assets/schema.png)
 
-A real-time web-based database monitoring system that focus on monitoring tables' data. You can use it for multiple databases, free and locally. Monitor your MySQL and PostgreSQL databases with a modern, responsive interface.
+A real-time database monitoring system that focus on monitoring tables' data. Available as both a **desktop application (Electron)** and **web application**. Monitor your MySQL and PostgreSQL databases with a modern, responsive interface.
 
-## Quick Installation
+## 🚀 Desktop Application (Electron)
+
+### Download Portable Executable
+- Download the latest portable `.exe` from [Releases](https://github.com/nganlinh4/udbm/releases)
+- No installation required - just run the executable!
+
+### Build from Source
+
+#### Prerequisites
+- Node.js 16+ ([Download](https://nodejs.org/))
+- Python 3.8+ ([Download](https://www.python.org/))
+
+#### Quick Setup
+
+**Windows:**
+```powershell
+# Clone and setup
+git clone https://github.com/nganlinh4/udbm.git
+cd udbm
+.\setup_dev.ps1  # Automated setup script
+
+# Run in development mode
+npm run dev
+
+# Build portable executable
+npm run build
+# Output: release/uDBM-portable.exe
+```
+
+**Linux/macOS:**
+```bash
+# Clone and setup
+git clone https://github.com/nganlinh4/udbm.git
+cd udbm
+chmod +x setup_dev.sh
+./setup_dev.sh  # Automated setup script
+
+# Run in development mode
+npm run dev
+
+# Build executable
+npm run build
+```
+
+## 📁 Project Structure
+
+```
+udbm/
+├── backend/          # Flask application
+│   ├── static/      # Frontend assets
+│   ├── templates/   # HTML templates
+│   └── monitor.py   # Main Flask server
+├── electron/        # Electron wrapper
+│   ├── main.js     # Main process
+│   └── preload.js  # Preload script
+├── build-tools/     # Build configurations
+│   └── monitor.spec # PyInstaller config
+├── package.json     # Node.js dependencies
+└── setup_dev.ps1/sh # Setup scripts
+```
+
+## Quick Installation (Web Version)
 
 ### Automated Installation (Recommended)
 

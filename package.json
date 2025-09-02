@@ -1,0 +1,59 @@
+{
+  "name": "udbm",
+  "version": "2.0.0",
+  "description": "uDBM - Realtime Database Monitor Desktop Application",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm:pydev\" \"npm:edev\"",
+    "pydev": "cd backend && python monitor.py",
+    "edev": "electron .",
+    "pybuild": "pyinstaller build-tools/monitor.spec --noconfirm --distpath backend/dist --workpath backend/build",
+    "electron:build": "electron-builder",
+    "build": "npm run pybuild && npm run electron:build",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "database",
+    "monitor",
+    "mysql",
+    "postgresql",
+    "electron"
+  ],
+  "author": "nganlinh4",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.nganlinh4.udbm",
+    "productName": "uDBM",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "!backend/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/dist/monitor",
+        "to": "python",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "backend/static/monitor_icon.png"
+    },
+    "portable": {
+      "artifactName": "uDBM-${version}-portable.exe"
+    }
+  }
+}

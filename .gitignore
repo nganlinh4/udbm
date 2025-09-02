@@ -107,3 +107,17 @@ dmypy.json
 static/schema
 static/schema.png
 config.py
+
+# Electron and build artifacts
+node_modules/
+backend/dist/
+backend/build/
+release/
+*.log
+package-lock.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
