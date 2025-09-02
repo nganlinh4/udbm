@@ -15,8 +15,10 @@ from datetime import timedelta, datetime, date
 from decimal import Decimal
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+# Suppress verbose debug logs from mysql.connector
+logging.getLogger('mysql.connector').setLevel(logging.WARNING)
 
 def make_json_serializable(obj):
     """
@@ -1724,7 +1726,7 @@ if __name__ == '__main__':
         app.run(
             host='0.0.0.0',  # Allow all incoming connections
             port=5080,
-            debug=True,     # Changed to False for security
+            debug=False,    # Set to False for production
             threaded=True,
             use_reloader=False  # Disable reloader when using threads
         )
