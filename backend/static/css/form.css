@@ -620,6 +620,11 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
     line-height: 1.2;
     margin: 0 0 6px 12px;
     color: var(--md-sys-color-on-surface-variant);
+    background: transparent !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    display: inline-block !important;
 }
 .material-form .form-group .field-shell { position: relative; }
 .material-form .form-group .field-extras select { flex: 1 1 auto; min-width: 0; }
