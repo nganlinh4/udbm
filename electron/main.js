@@ -4,6 +4,7 @@ const path = require('path');
 const net = require('net');
 
 let mainWindow;
+let splashWindow;
 let pythonProcess;
 
 // Function to check if port is open
@@ -123,6 +124,31 @@ function stopPythonBackend() {
   }
 }
 
+// Create splash screen
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 400,
+    height: 500,
+    frame: false,  // Remove window frame
+    transparent: false,  // Set to false for better performance
+    alwaysOnTop: true,
+    resizable: false,
+    movable: false,
+    center: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    },
+    icon: path.join(__dirname, '..', 'backend', 'static', 'monitor_icon.png')
+  });
+  
+  splashWindow.loadFile(path.join(__dirname, 'splash.html'));
+  
+  splashWindow.on('closed', () => {
+    splashWindow = null;
+  });
+}
+
 // Create the main window
 function createWindow() {
   // Create custom menu
@@ -190,6 +216,7 @@ function createWindow() {
     width: 1400,
     height: 900,
     autoHideMenuBar: true,  // Auto-hide menu bar - press Alt to show
+    show: false,  // Don't show until ready
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -197,6 +224,16 @@ function createWindow() {
     },
     icon: path.join(__dirname, '..', 'backend', 'static', 'monitor_icon.png'),
     title: 'uDBM - Realtime Database Monitor'
+  });
+  
+  // Show main window when ready and close splash
+  mainWindow.once('ready-to-show', () => {
+    // Instantly switch from splash to main window
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close();
+    }
+    mainWindow.show();
+    mainWindow.focus();
   });
   
   // Load the Flask application
@@ -211,6 +248,10 @@ function createWindow() {
 // App event handlers
 app.whenReady().then(async () => {
   try {
+    // Show splash screen immediately
+    createSplashWindow();
+    
+    // Start backend and create main window
     await startPythonBackend();
     createWindow();
     
@@ -224,6 +265,9 @@ app.whenReady().then(async () => {
     });
   } catch (error) {
     console.error('Failed to start application:', error);
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close();
+    }
     app.quit();
   }
 });
