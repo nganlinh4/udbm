@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, globalShortcut } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const net = require('net');
@@ -168,6 +168,16 @@ function createWindow() {
               mainWindow.setFullScreen(!mainWindow.isFullScreen());
             }
           }
+        },
+        {
+          label: 'Toggle Menu Bar',
+          accelerator: 'CmdOrCtrl+Shift+M',
+          click: () => {
+            if (mainWindow) {
+              const visible = mainWindow.isMenuBarVisible();
+              mainWindow.setMenuBarVisibility(!visible);
+            }
+          }
         }
       ]
     }
@@ -179,6 +189,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    autoHideMenuBar: true,  // Auto-hide menu bar - press Alt to show
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -202,6 +213,15 @@ app.whenReady().then(async () => {
   try {
     await startPythonBackend();
     createWindow();
+    
+    // Register global shortcut for toggling menu visibility
+    // This provides an additional way to toggle beyond the Alt key
+    globalShortcut.register('CmdOrCtrl+Shift+M', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const visible = mainWindow.isMenuBarVisible();
+        mainWindow.setMenuBarVisibility(!visible);
+      }
+    });
   } catch (error) {
     console.error('Failed to start application:', error);
     app.quit();
@@ -223,6 +243,11 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
   stopPythonBackend();
+});
+
+app.on('will-quit', () => {
+  // Unregister all shortcuts when app is quitting
+  globalShortcut.unregisterAll();
 });
 
 // Handle uncaught exceptions
