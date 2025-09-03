@@ -80,6 +80,12 @@ python -m venv venv
 # Install Python dependencies
 pip install -r backend/requirements.txt
 
+# Activate the virtual environment
+# Linux/Mac:
+source venv/bin/activate
+# Windows:
+venv\Scripts\Activate.ps1
+
 # Start the Flask server
 python backend/monitor.py
 ```
