@@ -324,6 +324,24 @@
     padding-right: 8px;
 }
 
+/* Database connection component styling */
+.db-name {
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+}
+
+.db-user {
+    font-weight: 500;
+    color: var(--md-sys-color-primary);
+    font-style: italic;
+}
+
+.db-host {
+    font-weight: 400;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.8;
+}
+
 .delete-db {
     padding: 4px 8px;
     background: rgba(211, 47, 47, 0.1);
@@ -356,6 +374,20 @@
     color: white;
 }
 
+.db-item.active .db-name {
+    color: white;
+    font-weight: 700;
+}
+
+.db-item.active .db-user {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.db-item.active .db-host {
+    color: rgba(255, 255, 255, 0.7);
+}
+
 /* DB Switcher Dark Theme Adaptations */
 [data-theme="dark"] .db-switch-button {
     background: var(--md-sys-color-surface-container);
@@ -381,6 +413,31 @@
 
 [data-theme="dark"] .db-item.active {
     background: var(--md-sys-color-primary);
+}
+
+[data-theme="dark"] .db-name {
+    color: var(--md-sys-color-on-surface);
+}
+
+[data-theme="dark"] .db-user {
+    color: var(--md-sys-color-primary);
+}
+
+[data-theme="dark"] .db-host {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+[data-theme="dark"] .db-item.active .db-name {
+    color: white;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .db-item.active .db-user {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="dark"] .db-item.active .db-host {
+    color: rgba(255, 255, 255, 0.7);
 }
 
 [data-theme="dark"] .delete-db {

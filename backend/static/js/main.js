@@ -1559,7 +1559,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const contentSpan = document.createElement('span');
                 contentSpan.className = 'db-item-content';
                 const dbType = config.type;
-                contentSpan.innerHTML = `${config.database} (${config.host}) <span class="db-type-badge db-type-${dbType.toLowerCase()}">${dbType === 'postgresql' ? 'PostgreSQL' : 'MySQL'}</span>`;
+                contentSpan.innerHTML = `<span class="db-name">${config.database}</span> (<span class="db-user">${config.user}</span>@<span class="db-host">${config.host}</span>) <span class="db-type-badge db-type-${dbType.toLowerCase()}">${dbType === 'postgresql' ? 'PostgreSQL' : 'MySQL'}</span>`;
                 contentSpan.addEventListener('click', () => switchDatabase(config));
 
                 const deleteBtn = document.createElement('button');
