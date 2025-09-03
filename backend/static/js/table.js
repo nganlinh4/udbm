@@ -995,8 +995,8 @@ function refreshTableWithImageSettings(tableName) {
             // Get the original data value, not the current display content
             let originalValue = cell.dataset.originalValue;
 
-            // If no original value is stored, try to extract it from current content
-            if (!originalValue) {
+            // If no original value is stored, or if it's the problematic "[object Object]", try to extract it from current content
+            if (!originalValue || originalValue === '[object Object]') {
                 const imageContainer = cell.querySelector('.table-image-container');
                 if (imageContainer) {
                     // If there's an image container, get the original path from img alt
@@ -1005,11 +1005,27 @@ function refreshTableWithImageSettings(tableName) {
                         originalValue = img.alt;
                     }
                 } else {
-                    // No image container, use text content as original value
-                    originalValue = cell.textContent;
+                    const jsonCell = cell.querySelector('.json-cell');
+                    if (jsonCell) {
+                        // For JSON cells, use the JSON content as the original value
+                        originalValue = jsonCell.textContent;
+                    } else {
+                        // No image container or JSON cell, use text content as original value
+                        originalValue = cell.textContent;
+                    }
                 }
-                // Store the original value for future use
-                cell.dataset.originalValue = originalValue;
+                // Store the original value for future use (properly formatted for JSON)
+                try {
+                    if (originalValue && (originalValue.trim().startsWith('{') || originalValue.trim().startsWith('['))) {
+                        // It's JSON, store as-is (already a JSON string)
+                        cell.dataset.originalValue = originalValue;
+                    } else {
+                        // It's a primitive, store as string
+                        cell.dataset.originalValue = originalValue;
+                    }
+                } catch (e) {
+                    cell.dataset.originalValue = originalValue;
+                }
             }
 
             const columnName = columnNames[index];
@@ -2185,8 +2201,23 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
                 // Special handling for JSON comparison
                 if (typeof newVal === 'object' && newVal !== null) {
                     try {
-                        // Deep compare objects
-                        return JSON.stringify(newVal) !== JSON.stringify(existingVal);
+                        // Normalize both values to JSON strings for comparison
+                        const newValStr = JSON.stringify(newVal);
+                        const existingValStr = typeof existingVal === 'object' && existingVal !== null
+                            ? JSON.stringify(existingVal)
+                            : existingVal;
+                        return newValStr !== existingValStr;
+                    } catch (e) {
+                        return true;
+                    }
+                }
+
+                // Handle case where existingVal might be an object but newVal is not
+                if (typeof existingVal === 'object' && existingVal !== null) {
+                    try {
+                        const existingValStr = JSON.stringify(existingVal);
+                        const newValStr = String(newVal !== null ? newVal : '');
+                        return newValStr !== existingValStr;
                     } catch (e) {
                         return true;
                     }
@@ -2205,9 +2236,23 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
                 let td;
 
                 // Check if this specific cell's data has changed
-                const cellChanged = (typeof val === 'object' && val !== null) ?
-                    JSON.stringify(val) !== JSON.stringify(existingVal) :
-                    String(val !== null ? val : '') !== String(existingVal !== null ? existingVal : '');
+                let cellChanged;
+                if (typeof val === 'object' && val !== null) {
+                    // New value is object, compare as JSON
+                    const newValStr = JSON.stringify(val);
+                    const existingValStr = typeof existingVal === 'object' && existingVal !== null
+                        ? JSON.stringify(existingVal)
+                        : existingVal;
+                    cellChanged = newValStr !== existingValStr;
+                } else if (typeof existingVal === 'object' && existingVal !== null) {
+                    // Existing value is object but new value is not
+                    const existingValStr = JSON.stringify(existingVal);
+                    const newValStr = String(val !== null ? val : '');
+                    cellChanged = newValStr !== existingValStr;
+                } else {
+                    // Both are primitives
+                    cellChanged = String(val !== null ? val : '') !== String(existingVal !== null ? existingVal : '');
+                }
 
                 if (!cellChanged && existing.element) {
                     // Data hasn't changed, reuse existing cell to preserve image elements
@@ -2223,7 +2268,8 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
 
                     if (val !== null) {
                         // Store original value for image refresh functionality
-                        td.dataset.originalValue = String(val);
+                        // For objects, store as JSON string; for primitives, store as string
+                        td.dataset.originalValue = typeof val === 'object' ? JSON.stringify(val) : String(val);
 
                         if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                             const jsonView = formatJsonCell(val);
@@ -2261,7 +2307,8 @@ function updateTableRows(tbody, tableData, columns, tableName = null) {
                 
                 if (val !== null) {
                     // Store original value for image refresh functionality
-                    td.dataset.originalValue = String(val);
+                    // For objects, store as JSON string; for primitives, store as string
+                    td.dataset.originalValue = typeof val === 'object' ? JSON.stringify(val) : String(val);
 
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
@@ -3191,7 +3238,8 @@ function appendTableData(tableName, tableInfo, translations, currentLang) {
                 
                 if (val !== null) {
                     // Store original value for image refresh functionality
-                    td.dataset.originalValue = String(val);
+                    // For objects, store as JSON string; for primitives, store as string
+                    td.dataset.originalValue = typeof val === 'object' ? JSON.stringify(val) : String(val);
 
                     if (typeof val === 'object' || (typeof val === 'string' && val.trim().startsWith('{'))) {
                         const jsonView = formatJsonCell(val);
