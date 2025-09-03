@@ -55,35 +55,49 @@
             if (!svg) return;
             const paths = Array.from(svg.querySelectorAll('path'));
 
-            // All paths scale from small to large together (loading-like progress)
-            const durationMs = 2500; // total time for the grow animation
-            const minScale = 0.15;   // starting scale (15%)
-
-            // Easing: easeOutCubic
-            const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);
+            // Respect reduced-motion in JS as well
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                paths.forEach(p => p.style.transform = 'scale(1)');
+                return;
+            }
 
             // Disable any CSS animations — JS fully controls transforms here
             paths.forEach((p) => (p.style.animation = 'none'));
 
+            // Grow-in parameters
+            const durationMs = 2500; // total time for the grow animation
+            const minScale = 0.15;   // starting scale (15%)
+            const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);
+
             const t0 = performance.now();
-            function tick(now) {
+            function growTick(now) {
                 const raw = Math.min(1, Math.max(0, (now - t0) / durationMs));
                 const e = easeOutCubic(raw);
                 const s = (minScale + (1 - minScale) * e).toFixed(4);
 
-                for (let i = 0; i < paths.length; i++) {
-                    const path = paths[i];
-                    path.style.transform = `scale(${s})`;
-                }
+                for (const p of paths) p.style.transform = `scale(${s})`;
 
                 if (raw < 1) {
-                    requestAnimationFrame(tick);
+                    requestAnimationFrame(growTick);
                 } else {
-                    // Ensure final state is exact 1.0
-                    for (const path of paths) path.style.transform = 'scale(1)';
+                    // Start subtle breathing pulse after reaching full size
+                    startBreathing(paths);
                 }
             }
-            requestAnimationFrame(tick);
+            requestAnimationFrame(growTick);
+
+            function startBreathing(targetPaths) {
+                const amp = 0.015; // +/-1.5% breathing
+                const freq = 0.5;  // Hz (2s per cycle)
+                const tStart = performance.now();
+                function breatheTick(now) {
+                    const t = (now - tStart) / 1000; // seconds
+                    const s = (1 + amp * Math.sin(2 * Math.PI * freq * t)).toFixed(4);
+                    for (const p of targetPaths) p.style.transform = `scale(${s})`;
+                    requestAnimationFrame(breatheTick);
+                }
+                requestAnimationFrame(breatheTick);
+            }
         }
 
         function createFallbackLogo() {
