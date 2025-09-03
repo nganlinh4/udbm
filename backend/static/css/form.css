@@ -121,7 +121,6 @@
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
 }
 
 .form-group label {
@@ -622,7 +621,6 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
     color: var(--md-sys-color-on-surface-variant);
 }
 .material-form .form-group .field-shell { position: relative; }
-.material-form .form-group .field-extras { margin-top: 6px; }
 .material-form .form-group .field-extras select { flex: 1 1 auto; min-width: 0; }
 
 /* Favicon controls styles */
