@@ -329,6 +329,8 @@ html[data-lang="en"] .db-form .add-db-button .lang-en {
 .db-form .form-group:nth-child(3) { animation-delay: 0.2s; }
 .db-form .form-group:nth-child(4) { animation-delay: 0.25s; }
 .db-form .form-group:nth-child(5) { animation-delay: 0.3s; }
+.db-form .form-group:nth-child(6) { animation-delay: 0.35s; }
+.db-form .form-group:nth-child(7) { animation-delay: 0.4s; }
 
 .db-form button[type="submit"] {
     animation: formItemReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
