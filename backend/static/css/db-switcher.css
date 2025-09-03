@@ -396,13 +396,13 @@
 .db-menu {
     position: absolute;
     top: calc(100% + 25px);
-    left: -120px;
+    left: -134px;
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     padding: 12px;
     display: none;
-    width: 280px;  /* Fixed width */
+    width: 303px;  /* Fixed width */
     z-index: 1000;
     border: 1px solid rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
