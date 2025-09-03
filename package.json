@@ -5,7 +5,7 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently \"npm:pydev\" \"npm:edev\"",
-    "pydev": "cd backend && python monitor.py",
+    "pydev": "node scripts/run-backend.js",
     "edev": "electron .",
     "pybuild": "pyinstaller build-tools/monitor.spec --noconfirm --distpath backend/dist --workpath backend/build",
     "electron:build": "electron-builder",

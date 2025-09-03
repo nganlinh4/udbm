@@ -2,6 +2,7 @@ const { app, BrowserWindow, Menu, globalShortcut } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const net = require('net');
+const fs = require('fs');
 
 let mainWindow;
 let splashWindow;
@@ -57,13 +58,25 @@ async function startPythonBackend() {
       pythonPath = path.join(process.resourcesPath, 'python', 'monitor.exe');
       pythonArgs = [];
     } else {
-      // In development, use Python directly
-      pythonPath = 'python';
+      // In development, prefer Python from root venv if available
+      const root = path.join(__dirname, '..');
+      const isWindows = process.platform === 'win32';
+      const candidates = isWindows
+        ? [
+            path.join(root, 'venv', 'Scripts', 'python.exe'),
+            path.join(root, 'venv', 'Scripts', 'python.bat')
+          ]
+        : [
+            path.join(root, 'venv', 'bin', 'python3'),
+            path.join(root, 'venv', 'bin', 'python')
+          ];
+      const venvPython = candidates.find(p => fs.existsSync(p));
+      pythonPath = venvPython || 'python';
       pythonArgs = [path.join(__dirname, '..', 'backend', 'monitor.py')];
     }
-    
+
     console.log('Starting Python backend:', pythonPath, pythonArgs);
-    
+
     pythonProcess = spawn(pythonPath, pythonArgs, {
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']

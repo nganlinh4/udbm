@@ -6,8 +6,6 @@ psutil>=5.8.0
 SQLAlchemy>=1.4.0
 pandas
 openpyxl
-graphviz
 xlsxwriter
 faker
-pymysql
 cryptography
