@@ -18,7 +18,7 @@ A real-time database monitoring system that focus on monitoring tables' data. Av
 ## 🚀 Desktop Application (Electron)
 
 ### Download Portable Executable
-- **Latest:** [Download Portable](https://github.com/nganlinh4/udbm/releases/latest) (94MB)
+- **Latest:** [Download Portable](https://github.com/nganlinh4/udbm/releases/latest)
 - No installation required - just download and run!
 
 ### Build from Source
@@ -48,6 +48,21 @@ pip install -r backend/requirements.txt
 npm run build
 # Output: release/uDBM-2.0.0-portable.exe
 ```
+
+## Run in Development (Electron + Backend)
+
+Use this to run the Flask backend and Electron together during development.
+
+```bash
+# Start development (runs backend via the root venv + Electron)
+npm run dev
+```
+
+Notes:
+- The dev script prefers Python from the root venv (venv). Ensure it exists and has Flask installed via the requirements file.
+- The backend serves at http://127.0.0.1:5080 and the Electron window will open automatically.
+- Stop with Ctrl+C.
+
 
 ## 📁 Project Structure
 
@@ -133,7 +148,7 @@ python monitor.py
    - Add your database connection through the interface
 
 ### Swipe table pills
-Quickly toggle multiple tables with swiping (table pills ordered smartly by their foreign keys, instead of alphabetically) 
+Quickly toggle multiple tables with swiping (table pills ordered smartly by their foreign keys, instead of alphabetically)
 
 ![Swipe Tables](readme_assets/swipe.png)
 
