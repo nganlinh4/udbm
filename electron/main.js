@@ -143,7 +143,8 @@ function createSplashWindow() {
     width: 400,
     height: 500,
     frame: false,  // Remove window frame
-    transparent: false,  // Set to false for better performance
+    transparent: true,  // Make window transparent
+    backgroundColor: '#00000000', // Fully transparent background
     alwaysOnTop: true,
     resizable: false,
     movable: false,
