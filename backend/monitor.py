@@ -522,22 +522,19 @@ def index():
                 current_db_config = None
                 tables = []
         app.jinja_env.cache = {}
-        preferred_theme = request.cookies.get('preferred_theme', 'light')
-        preferred_language = request.cookies.get('preferred_language', 'en')
+
+        # Let client decide theme and language (OS defaults) unless cookies already exist
+        preferred_theme = request.cookies.get('preferred_theme')
+        preferred_language = request.cookies.get('preferred_language')
 
         response = make_response(render_template('index.html',
             tables=tables,
-            preferred_theme=preferred_theme,
-            preferred_language=preferred_language,
+            preferred_theme=preferred_theme or '',
+            preferred_language=preferred_language or '',
             has_database=bool(current_db_config)
         ))
 
-        # Set default cookies if not present
-        if 'preferred_language' not in request.cookies:
-            response.set_cookie('preferred_language', 'en', max_age=365*24*60*60)
-        if 'preferred_theme' not in request.cookies:
-            response.set_cookie('preferred_theme', 'light', max_age=365*24*60*60)
-
+        # Do not set defaults here; the frontend will apply OS-based defaults and may set cookies later
         return response
     except Exception as e:
         logger.error(f"Error rendering template: {e}", exc_info=True)

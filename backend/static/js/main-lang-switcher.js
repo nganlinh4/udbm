@@ -19,6 +19,13 @@ function getMainCurrentLanguage() {
             return value;
         }
     }
+    // No cookie: use current document attribute (set from OS or navigator)
+    const attr = document.documentElement.getAttribute('data-lang');
+    if (attr) return attr;
+    const nav = navigator.language || (Array.isArray(navigator.languages) && navigator.languages[0]);
+    const lc = (nav || 'en').toLowerCase();
+    if (lc.startsWith('ko')) return 'ko';
+    if (lc.startsWith('vi')) return 'vi';
     return 'en';
 }
 

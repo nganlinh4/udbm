@@ -1,5 +1,39 @@
 <head>
     <title></title>
+    <script>
+        // Early theme and language setup before CSS to avoid FOUC
+        (function() {
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+                return null;
+            }
+            // Theme: cookie wins; otherwise follow OS preference
+            const savedTheme = getCookie('preferred_theme');
+            if (savedTheme === 'dark' || savedTheme === 'light') {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+            // Language: cookie wins; otherwise use navigator.language
+            const savedLang = getCookie('preferred_language');
+            let initialLang = savedLang;
+            if (!initialLang) {
+                const nav = navigator.language || (Array.isArray(navigator.languages) && navigator.languages[0]);
+                const lc = (nav || 'en').toLowerCase();
+                // Map to supported langs
+                if (lc.startsWith('ko')) initialLang = 'ko';
+                else if (lc.startsWith('vi')) initialLang = 'vi';
+                else initialLang = 'en';
+            }
+            document.documentElement.setAttribute('data-lang', initialLang);
+            // Also set html lang attribute for a11y
+            document.documentElement.setAttribute('lang', initialLang);
+        })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -48,9 +82,8 @@
             return null;
         }
 
-        // Set initial language display
-        const savedLang = getCookie('preferred_language') || 'en';
-        document.documentElement.setAttribute('data-lang', savedLang);
+        // Language attribute is already set early above; keep toggles in sync
+        const savedLang = document.documentElement.getAttribute('data-lang') || 'en';
 
         // The CSS in base.css will handle the language visibility based on data-lang attribute
         // No need for inline styles that can conflict
@@ -59,9 +92,9 @@
         window.addEventListener('DOMContentLoaded', () => {
             const toggle = document.getElementById('languageToggle');
             const initialToggle = document.getElementById('initialLanguageToggle');
-            
+
             const setToggleState = (toggle) => {
-                if (toggle) toggle.selected = savedLang === 'en';
+                if (toggle) toggle.selected = (savedLang === 'en');
             };
             [toggle, initialToggle].forEach(setToggleState);
 
@@ -72,9 +105,9 @@
                     document.documentElement.setAttribute('data-lang', newLang);
                     document.cookie = `preferred_language=${newLang};path=/;max-age=31536000`;
                     if (toggle) toggle.selected = this.selected;
-                    
+
                     // CSS will handle the language display based on data-lang attribute
-                    
+
                     // Update switch label opacity
                     document.querySelectorAll('.switch-label').forEach(label => {
                         if (label.getAttribute('data-lang') === newLang) {
@@ -114,7 +147,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             const mainThemeToggle = document.getElementById('themeToggle');
             const initialThemeToggle = document.getElementById('initialThemeToggle');
-            
+
             // Set initial state based on current theme
             const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
             if (mainThemeToggle) mainThemeToggle.selected = isDarkTheme;
@@ -144,18 +177,19 @@
                 return;
             }
 
-            // Initialize i18next
+            // Initialize i18next using the current data-lang
+            const initialLng = document.documentElement.getAttribute('data-lang') || 'en';
             window.i18nextPromise = i18next
                 .use(i18nextHttpBackend)
                 .init({
-                    lng: getCookie('preferred_language') || 'en',
+                    lng: initialLng,
                     fallbackLng: 'en',
                     debug: false,
                     backend: {
                         // Cache-bust translation files per page load to avoid stale keys
                         loadPath: (lngs, namespaces) => {
                             const v = (typeof window.__I18N_CACHE_BUSTER__ !== 'undefined') ? window.__I18N_CACHE_BUSTER__ : Date.now();
-                            const lng = Array.isArray(lngs) ? lngs[0] : (lngs || 'en');
+                            const lng = Array.isArray(lngs) ? lngs[0] : (lngs || initialLng);
                             return `/static/locales/${lng}/translation.json?v=${v}`;
                         }
                     },
@@ -242,10 +276,7 @@
                     'image.download': '다운로드',
                     'languages.korean': '한국어',
                     'languages.english': 'English',
-                    'languages.vietnamese': 'Tiếng Việt',
-                    'ui.warningPerformance': '갱신 주기가 2초 미만일 경우 시스템 성능에 영향을 줄 수 있습니다.',
-                    'ui.rowDeleted': '행이 삭제되었습니다.',
-                    'ui.databaseSetup': '데이터베이스 설정'
+                    'languages.vietnamese': 'Tiếng Việt'
                 },
                 en: {
                     'ui.timeUnit': 's',
@@ -294,10 +325,7 @@
                     'image.download': 'Download',
                     'languages.korean': '한국어',
                     'languages.english': 'English',
-                    'languages.vietnamese': 'Tiếng Việt',
-                    'ui.warningPerformance': 'Setting refresh rate under 2s may affect system performance.',
-                    'ui.rowDeleted': 'Row has been deleted.',
-                    'ui.databaseSetup': 'Database Setup'
+                    'languages.vietnamese': 'Tiếng Việt'
                 },
                 vi: {
                     'ui.timeUnit': 'giây',
@@ -346,10 +374,7 @@
                     'image.download': 'Tải xuống',
                     'languages.korean': '한국어',
                     'languages.english': 'English',
-                    'languages.vietnamese': 'Tiếng Việt',
-                    'ui.warningPerformance': 'Đặt tần suất làm mới dưới 2 giây có thể ảnh hưởng đến hiệu suất hệ thống.',
-                    'ui.rowDeleted': 'Hàng đã được xóa.',
-                    'ui.databaseSetup': 'Thiết lập cơ sở dữ liệu'
+                    'languages.vietnamese': 'Tiếng Việt'
                 }
             };
 
@@ -379,6 +404,7 @@
             if (window.i18next && window.i18next.isInitialized) {
                 i18next.changeLanguage(lng, () => {
                     document.documentElement.setAttribute('data-lang', lng);
+                    document.documentElement.setAttribute('lang', lng);
                     document.cookie = `preferred_language=${lng};path=/;max-age=31536000`;
                     updateTranslations();
 
@@ -388,6 +414,7 @@
             } else {
                 // Fallback when i18next is not ready - convert data-i18n elements manually
                 document.documentElement.setAttribute('data-lang', lng);
+                document.documentElement.setAttribute('lang', lng);
                 document.cookie = `preferred_language=${lng};path=/;max-age=31536000`;
 
                 // Manually update data-i18n elements using fallback translations

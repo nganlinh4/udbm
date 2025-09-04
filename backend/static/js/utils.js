@@ -25,9 +25,10 @@ export let isDarkMode = false;
 
 export function initializeTheme() {
     const themeToggle = document.getElementById('themeToggle');
-    const savedTheme = document.documentElement.getAttribute('data-theme');
-    themeToggle.selected = savedTheme === 'dark';
-    isDarkMode = savedTheme === 'dark';
+    // data-theme is set early based on cookie or OS
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    themeToggle.selected = currentTheme === 'dark';
+    isDarkMode = currentTheme === 'dark';
 
     themeToggle.addEventListener('change', () => {
         isDarkMode = themeToggle.selected;
@@ -37,7 +38,7 @@ export function initializeTheme() {
 }
 
 // Language management with i18next
-let currentLang = 'en';
+let currentLang = document.documentElement.getAttribute('data-lang') || 'en';
 
 export function getCurrentLanguage() {
     return currentLang;
@@ -371,12 +372,16 @@ export function initializeSettings() {
 }
 
 export function initializeLanguage(updateLanguage, updateStaticLanguageElements, updateDynamicElements, updateDropdownOptions, updateConnectionStatus) {
-    // Get saved language or default to English
-    const savedLang = getCookie('preferred_language') || 'en';
-    currentLang = savedLang;
-
-    // Set initial language attribute
-    document.documentElement.setAttribute('data-lang', currentLang);
+    // Use data-lang set early from cookie or OS; fall back to navigator
+    const attrLang = document.documentElement.getAttribute('data-lang');
+    if (attrLang) {
+        currentLang = attrLang;
+    } else {
+        const nav = navigator.language || (Array.isArray(navigator.languages) && navigator.languages[0]);
+        const lc = (nav || 'en').toLowerCase();
+        currentLang = lc.startsWith('ko') ? 'ko' : lc.startsWith('vi') ? 'vi' : 'en';
+        document.documentElement.setAttribute('data-lang', currentLang);
+    }
 
     // Wait for i18next to be ready, then update language
     if (window.i18nextPromise && typeof window.i18nextPromise.then === 'function') {
