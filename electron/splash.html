@@ -55,8 +55,9 @@
             if (!svg) return;
             const paths = Array.from(svg.querySelectorAll('path'));
 
-            // Respect reduced-motion in JS as well
-            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            // Respect reduced-motion, unless explicitly overridden via ?anim=on
+            const forceAnim = new URLSearchParams(location.search).get('anim') === 'on';
+            if (!forceAnim && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 paths.forEach(p => p.style.transform = 'scale(1)');
                 return;
             }

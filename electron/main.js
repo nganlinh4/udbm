@@ -156,7 +156,12 @@ function createSplashWindow() {
     icon: path.join(__dirname, '..', 'backend', 'static', 'monitor_icon.png')
   });
   
-  splashWindow.loadFile(path.join(__dirname, 'splash.html'));
+  if (app.isPackaged) {
+    splashWindow.loadFile(path.join(__dirname, 'splash.html'));
+  } else {
+    // Developer override: force animation even if OS has reduced motion enabled
+    splashWindow.loadFile(path.join(__dirname, 'splash.html'), { query: { anim: 'on' } });
+  }
   
   splashWindow.on('closed', () => {
     splashWindow = null;
