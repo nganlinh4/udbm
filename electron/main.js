@@ -7,21 +7,22 @@ const fs = require('fs');
 let mainWindow;
 let splashWindow;
 let pythonProcess;
+let splashLoadTime = null;
 
 // Function to check if port is open
 function waitForPort(port, host = '127.0.0.1', timeout = 30000) {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
-    
+
     const tryConnect = () => {
       const socket = new net.Socket();
-      
+
       socket.setTimeout(100);
       socket.on('connect', () => {
         socket.destroy();
         resolve();
       });
-      
+
       socket.on('timeout', () => {
         socket.destroy();
         if (Date.now() - startTime > timeout) {
@@ -30,7 +31,7 @@ function waitForPort(port, host = '127.0.0.1', timeout = 30000) {
           setTimeout(tryConnect, 500);
         }
       });
-      
+
       socket.on('error', () => {
         socket.destroy();
         if (Date.now() - startTime > timeout) {
@@ -39,10 +40,10 @@ function waitForPort(port, host = '127.0.0.1', timeout = 30000) {
           setTimeout(tryConnect, 500);
         }
       });
-      
+
       socket.connect(port, host);
     };
-    
+
     tryConnect();
   });
 }
@@ -52,7 +53,7 @@ async function startPythonBackend() {
   return new Promise((resolve, reject) => {
     let pythonPath;
     let pythonArgs;
-    
+
     if (app.isPackaged) {
       // In production, use the bundled executable
       pythonPath = path.join(process.resourcesPath, 'python', 'monitor.exe');
@@ -81,25 +82,25 @@ async function startPythonBackend() {
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']
     });
-    
+
     pythonProcess.stdout.on('data', (data) => {
       console.log(`Python stdout: ${data}`);
     });
-    
+
     pythonProcess.stderr.on('data', (data) => {
       console.error(`Python stderr: ${data}`);
     });
-    
+
     pythonProcess.on('error', (error) => {
       console.error('Failed to start Python process:', error);
       reject(error);
     });
-    
+
     pythonProcess.on('close', (code) => {
       console.log(`Python process exited with code ${code}`);
       pythonProcess = null;
     });
-    
+
     // Wait for Flask server to be ready
     waitForPort(5080)
       .then(() => {
@@ -120,14 +121,14 @@ async function startPythonBackend() {
 function stopPythonBackend() {
   if (pythonProcess) {
     console.log('Stopping Python backend...');
-    
+
     // Try graceful shutdown first
     if (process.platform === 'win32') {
       spawn('taskkill', ['/pid', pythonProcess.pid, '/f', '/t']);
     } else {
       pythonProcess.kill('SIGTERM');
     }
-    
+
     // Force kill after timeout
     setTimeout(() => {
       if (pythonProcess) {
@@ -151,18 +152,17 @@ function createSplashWindow() {
     center: true,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      backgroundThrottling: false
     },
     icon: path.join(__dirname, '..', 'backend', 'static', 'monitor_icon.png')
   });
-  
-  if (app.isPackaged) {
-    splashWindow.loadFile(path.join(__dirname, 'splash.html'));
-  } else {
-    // Developer override: force animation even if OS has reduced motion enabled
-    splashWindow.loadFile(path.join(__dirname, 'splash.html'), { query: { anim: 'on' } });
-  }
-  
+
+  const query = { anim: 'on' };
+  splashWindow.loadFile(path.join(__dirname, 'splash.html'), { query });
+  // Record when splash started rendering; we will hold main window until min duration
+  splashWindow.webContents.once('dom-ready', () => { splashLoadTime = Date.now(); });
+
   splashWindow.on('closed', () => {
     splashWindow = null;
   });
@@ -227,15 +227,16 @@ function createWindow() {
       ]
     }
   ];
-  
+
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
-  
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     autoHideMenuBar: true,  // Auto-hide menu bar - press Alt to show
     show: false,  // Don't show until ready
+    backgroundColor: '#000000',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -244,7 +245,7 @@ function createWindow() {
     icon: path.join(__dirname, '..', 'backend', 'static', 'monitor_icon.png'),
     title: 'uDBM - Realtime Database Monitor'
   });
-  
+
   // Show main window when ready and close splash
   mainWindow.once('ready-to-show', () => {
     // Instantly switch from splash to main window
@@ -253,11 +254,21 @@ function createWindow() {
     }
     mainWindow.show();
     mainWindow.focus();
+  // Enforce splash duration before showing main window
+  const MIN_SPLASH_MS = 2600;
+  mainWindow.webContents.once('dom-ready', async () => {
+    const since = splashLoadTime ? Date.now() - splashLoadTime : MIN_SPLASH_MS;
+    const wait = Math.max(0, MIN_SPLASH_MS - since);
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    if (splashWindow && !splashWindow.isDestroyed()) splashWindow.close();
+    mainWindow.show();
+    mainWindow.focus();
   });
-  
+  });
+
   // Load the Flask application
   mainWindow.loadURL('http://127.0.0.1:5080');
-  
+
   // Handle window closed
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -269,11 +280,11 @@ app.whenReady().then(async () => {
   try {
     // Show splash screen immediately
     createSplashWindow();
-    
+
     // Start backend and create main window
     await startPythonBackend();
     createWindow();
-    
+
     // Register global shortcut for toggling menu visibility
     // This provides an additional way to toggle beyond the Alt key
     globalShortcut.register('CmdOrCtrl+Shift+M', () => {

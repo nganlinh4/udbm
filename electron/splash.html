@@ -84,6 +84,7 @@
                     // Start subtle breathing pulse after reaching full size
                     startBreathing(paths);
                 }
+                    try { window.electronSplashDone && window.electronSplashDone(); } catch (e) {}
             }
             requestAnimationFrame(growTick);
 
