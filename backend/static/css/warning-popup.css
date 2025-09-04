@@ -18,12 +18,16 @@
     max-width: 80vw;
     will-change: transform,
         opacity;
+    pointer-events: none; /* Do not block interactions when hidden */
+    visibility: hidden;   /* Prevent accidental hover/click capture */
 }
 
 .warning-popup.show {
     transform: translate(-50%, 0);
     opacity: 1;
     z-index: 10000;
+    pointer-events: auto; /* Allow interactions when visible */
+    visibility: visible;
 }
 
 .warning-popup .warning-icon {

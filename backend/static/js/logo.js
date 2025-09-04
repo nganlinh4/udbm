@@ -6,19 +6,26 @@ document.addEventListener('DOMContentLoaded', function() {
     var savedLogoData = localStorage.getItem('pageLogo');
     var savedLogoEnabled = localStorage.getItem('logoEnabled') === 'true';
 
+    var DEFAULT_LOGO_WIDTH = 300;
+
+    function applyLogoWidth() {
+        var savedWidth = parseInt(localStorage.getItem('logoWidth'), 10);
+        if (savedWidth && savedWidth >= 50 && savedWidth <= 1000) {
+            pageLogo.style.width = savedWidth + 'px';
+        } else {
+            pageLogo.style.width = DEFAULT_LOGO_WIDTH + 'px';
+        }
+    }
+
     // Initialize logo state
     logoToggle.selected = savedLogoEnabled;
     logoUploadButton.style.display = savedLogoEnabled ? 'block' : 'none';
-    
+
     if (savedLogoData && savedLogoEnabled) {
         pageLogo.style.display = 'block';
         pageLogo.innerHTML = '<img src="' + savedLogoData + '" alt="Page Logo"><div class="resize-handle"></div>';
 
-        // Apply saved width if available
-        var savedWidth = localStorage.getItem('logoWidth');
-        if (savedWidth) {
-            pageLogo.style.width = savedWidth + 'px';
-        }
+        applyLogoWidth();
     }
 
     // Handle logo toggle
@@ -30,13 +37,9 @@ document.addEventListener('DOMContentLoaded', function() {
             pageLogo.style.display = 'block';
             pageLogo.innerHTML = '<img src="' + localStorage.getItem('pageLogo') + '" alt="Page Logo"><div class="resize-handle"></div>';
 
-            // Apply saved width if available
-            var savedWidth = localStorage.getItem('logoWidth');
-            if (savedWidth) {
-                pageLogo.style.width = savedWidth + 'px';
-            }
+            applyLogoWidth();
         }
-        
+
         if (!this.selected) {
             pageLogo.innerHTML = '';
             pageLogo.style.display = 'none';
@@ -56,11 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 logoToggle.selected = true;
                 localStorage.setItem('logoEnabled', true);
 
-                // Apply saved width if available
-                var savedWidth = localStorage.getItem('logoWidth');
-                if (savedWidth) {
-                    pageLogo.style.width = savedWidth + 'px';
-                }
+                applyLogoWidth();
             };
             reader.readAsDataURL(file);
         }
@@ -88,11 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 logoToggle.selected = true;
                 localStorage.setItem('logoEnabled', true);
 
-                // Apply saved width if available
-                var savedWidth = localStorage.getItem('logoWidth');
-                if (savedWidth) {
-                    pageLogo.style.width = savedWidth + 'px';
-                }
+                applyLogoWidth();
             };
             reader.readAsDataURL(file);
         }
