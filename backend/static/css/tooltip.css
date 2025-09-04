@@ -87,9 +87,9 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
     background: #2d3748;
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
+    overflow: visible;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -101,11 +101,15 @@
     font-weight: 600;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
 }
 
 .switch-container .admin-tooltip .tooltip-content {
     padding: 8px 0;
     background: #2d3748;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
 }
 
 .switch-container .admin-tooltip .shortcut-row {
@@ -170,4 +174,25 @@
     width: 8px;
     height: 8px;
     background: inherit;
+}
+
+/* Admin tooltip arrow: match warning header color and point upward */
+.switch-container .admin-tooltip::after {
+    /* Remove default grey tooltip arrow from .tooltip::after */
+    content: none;
+}
+
+.switch-container .admin-tooltip .tooltip-warning {
+    position: relative;
+}
+
+.switch-container .admin-tooltip .tooltip-warning::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background: inherit; /* Use the same gradient as the header */
 }

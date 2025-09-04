@@ -66,6 +66,9 @@ md-switch::part(handle) {
     --md-switch-track-height: 24px;
     --md-switch-handle-width: 16px;
     --md-switch-handle-height: 16px;
+    /* Ensure selected (ON) thumb matches OFF size */
+    --md-switch-selected-handle-width: 16px;
+    --md-switch-selected-handle-height: 16px;
     --md-switch-track-shape: 12px;
 }
 
