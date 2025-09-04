@@ -14,7 +14,8 @@
     "scrollMore": "스크롤하여 더 많은 데이터 불러오기!",
     "allDataLoaded": "모든 데이터가 로드되었습니다.",
     "rows": "행",
-    "timeUnit": "초"
+    "timeUnit": "초",
+    "pageTitlePlaceholder": "페이지 제목을 편집하세요"
   },
   "admin": {
     "adminMode": "관리자 모드",

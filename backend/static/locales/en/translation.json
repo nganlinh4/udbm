@@ -14,7 +14,8 @@
     "scrollMore": "Scroll to load more data!",
     "allDataLoaded": "All data loaded.",
     "rows": "rows",
-    "timeUnit": "s"
+    "timeUnit": "s",
+    "pageTitlePlaceholder": "Edit page title"
   },
   "admin": {
     "adminMode": "ADMIN MODE",

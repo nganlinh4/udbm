@@ -14,7 +14,8 @@
     "scrollMore": "Cuộn để tải thêm dữ liệu!",
     "allDataLoaded": "Đã tải tất cả dữ liệu.",
     "rows": "hàng",
-    "timeUnit": "giây"
+    "timeUnit": "giây",
+    "pageTitlePlaceholder": "Chỉnh sửa tiêu đề trang"
   },
   "admin": {
     "adminMode": "CHẾ ĐỘ QUẢN TRỊ",
