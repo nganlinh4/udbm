@@ -154,8 +154,10 @@ function createSplashWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       backgroundThrottling: false
-    },
-    icon: path.join(__dirname, '..', 'backend', 'static', 'monitor_icon.png')
+    }
+  ,
+    icon: process.platform === 'win32' ? undefined
+         : path.join(__dirname, '..', 'backend', 'static', 'monitor_icon.png')
   });
 
   const query = { anim: 'on' };
@@ -241,8 +243,10 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
-    },
-    icon: path.join(__dirname, '..', 'backend', 'static', 'monitor_icon.png'),
+    }
+  ,
+    icon: process.platform === 'win32' ? undefined
+         : path.join(__dirname, '..', 'backend', 'static', 'monitor_icon.png'),
     title: 'uDBM - Realtime Database Monitor'
   });
 

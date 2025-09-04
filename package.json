@@ -50,7 +50,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "backend/static/monitor_icon.png"
+      "icon": "electron/assets/icon.ico"
     },
     "portable": {
       "artifactName": "uDBM-${version}-portable.exe"
