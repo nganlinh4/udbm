@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm:pydev\" \"npm:edev\"",
     "pydev": "node scripts/run-backend.js",
     "edev": "electron .",
-    "pybuild": "pyinstaller build-tools/monitor.spec --noconfirm --distpath backend/dist --workpath backend/build",
+    "pybuild": "node scripts/build-backend.js",
     "electron:build": "electron-builder",
     "build": "npm run pybuild && npm run electron:build",
     "postinstall": "electron-builder install-app-deps"
