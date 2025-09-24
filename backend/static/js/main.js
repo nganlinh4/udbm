@@ -616,6 +616,20 @@ function loadTableOrder() {
     }
 }
 
+// Keep pill buttons order in sync with section order
+function syncPillsToSections() {
+    const container = document.getElementById('tables-container');
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    if (!container || !buttonsLine) return;
+    const order = Array.from(container.querySelectorAll('.table-section'))
+        .map(section => section.dataset.tableName);
+    order.forEach((tableName) => {
+        const pill = buttonsLine.querySelector(`.table-button[data-table="${tableName}"]`);
+        if (pill) buttonsLine.appendChild(pill);
+    });
+}
+
+
 function updateDropdownOptions() {
     const dropdown = document.getElementById('monitorDropdown');
     if (dropdown) {
@@ -1116,10 +1130,46 @@ document.addEventListener('DOMContentLoaded', () => {
         animation: 150,
         handle: '.drag-handle',
         ghostClass: 'sortable-ghost',
+        onStart: function () { window.__sectionDragActive = true; },
         onEnd: function () {
+            window.__sectionDragActive = false;
             saveTableOrder();
+            // Keep pills in the same order as sections after manual drag
+            syncPillsToSections();
         }
     });
+
+    // Enable dragging the pill buttons themselves and sync section order
+    const pillsButtonsLine = document.querySelector('.table-buttons-line');
+    if (pillsButtonsLine) {
+        new Sortable(pillsButtonsLine, {
+            animation: 150,
+            draggable: '.table-button',
+            filter: '.arrangement-mode',
+            direction: 'horizontal',
+            forceFallback: true,
+            fallbackOnBody: true,
+            fallbackTolerance: 5,
+            swapThreshold: 0.5,
+            invertSwap: true,
+            bubbleScroll: true,
+            onStart: function () { window.__pillDragActive = true; },
+            onEnd: function () {
+                const order = Array.from(pillsButtonsLine.querySelectorAll('.table-button'))
+                    .map(btn => btn.dataset.table);
+                const container = document.getElementById('tables-container');
+                if (container) {
+                    order.forEach((tableName) => {
+                        const section = container.querySelector(`.table-section[data-table-name="${tableName}"]`);
+                        if (section) container.appendChild(section);
+                    });
+                }
+                saveTableOrder();
+                window.__pillDragActive = false;
+            }
+        });
+    }
+
 
     loadTableOrder();
 
@@ -2137,6 +2187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasMoved = false;
 
     buttonsLine.addEventListener('mousedown', (e) => {
+        if (window.__pillDragActive || window.__sectionDragActive) return;
         isMouseDown = true;
         hasMoved = false;
         mouseDownTime = Date.now();
@@ -2153,7 +2204,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         processedButtons.clear();
-        e.preventDefault();
     });
 
     function hasMovedEnough(e) {
@@ -2198,6 +2248,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     buttonsLine.addEventListener('mousemove', (e) => {
+        if (window.__pillDragActive || window.__sectionDragActive) return;
         if (!isMouseDown) return;
 
         // Check if movement threshold is met
@@ -2221,6 +2272,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('mouseup', (e) => {
+        if (window.__pillDragActive || window.__sectionDragActive) return;
         if (!isMouseDown) return;
 
         isMouseDown = false;

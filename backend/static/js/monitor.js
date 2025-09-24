@@ -8,12 +8,12 @@ const baseUrl = window.location.origin;
 // State management function
 function updateMonitoringState(newPausedState) {
     const button = document.getElementById('pauseButton');
-    
+
     if (newPausedState === isMonitoringPaused) return;
-    
+
     isMonitoringPaused = newPausedState;
     button.classList.toggle('paused', newPausedState);
-    
+
     if (newPausedState) {
         if (monitorIntervalId) {
             clearInterval(monitorIntervalId);
@@ -116,7 +116,7 @@ function createNewTable(tableDiv, tableData, columns) {
     const bodyTable = document.createElement('table');
     bodyTable.className = 'body-table';
     const tbody = document.createElement('tbody');
-    
+
     const headerRow = document.createElement('tr');
     columns.forEach(col => {
         const th = document.createElement('th');
@@ -124,12 +124,12 @@ function createNewTable(tableDiv, tableData, columns) {
         const span = document.createElement('span');
         span.textContent = col;
         th.appendChild(span);
-        
+
         // Add resizer
         const resizer = document.createElement('div');
         resizer.className = 'resizer';
         th.appendChild(resizer);
-        
+
         headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -213,7 +213,7 @@ function createNewTable(tableDiv, tableData, columns) {
         headerTable.style.width = `${bodyTableTargetWidth}px`;
         bodyTable.style.width = `${bodyTableTargetWidth}px`;
     }, 100);
-    
+
     // Add resizer event listeners
     addResizerListeners(headerTable, bodyTable, columns);
 
@@ -224,13 +224,13 @@ function createNewTable(tableDiv, tableData, columns) {
         const bottomOffset = 50;
         const isAtBottom = this.scrollHeight - (this.scrollTop + this.clientHeight) < bottomOffset;
         const isAtTop = this.scrollTop === 0;
-        
+
         // Load more data when reaching bottom
         if (isAtBottom && !isLoading[tableName] && tableChunks[tableName]) {
             // Always fetch more data at bottom, historical state is managed in fetchTableData
             fetchTableData(tableName, true);
         }
-        
+
         // Handle return to top - clear historical state and resume monitoring
         if (isAtTop && tablesWithHistoricalData.has(tableName)) {
             // Check if filters are active for this table
@@ -309,12 +309,12 @@ function addResizerListeners(headerTable, bodyTable, columns) {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
             document.body.style.cursor = '';
-            
+
             // Save the final width
             const widths = getSavedColumnWidths(headerTable);
             widths[columns[index]] = currentWidth;
             saveColumnWidths(headerTable, widths);
-            
+
             startX = null;
             currentWidth = null;
         }
@@ -454,7 +454,7 @@ function updateSingleTable(tableName, tableInfo) {
 function updateConnectionStatus() {
     const status = document.getElementById('connection-status');
     const isConnected = status.classList.contains('connected');
-    
+
     status.className = `connection-status ${isConnected ? 'connected' : 'disconnected'}`;
     status.innerHTML = `
         <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">
@@ -479,7 +479,7 @@ async function checkConnection() {
                 'Cache-Control': 'no-cache'
             },
         });
-        
+
         if (response.ok) {
             connectionAttempts = 0;
             const status = document.getElementById('connection-status');
@@ -566,11 +566,11 @@ function fetchTableData(tableName, append = false) {
         hideError();
         if (append) {
             appendTableData(tableName, data);
-            
+
             // Update chunk range
             const newEnd = tableChunks[tableName].end + data.data.length;
             tableChunks[tableName].end = newEnd;
-            
+
             // Mark as historical data after first chunk
             if (newEnd > ROWS_PER_LOAD && !tableChunks[tableName].isHistorical) {
                 tableChunks[tableName].isHistorical = true;
@@ -729,12 +729,12 @@ function saveTableOrder() {
 function loadTableOrder() {
     const orderCookie = getCookie('tableOrder');
     if (!orderCookie) return;
-    
+
     try {
         const order = JSON.parse(orderCookie);
         const container = document.getElementById('tables-container');
         const sections = Array.from(document.querySelectorAll('.table-section'));
-        
+
         sections.sort((a, b) => {
             const aIndex = order.indexOf(a.dataset.tableName);
             const bIndex = order.indexOf(b.dataset.tableName);
@@ -747,12 +747,26 @@ function loadTableOrder() {
     }
 }
 
+// Keep pill buttons order in sync with section order
+function syncPillsToSections() {
+    const container = document.getElementById('tables-container');
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    if (!container || !buttonsLine) return;
+    const order = Array.from(container.querySelectorAll('.table-section'))
+        .map(section => section.dataset.tableName);
+    order.forEach((tableName) => {
+        const pill = buttonsLine.querySelector(`.table-button[data-table="${tableName}"]`);
+        if (pill) buttonsLine.appendChild(pill);
+    });
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize connection status as connected by default
     const status = document.getElementById('connection-status');
     status.className = 'connection-status connected';
     updateConnectionStatus();
-    
+
     loadTableStates();
     checkConnection();
 
@@ -762,8 +776,42 @@ document.addEventListener('DOMContentLoaded', () => {
         ghostClass: 'sortable-ghost',
         onEnd: function() {
             saveTableOrder();
+            // Keep pills in the same order as sections after manual drag
+            syncPillsToSections();
         }
     });
+
+    // Enable dragging the pill buttons themselves and sync section order
+    const buttonsLine = document.querySelector('.table-buttons-line');
+    if (buttonsLine) {
+        new Sortable(buttonsLine, {
+            animation: 150,
+            draggable: '.table-button',
+            filter: '.arrangement-mode',
+            direction: 'horizontal',
+            forceFallback: true,
+            fallbackOnBody: true,
+            fallbackTolerance: 5,
+            swapThreshold: 0.5,
+            invertSwap: true,
+            bubbleScroll: true,
+            onStart: function () { window.__pillDragActive = true; },
+            onEnd: function () {
+                const order = Array.from(buttonsLine.querySelectorAll('.table-button'))
+                    .map(btn => btn.dataset.table);
+                const container = document.getElementById('tables-container');
+                if (container) {
+                    order.forEach((tableName) => {
+                        const section = container.querySelector(`.table-section[data-table-name="${tableName}"]`);
+                        if (section) container.appendChild(section);
+                    });
+                }
+                saveTableOrder();
+                window.__pillDragActive = false;
+            }
+        });
+    }
+
 
     loadTableOrder();
 
@@ -833,9 +881,9 @@ document.addEventListener('DOMContentLoaded', () => {
     dropdown.addEventListener('change', (e) => {
         const milliseconds = parseInt(e.target.value);
         const seconds = (milliseconds / 1000).toFixed(milliseconds >= 1000 ? 1 : 1);
-        
+
         updateDropdownDangerState(milliseconds);
-        
+
         if (milliseconds < 2000) {  // Changed from 500 to 2000
             showWarning();
         } else {
@@ -858,11 +906,11 @@ document.addEventListener('DOMContentLoaded', () => {
         monitorInterval = 10000;
         setCookie('monitor_interval', monitorInterval, 365);
     }
-    
+
     // Always set both the dropdown value and the actual interval to 10000ms
     dropdown.value = '10000';
     monitorInterval = 10000;
-    
+
     // Initialize danger class based on current value
     updateDropdownDangerState(monitorInterval);
 
@@ -876,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add theme toggle handler
     const themeToggle = document.getElementById('themeToggle');
-    
+
     // Load saved theme preference
     const savedTheme = document.documentElement.getAttribute('data-theme');
     themeToggle.selected = savedTheme === 'dark';
@@ -917,12 +965,12 @@ function toggleTable(tableName) {
     const container = document.getElementById(tableName);
     const button = container.previousElementSibling.querySelector('.toggle-button');
     const limitedInfoSpan = document.getElementById(`${tableName}_limited_info`);
-    
+
     // Add transition class before toggling
     container.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-    
+
     const isHidden = container.classList.toggle('hidden-table');
-    
+
     // Clear historical data tracking when collapsing
     if (isHidden) {
         if (limitedInfoSpan) {
@@ -930,7 +978,7 @@ function toggleTable(tableName) {
             limitedInfoSpan.classList.remove('visible');
         }
         tablesWithHistoricalData.delete(tableName);
-        
+
         // Resume monitoring if no tables have historical data
         if (tablesWithHistoricalData.size === 0 && isMonitoringPaused) {
             updateMonitoringState(false);
@@ -940,7 +988,7 @@ function toggleTable(tableName) {
     updateToggleButtonText(button, isHidden);
     button.classList.toggle('show', isHidden);
     button.classList.toggle('hide', !isHidden);
-    
+
     // Apply theme class to the button
     const themeClass = container.className.match(/theme-\d+/)[0];
     button.classList.forEach(cls => {
@@ -949,7 +997,7 @@ function toggleTable(tableName) {
         }
     });
     button.classList.add(themeClass);
-    
+
     setCookie(`table_${tableName}`, isHidden ? 'hidden' : 'visible', 365);
 
     if (isHidden) {
@@ -962,13 +1010,13 @@ function toggleTable(tableName) {
         // Add hiding class for slide-out animation
         limitedInfoSpan.classList.add('hiding');
         limitedInfoSpan.classList.remove('visible');
-        
+
         // Wait for animation to complete before removing text
         setTimeout(() => {
             limitedInfoSpan.textContent = '';
             limitedInfoSpan.classList.remove('hiding');
         }, 300); // Match the transition duration
-        
+
         // Use requestAnimationFrame for smooth cleanup
         const handleTransitionEnd = () => {
             if (isHidden) {
@@ -978,7 +1026,7 @@ function toggleTable(tableName) {
             }
             container.removeEventListener('transitionend', handleTransitionEnd);
         };
-        
+
         container.addEventListener('transitionend', handleTransitionEnd);
     } else {
         // Initialize chunk tracking when showing table
@@ -1052,7 +1100,7 @@ function updateDynamicElements() {
     // Update tooltips and info spans
     document.querySelectorAll('[id$="_limited_info"]').forEach(span => {
         if (!span.textContent) return;
-        
+
         const isScrollMore = span.textContent.includes('scroll') || span.textContent.includes('스크롤') || span.textContent.includes('Cuộn');
         const text = isScrollMore ? t('ui.scrollMore') : t('ui.allDataLoaded');
         span.innerHTML = `<span class="lang-${currentLang}" style="display: inline">${text}</span>`;
@@ -1070,7 +1118,7 @@ function updateDynamicElements() {
 function updateConnectionStatus() {
     const status = document.getElementById('connection-status');
     const isConnected = status.classList.contains('connected');
-    
+
     status.className = `connection-status ${isConnected ? 'connected' : 'disconnected'}`;
     status.innerHTML = `
         <span class="lang-ko" style="display: ${currentLang === 'ko' ? 'inline' : 'none'}">
@@ -1122,15 +1170,15 @@ function startMonitoring() {
     if (monitorIntervalId) {
         clearInterval(monitorIntervalId);
     }
-    
+
     if (isMonitoringPaused) return;
-    
+
     monitorIntervalId = setInterval(() => {
         const currentLanguageState = currentLang;
-        
+
         // First check connection
         checkConnection();
-        
+
         // Then update tables
         tableNames.forEach(tableName => {
             const container = document.getElementById(tableName);
@@ -1192,13 +1240,13 @@ function startMonitoring() {
 // Add new function to handle pause/resume
 function toggleMonitoring() {
     const wasMonitoringPaused = isMonitoringPaused;
-    
+
     if (isMonitoringPaused) {
         // If paused and has historical data, clear it before resuming
         if (tablesWithHistoricalData.size > 0) {
             const tablesToRefresh = Array.from(tablesWithHistoricalData);
             tablesWithHistoricalData.clear();
-            
+
             // Reset each table that had historical data
             tablesToRefresh.forEach(tableName => {
                 const container = document.getElementById(tableName);
@@ -1222,10 +1270,10 @@ function toggleMonitoring() {
 
 // Add new function to snap slider value to predefined steps
 function snapToStep(value) {
-    const steps = [500, 600, 700, 800, 900, 1000, 
-                   1250, 1500, 1750, 2000, 3000, 4000, 5000, 
+    const steps = [500, 600, 700, 800, 900, 1000,
+                   1250, 1500, 1750, 2000, 3000, 4000, 5000,
                    7500, 10000, 20000, 60000];
-    
+
     return steps.reduce((prev, curr) => {
         return Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev;
     });
@@ -1254,6 +1302,38 @@ function updateClockAnimation() {
 
         // Add event listener for when the hand completes a full rotation
         clockHand.addEventListener('animationiteration', handleClockEffect);
+
+    // Enable dragging the pill buttons themselves and sync section order
+    const buttonsLine2 = document.querySelector('.table-buttons-line');
+    if (buttonsLine2) {
+        new Sortable(buttonsLine2, {
+            animation: 150,
+            draggable: '.table-button',
+            filter: '.arrangement-mode',
+            direction: 'horizontal',
+            forceFallback: true,
+            fallbackOnBody: true,
+            fallbackTolerance: 5,
+            swapThreshold: 0.5,
+            invertSwap: true,
+            bubbleScroll: true,
+            onStart: function () { window.__pillDragActive = true; },
+            onEnd: function () {
+                const order = Array.from(buttonsLine2.querySelectorAll('.table-button'))
+                    .map(btn => btn.dataset.table);
+                const container = document.getElementById('tables-container');
+                if (container) {
+                    order.forEach((tableName) => {
+                        const section = container.querySelector(`.table-section[data-table-name="${tableName}"]`);
+                        if (section) container.appendChild(section);
+                    });
+                }
+                saveTableOrder();
+                window.__pillDragActive = false;
+            }
+        });
+    }
+
     }
 }
 
@@ -1280,6 +1360,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ghostClass: 'sortable-ghost',
         onEnd: function() {
             saveTableOrder();
+            // Keep pills in the same order as sections after manual drag
+            syncPillsToSections();
         }
     });
 
@@ -1351,9 +1433,9 @@ document.addEventListener('DOMContentLoaded', () => {
     dropdown.addEventListener('change', (e) => {
         const milliseconds = parseInt(e.target.value);
         const seconds = (milliseconds / 1000).toFixed(milliseconds >= 1000 ? 1 : 1);
-        
+
         updateDropdownDangerState(milliseconds);
-        
+
         if (milliseconds < 2000) {  // Changed from 500 to 2000
             showWarning();
         } else {
@@ -1376,7 +1458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         monitorInterval = 10000;
         setCookie('monitor_interval', monitorInterval, 365);
     }
-    
+
     // Always set both the dropdown value and the actual interval to 10000ms
     dropdown.value = '10000';
     monitorInterval = 10000;
@@ -1398,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('adminToggleState', isChecked);
         });
     }
-    
+
     // Initialize danger class based on current value
     updateDropdownDangerState(monitorInterval);
 
@@ -1412,7 +1494,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add theme toggle handler
     const themeToggle = document.getElementById('themeToggle');
-    
+
     // Load saved theme preference
     const savedTheme = document.documentElement.getAttribute('data-theme');
     themeToggle.selected = savedTheme === 'dark';
