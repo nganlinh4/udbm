@@ -36,8 +36,10 @@ cd udbm
 
 # Create and activate virtual environment
 python -m venv venv
-# Windows: venv\Scripts\activate
-# Linux/Mac: source venv/bin/activate
+# Windows: 
+venv\Scripts\activate
+# Linux/Mac: 
+source venv/bin/activate
 
 # Install dependencies
 npm install
