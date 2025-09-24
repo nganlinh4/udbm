@@ -1146,13 +1146,6 @@ document.addEventListener('DOMContentLoaded', () => {
             animation: 150,
             draggable: '.table-button',
             filter: '.arrangement-mode',
-            direction: 'horizontal',
-            forceFallback: true,
-            fallbackOnBody: true,
-            fallbackTolerance: 5,
-            swapThreshold: 0.5,
-            invertSwap: true,
-            bubbleScroll: true,
             onStart: function () { window.__pillDragActive = true; },
             onEnd: function () {
                 const order = Array.from(pillsButtonsLine.querySelectorAll('.table-button'))
@@ -2204,6 +2197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         processedButtons.clear();
+        e.preventDefault();
     });
 
     function hasMovedEnough(e) {

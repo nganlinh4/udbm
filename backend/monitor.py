@@ -19,6 +19,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # Suppress verbose debug logs from mysql.connector
 logging.getLogger('mysql.connector').setLevel(logging.WARNING)
+# Suppress Flask/Werkzeug access logs (these are very noisy at INFO)
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
 
 def make_json_serializable(obj):
     """

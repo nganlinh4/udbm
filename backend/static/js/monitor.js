@@ -788,14 +788,6 @@ document.addEventListener('DOMContentLoaded', () => {
             animation: 150,
             draggable: '.table-button',
             filter: '.arrangement-mode',
-            direction: 'horizontal',
-            forceFallback: true,
-            fallbackOnBody: true,
-            fallbackTolerance: 5,
-            swapThreshold: 0.5,
-            invertSwap: true,
-            bubbleScroll: true,
-            onStart: function () { window.__pillDragActive = true; },
             onEnd: function () {
                 const order = Array.from(buttonsLine.querySelectorAll('.table-button'))
                     .map(btn => btn.dataset.table);
@@ -807,7 +799,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
                 saveTableOrder();
-                window.__pillDragActive = false;
             }
         });
     }
@@ -1310,14 +1301,6 @@ function updateClockAnimation() {
             animation: 150,
             draggable: '.table-button',
             filter: '.arrangement-mode',
-            direction: 'horizontal',
-            forceFallback: true,
-            fallbackOnBody: true,
-            fallbackTolerance: 5,
-            swapThreshold: 0.5,
-            invertSwap: true,
-            bubbleScroll: true,
-            onStart: function () { window.__pillDragActive = true; },
             onEnd: function () {
                 const order = Array.from(buttonsLine2.querySelectorAll('.table-button'))
                     .map(btn => btn.dataset.table);
@@ -1329,7 +1312,6 @@ function updateClockAnimation() {
                     });
                 }
                 saveTableOrder();
-                window.__pillDragActive = false;
             }
         });
     }
