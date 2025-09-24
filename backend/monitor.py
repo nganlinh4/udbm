@@ -1428,6 +1428,26 @@ def download_table_csv(table_name):
         else:
             cursor = connection.cursor(dictionary=True)
 
+        # Build filters and sort from query params
+        db_type = 'postgresql' if current_db_config.get('db_type') == 'postgresql' else 'mysql'
+        filters = {}
+        for key, value in request.args.items():
+            if key.startswith('filter_'):
+                column_name = key[7:]
+                if value:
+                    vals = [v.strip() for v in value.split(',') if v.strip()]
+                    if vals:
+                        filters[column_name] = vals
+        sort_column = request.args.get('sort_column')
+        sort_direction = request.args.get('sort_direction', 'desc').lower()
+        if sort_direction not in ['asc', 'desc']:
+            sort_direction = 'desc'
+        effective_sort_column = sort_column if sort_column in columns else columns[0]
+        if not sort_column:
+            sort_direction = 'desc'
+        where_clause, filter_params = build_where_clause(filters, db_type)
+        order_clause = build_order_clause(effective_sort_column, sort_direction, db_type)
+
         # Create in-memory file
         output = io.StringIO()
         writer = csv.writer(output)
@@ -1438,18 +1458,19 @@ def download_table_csv(table_name):
         offset = 0
 
         while True:
-            if current_db_config.get('db_type') == 'postgresql':
-                query = f'SELECT * FROM "{table_name}" ORDER BY "{columns[0]}" LIMIT %s OFFSET %s'
+            if db_type == 'postgresql':
+                query = f'SELECT * FROM "{table_name}"{where_clause}{order_clause} LIMIT %s OFFSET %s'
             else:
-                query = f"SELECT * FROM {table_name} ORDER BY `{columns[0]}` LIMIT %s OFFSET %s"
+                query = f"SELECT * FROM {table_name}{where_clause}{order_clause} LIMIT %s OFFSET %s"
 
-            cursor.execute(query, (chunk_size, offset))
+            params = filter_params + [chunk_size, offset]
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             if not rows:
                 break
 
             for row in rows:
-                if current_db_config.get('db_type') == 'postgresql':
+                if db_type == 'postgresql':
                     processed_row = []
                     for value in row:
                         processed_row.append(json.dumps(value) if isinstance(value, (dict, list))
@@ -1517,18 +1538,39 @@ def download_table_xlsx(table_name):
         for col_num, column in enumerate(columns):
             worksheet.write(0, col_num, column)
 
+        # Build filters and sort from query params
+        db_type = 'postgresql' if current_db_config.get('db_type') == 'postgresql' else 'mysql'
+        filters = {}
+        for key, value in request.args.items():
+            if key.startswith('filter_'):
+                column_name = key[7:]
+                if value:
+                    vals = [v.strip() for v in value.split(',') if v.strip()]
+                    if vals:
+                        filters[column_name] = vals
+        sort_column = request.args.get('sort_column')
+        sort_direction = request.args.get('sort_direction', 'desc').lower()
+        if sort_direction not in ['asc', 'desc']:
+            sort_direction = 'desc'
+        effective_sort_column = sort_column if sort_column in columns else columns[0]
+        if not sort_column:
+            sort_direction = 'desc'
+        where_clause, filter_params = build_where_clause(filters, db_type)
+        order_clause = build_order_clause(effective_sort_column, sort_direction, db_type)
+
         # Fetch and write data in chunks
         chunk_size = 5000
         offset = 0
         row_num = 1
 
         while True:
-            if current_db_config.get('db_type') == 'postgresql':
-                query = f'SELECT * FROM "{table_name}" ORDER BY "{columns[0]}" LIMIT %s OFFSET %s'
+            if db_type == 'postgresql':
+                query = f'SELECT * FROM "{table_name}"{where_clause}{order_clause} LIMIT %s OFFSET %s'
             else:
-                query = f"SELECT * FROM {table_name} ORDER BY `{columns[0]}` LIMIT %s OFFSET %s"
+                query = f"SELECT * FROM {table_name}{where_clause}{order_clause} LIMIT %s OFFSET %s"
 
-            cursor.execute(query, (chunk_size, offset))
+            params = filter_params + [chunk_size, offset]
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             if not rows:
                 break

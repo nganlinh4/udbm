@@ -209,10 +209,23 @@ export function addDownloadButtons() {
                 XLSX
             `;
 
-            // Setup click handlers
+            // Setup click handlers that respect current filters and sort
             csvButton.onclick = async () => {
                 try {
-                    const response = await fetch(`${window.baseUrl}/download/${tableName}/csv`);
+                    const params = new URLSearchParams();
+                    const filters = (typeof tableFilters !== 'undefined' && tableFilters.get(tableName)) || {};
+                    Object.entries(filters).forEach(([columnName, selectedValues]) => {
+                        if (columnName && Array.isArray(selectedValues) && selectedValues.length > 0) {
+                            params.append(`filter_${columnName}`, selectedValues.join(','));
+                        }
+                    });
+                    const sortState = (typeof tableSorts !== 'undefined' && tableSorts.get(tableName)) || { column: null, direction: null };
+                    if (sortState.column) {
+                        params.append('sort_column', sortState.column);
+                        params.append('sort_direction', sortState.direction);
+                    }
+                    const url = `${window.baseUrl}/download/${tableName}/csv` + (params.toString() ? `?${params.toString()}` : '');
+                    const response = await fetch(url);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const blob = await response.blob();
                     downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`);
@@ -223,7 +236,20 @@ export function addDownloadButtons() {
 
             xlsxButton.onclick = async () => {
                 try {
-                    const response = await fetch(`${window.baseUrl}/download/${tableName}/xlsx`);
+                    const params = new URLSearchParams();
+                    const filters = (typeof tableFilters !== 'undefined' && tableFilters.get(tableName)) || {};
+                    Object.entries(filters).forEach(([columnName, selectedValues]) => {
+                        if (columnName && Array.isArray(selectedValues) && selectedValues.length > 0) {
+                            params.append(`filter_${columnName}`, selectedValues.join(','));
+                        }
+                    });
+                    const sortState = (typeof tableSorts !== 'undefined' && tableSorts.get(tableName)) || { column: null, direction: null };
+                    if (sortState.column) {
+                        params.append('sort_column', sortState.column);
+                        params.append('sort_direction', sortState.direction);
+                    }
+                    const url = `${window.baseUrl}/download/${tableName}/xlsx` + (params.toString() ? `?${params.toString()}` : '');
+                    const response = await fetch(url);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const blob = await response.blob();
                     downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`);
@@ -2561,79 +2587,53 @@ export function updateSingleTable(tableName, tableInfo, translations, currentLan
                 XLSX
             `;
 
-            csvButton.onclick = () => {
-                if (!tableInfo.data || !tableInfo.data.length) return;
-                const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`;
-                const headers = tableInfo.columns;
-                const csvContent = [
-                    headers.join(','),
-                    ...tableInfo.data.map(row => headers.map(header => {
-                        let value = row[header] ?? '';
-                        
-                        // Convert to string and handle special cases
-                        value = String(value);
-                        
-                        // Convert JSON objects to strings
-                        if (typeof row[header] === 'object' && row[header] !== null) {
-                            value = JSON.stringify(row[header]);
+            // Respect current filters and sort; request full filtered data from server
+            csvButton.onclick = async () => {
+                try {
+                    const params = new URLSearchParams();
+                    const filters = (typeof tableFilters !== 'undefined' && tableFilters.get(tableName)) || {};
+                    Object.entries(filters).forEach(([columnName, selectedValues]) => {
+                        if (columnName && Array.isArray(selectedValues) && selectedValues.length > 0) {
+                            params.append(`filter_${columnName}`, selectedValues.join(','));
                         }
-                        
-                        // Escape values containing commas or quotes
-                        if (value.includes(',') || value.includes('"')) {
-                            value = value.replace(/"/g, '""');
-                            value = `"${value}"`;
-                        }
-                        return value;
-                    }).join(','))
-                ].join('\n');
-                
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = filename;
-                link.click();
+                    });
+                    const sortState = (typeof tableSorts !== 'undefined' && tableSorts.get(tableName)) || { column: null, direction: null };
+                    if (sortState.column) {
+                        params.append('sort_column', sortState.column);
+                        params.append('sort_direction', sortState.direction);
+                    }
+                    const url = `${(window.baseUrl || baseUrl)}/download/${tableName}/csv` + (params.toString() ? `?${params.toString()}` : '');
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const blob = await response.blob();
+                    downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.csv`);
+                } catch (error) {
+                    console.error('Error downloading CSV:', error);
+                }
             };
 
-            xlsxButton.onclick = () => {
-                if (!tableInfo.data || !tableInfo.data.length) return;
-                const filename = `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`;
-                fetch(`${baseUrl}/download/xlsx`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        data: tableInfo.data,
-                        filename
-                    })
-                })
-                .then(async response => {
-                    if (response.ok) {
-                        return await response.blob();
-                    } else {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                })
-                .then(blob => {
-                    const excelBlob = new Blob([blob], { 
-                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+            xlsxButton.onclick = async () => {
+                try {
+                    const params = new URLSearchParams();
+                    const filters = (typeof tableFilters !== 'undefined' && tableFilters.get(tableName)) || {};
+                    Object.entries(filters).forEach(([columnName, selectedValues]) => {
+                        if (columnName && Array.isArray(selectedValues) && selectedValues.length > 0) {
+                            params.append(`filter_${columnName}`, selectedValues.join(','));
+                        }
                     });
-                    const link = document.createElement('a');
-                    const url = URL.createObjectURL(excelBlob);
-                    link.href = url;
-                    link.download = filename;
-                    document.body.appendChild(link);
-                    link.click();
-                    setTimeout(() => {
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                    }, 100);
-                })
-                .catch(error => {
+                    const sortState = (typeof tableSorts !== 'undefined' && tableSorts.get(tableName)) || { column: null, direction: null };
+                    if (sortState.column) {
+                        params.append('sort_column', sortState.column);
+                        params.append('sort_direction', sortState.direction);
+                    }
+                    const url = `${(window.baseUrl || baseUrl)}/download/${tableName}/xlsx` + (params.toString() ? `?${params.toString()}` : '');
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const blob = await response.blob();
+                    downloadBlob(blob, `${tableName}_${new Date().toISOString().slice(0,19).replace(/[:]/g, '-')}.xlsx`);
+                } catch (error) {
                     console.error('Error downloading XLSX:', error);
-                    alert(
-                        'Failed to download Excel file. Please ensure the server supports Excel downloads ' +
-                        'or try downloading as CSV instead.'
-                    );
-                });
+                }
             };
 
             // Create image settings button
